@@ -1,19 +1,19 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9 shipped (2026-07-01)  
-**Source of truth:** `project_state`, `open_loops`, `tasks` in SQLite · **V3.9 target:** `tickets` table (planned).
+**As of:** V3.9.1 shipped (2026-07-01)  
+**Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative
 
-**Pick next** (planning tickets minted on board):
+**Pick next** (planning tickets on board or mint new):
 
 | Ticket theme | Assignee | Priority |
 |--------------|----------|------------|
-| V3.9.1 CI pipeline | Codex plans | P2 |
 | First canon synthesis | Codex plans | P2 |
 | Agent feed UI tab | Codex plans | P3 |
+| V4 connectivity (git collector) | Codex plans | P3 |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
@@ -24,7 +24,6 @@ Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.m
 | Priority | Item |
 |----------|------|
 | P1 | LLM merge of duplicate content bodies (deferred) |
-| P2 | Automated CI test suite |
 | P2 | QA test isolation / probe row pollution |
 | P3 | Debounced canon synthesis after ingest |
 | P4 | QA autonomous extraction |
@@ -33,11 +32,12 @@ Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.m
 
 ## Completed (recent)
 
-- Git repository initialized (`.gitignore`, baseline commit, `--from-git` handoffs)
+- **V3.9.1 Repository & CI** — GitHub remote, `.github/workflows/tests.yml`, full doc sweep
+- Git repository baseline — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 - V3.9 Concurrent Ticketing (`tickets` API, sync mint/claim/close, UI tab, prompt block)
 - V3.8 Memory Trail (truthful counts, memory filters, canon path, synthesis script)
 - V3.8 multi-agent sync (`codex_sync.py`, `cursor_sync.py`, `/api/agent/sync`, Cursor hooks)
-- Bus restart QA on 8765 (37 tests passing)
+- Bus restart QA on 8765
 - V3.6 Phase 4 memory consolidation (session merge, dedupe, stale, daily opt-in)
 - Live UI sync (dashboard, polling, phase bar, intelligence polish, task done)
 - V3.7 Context Bridge (phases 1–6)
@@ -56,3 +56,4 @@ Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.m
 5. Pull agent context before work: `cursor_sync.py --before` or `codex_sync.py --before`.
 6. New session onboarding: read `docs/WHERE_WE_ARE.md` (loaded in every Crowley prompt).
 7. Re-run lock-in after major ships: `scripts/lock_in_state.py`.
+8. CI runs on every push/PR to `main` — keep tests green before merge.

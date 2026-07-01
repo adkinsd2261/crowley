@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9 (`Crowley V3.9 Concurrent Ticketing`)  
-**Next planned:** V3.9.1 CI + polish, canon synthesis
+**Current:** V3.9.1 (`Crowley V3.9.1 Repository & CI`)  
+**Next planned:** Canon synthesis, agent feed UI tab, V4 connectivity
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -24,6 +24,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.8    | shipped  | 2026-07-01 | Memory Trail + multi-agent sync              |
 | V3.8.1  | shipped  | 2026-07-01 | Agent parity — stop hook, shared verify, activity feed |
 | V3.9    | shipped  | 2026-07-01 | Concurrent ticketing — unified agent work board |
+| V3.9.1  | shipped  | 2026-07-01 | GitHub repo baseline + GitHub Actions CI |
 
 ---
 
@@ -382,9 +383,29 @@ Plan: [docs/V3.9_CONCURRENT_TICKETING.md](./docs/V3.9_CONCURRENT_TICKETING.md)
 
 ---
 
+## V3.9.1 — Repository & CI
+
+**Theme:** Version-control baseline on GitHub and automated regression on every push to `main`.
+
+**Shipped:**
+
+| Component | Description |
+|-----------|-------------|
+| Git remote | [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley) on `main` |
+| `.gitignore` | Secrets, DB, venv, processed handoffs excluded |
+| Handoffs | `--from-git` file lists in `crowley_handoff.py` / `cursor_sync --after` |
+| CI | `.github/workflows/tests.yml` — `unittest discover` on push/PR |
+| Docs | Full sweep; `docs/V3.9.1_REPOSITORY_AND_CI.md` |
+| Tests | **52 tests** (unchanged count; now gated in CI) |
+
+**Version:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`
+
+Plan: [docs/V3.9.1_REPOSITORY_AND_CI.md](./docs/V3.9.1_REPOSITORY_AND_CI.md)
+
+---
+
 ## V3+ — Planned
 
-- Automated CI test suite (tests exist; no CI runner yet)
 - External collectors (Git, calendar) writing to `memory_items`
 - Multi-project commands
 - `propose_handoff_updates()` tuned extraction prompt

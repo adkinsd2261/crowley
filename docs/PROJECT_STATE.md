@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9 (`CROWLEY_VERSION = "3.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9 Concurrent Ticketing"`)  
-**Planning:** Shipped — [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)  
-**Last doc sync:** 2026-07-01 (state lock-in)  
+**As of:** V3.9.1 (`CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`)  
+**Planning:** Shipped — [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)  
+**Last doc sync:** 2026-07-01 (V3.9.1 release)  
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -27,6 +27,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **Multi-agent hub** (V3.8) — Codex/Cursor sync scripts, `/api/agent/sync`, Crowley-only messaging
 - **Agent parity** (V3.8.1) — `agent_activity` in all bundles, stop hook, shared verify lib
 - **V3.9 shipped** — concurrent ticketing (`tickets` table, `/api/tickets`, agent mint/claim/close)
+- **V3.9.1 shipped** — GitHub repo on `main`, GitHub Actions CI, documentation sweep
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -55,7 +56,8 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (no CI yet) |
+| `tests/` | **Active** | QA unit tests (52; gated by GitHub Actions on `main`) |
+| `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
 | `requirements.txt` | **Active** | Dependencies |
 | `VERSIONS.md` | **Active** | Release log |
 | `docs/TICKETS.md` | **Active** | Human-readable backlog mirror |
@@ -77,6 +79,8 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.7.3 | Memory consolidation | V3.6 Phase 4 — merge, dedupe, stale, daily summary |
 | V3.8 | Memory Trail | Truthful memory UI/API, canon path, multi-agent sync |
 | V3.8.1 | Agent Parity | `agent_activity` bundles, stop hook, shared verify |
+| V3.9 | Concurrent Ticketing | Unified ticket board; mint/claim/close via sync |
+| V3.9.1 | Repository & CI | GitHub remote, Actions test gate, doc sweep |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 
@@ -97,6 +101,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Codex sync | ✅ V3.8 | `scripts/codex_sync.py`, `CODEX.md` |
 | Cursor sync | ✅ V3.8.1 | `cursor_sync.py`, hooks (start/prompt/stop), `agent_sync_lib` |
 | Concurrent tickets | ✅ V3.9 | `tickets` table, `/api/tickets`, mint/claim/close via sync scripts |
+| Git + CI | ✅ V3.9.1 | [adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `.github/workflows/tests.yml` |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
 | Canon synthesis | ✅ V3.8 | `scripts/synthesize_canon.py` (manual `--write`) |
 | Hybrid memory | ✅ V3.6 | `retrieve_memories()` |
@@ -141,11 +146,11 @@ Bind: `127.0.0.1:8765`.
 | Item | Detail |
 |------|--------|
 | No canon rows yet | Run `scripts/synthesize_canon.py --write` when ready |
-| Git baseline | Repo initialized; handoffs use `--from-git` for file lists |
+| Git baseline | [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley) on `main`; handoffs use `--from-git` |
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| No CI pipeline | Unit tests in `tests/`; run manually |
+| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Agent feed UI tab | Deferred — API exists, dedicated tab does not |
@@ -189,6 +194,7 @@ curl http://127.0.0.1:8765/api/bus/health
 
 ## 8. Related documents
 
+- [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
 - [V3.8.1_AGENT_PARITY.md](./V3.8.1_AGENT_PARITY.md)
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md)

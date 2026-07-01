@@ -18,6 +18,31 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-031 — GitHub repository baseline and Actions CI (V3.9.1)
+
+**Date:** 2026-07-01  
+**Status:** Accepted  
+**Evidence:** `.github/workflows/tests.yml`, `.gitignore`, remote `github.com/adkinsd2261/crowley`, `docs/V3.9.1_REPOSITORY_AND_CI.md`
+
+### Context
+
+V3.9 shipped concurrent ticketing but the workspace lacked version control and automated regression. Handoff `Files Changed` sections depended on git; fifty-two unit tests only ran manually.
+
+### Decision
+
+- Initialize git with secrets/DB/venv excluded; push baseline to GitHub `main`
+- Add GitHub Actions workflow running `python -m unittest discover -s tests -q` on push/PR
+- Use Python 3.12 on `ubuntu-latest`; 20-minute timeout for cold embedding-model cache
+- Defer agent feed UI tab and automated canon synthesis to post-V3.9.1
+
+### Alternatives
+
+- Local-only git without remote — rejected; no backup or CI trigger surface
+- Skip heavy deps in CI — rejected; would not gate embedding/memory tests
+- CircleCI / self-hosted runner — rejected; GitHub Actions matches repo host
+
+---
+
 ## ADR-030 — Unified tickets for multi-agent work (V3.9)
 
 **Date:** 2026-07-01  

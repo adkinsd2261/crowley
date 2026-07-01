@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9 (`Crowley V3.9 Concurrent Ticketing`) · **2026-07-01**  
+**As of:** V3.9.1 (`Crowley V3.9.1 Repository & CI`) · **2026-07-01**  
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -32,9 +32,12 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | V3.7.3 | Memory consolidation (merge, dedupe, stale) |
 | V3.8 | Memory Trail — truthful memory counts, canon path, multi-agent sync |
 | V3.8.1 | Agent parity — `agent_activity`, stop hook, shared verify |
-| **V3.9** | **Concurrent ticketing** — `tickets` table, `/api/tickets`, mint/claim/close |
+| V3.9 | Concurrent ticketing — `tickets` table, `/api/tickets`, mint/claim/close |
+| **V3.9.1** | **Repository & CI** — GitHub `main`, Actions test gate, doc sweep |
 
-**Current constants:** `CROWLEY_VERSION = "3.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9 Concurrent Ticketing"`
+**Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`
+
+**Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
 ---
 
@@ -92,16 +95,17 @@ Hooks run `--before` automatically. After shipping:
 - Web UI + SSE chat, markdown replies, intelligence drawer (Tasks, **Tickets**, Loops, Decisions, Memory)
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py`
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- 52+ unit tests (manual run; no CI yet)
+- **52 unit tests** — local run + **GitHub Actions** on push/PR to `main`
 - Personality: Crowley = the running system; Jarvis-shaped; filesystem-first answers
-- Git baseline — `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
+- Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
 **Known gaps (honest):**
 
-- No CI pipeline (tests exist locally)
-- Canon was empty until lock-in / first synthesis
+- Canon synthesis still manual (`scripts/synthesize_canon.py --write`)
 - Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board)
-- Some open_loops may be stale until backlog hygiene runs
+- Agent feed UI tab deferred (API exists)
+- Some `open_loops` may be stale until backlog hygiene runs
+- Test suite hits real `crowley.db` — probe-row pollution possible
 
 ---
 
@@ -109,9 +113,9 @@ Hooks run `--before` automatically. After shipping:
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
-| **V3.9.1 — CI** | Cursor builds, Codex specs | GitHub Actions or similar; run `unittest discover` |
 | **First canon synthesis** | Codex plans, manual `--write` | `scripts/synthesize_canon.py` |
 | **Agent feed UI tab** | Cursor builds | API exists; dedicated tab deferred from V3.8 |
+| **V4 connectivity** | Codex plans | Git collector, multi-project commands |
 
 Codex should **mint tickets** for the chosen initiative; Cursor fills by ticket ID.
 
@@ -123,6 +127,8 @@ Codex should **mint tickets** for the chosen initiative; Cursor fills by ticket 
 |------|------|
 | `crowley.py` | Engine |
 | `app.py` | HTTP transport |
+| `.github/workflows/tests.yml` | CI regression gate |
+| `docs/V3.9.1_REPOSITORY_AND_CI.md` | V3.9.1 spec |
 | `docs/V3.9_CONCURRENT_TICKETING.md` | V3.9 spec |
 | `docs/V3.8_MEMORY_TRAIL.md` | Memory trail spec |
 | `CODEX.md` / `CURSOR.md` | Agent rituals |

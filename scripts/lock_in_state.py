@@ -42,15 +42,19 @@ SHIPPED_LOOP_SNIPPETS = (
     "stop hook or richer auto-handoff",
     "run full sync qa",
     "cursor can continue with ci",
-    "synthesize_canon.py --write",
-)
+    "git init",
+    "initialize git",
+    "automated ci",
+    "ci test suite",
+    "ci pipeline",
+    "v3.9.1 ci",
 
 CANON_LAYERS = [
     (
         "Canon: Project",
-        "Crowley V3.9 Concurrent Ticketing is shipped. Local-first OS: chat, SQLite memory, "
-        "tickets board, HTTP bus at 127.0.0.1:8765. Evidence: VERSIONS.md, docs/PROJECT_STATE.md, "
-        "docs/WHERE_WE_ARE.md.",
+        "Crowley V3.9.1 Repository & CI is shipped. Local-first OS: chat, SQLite memory, "
+        "tickets board, GitHub CI on main, HTTP bus at 127.0.0.1:8765. Evidence: VERSIONS.md, "
+        "docs/PROJECT_STATE.md, docs/WHERE_WE_ARE.md, github.com/adkinsd2261/crowley.",
     ),
     (
         "Canon: Agents",
@@ -60,9 +64,9 @@ CANON_LAYERS = [
     ),
     (
         "Canon: Work",
-        "V3.8 Memory Trail, V3.8.1 agent parity, and V3.9 concurrent ticketing are complete. "
-        "Next: V3.9.1 CI, first canon synthesis, or agent feed UI tab. Evidence: docs/TICKETS.md, "
-        "docs/ROADMAP.md.",
+        "V3.8 Memory Trail, V3.8.1 agent parity, V3.9 concurrent ticketing, and V3.9.1 git/CI "
+        "are complete. Next: first canon synthesis, agent feed UI tab, or V4 connectivity. "
+        "Evidence: docs/TICKETS.md, docs/ROADMAP.md.",
     ),
     (
         "Canon: Mr. Go",
@@ -72,13 +76,6 @@ CANON_LAYERS = [
 ]
 
 NEXT_TICKETS = [
-    {
-        "title": "Plan V3.9.1 automated CI test pipeline",
-        "assignee": "codex",
-        "priority": 2,
-        "description": "Spec CI runner for unittest discover; document in ROADMAP.",
-        "acceptance": "Codex architect handoff with ticket breakdown for Cursor",
-    },
     {
         "title": "Plan first canon synthesis run",
         "assignee": "codex",

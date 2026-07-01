@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-01  
-**Code version:** `CROWLEY_VERSION = "3.8.1"` (`Crowley V3.8.1 Agent Parity`)  
+**Code version:** `CROWLEY_VERSION = "3.9.1"` (`Crowley V3.9.1 Repository & CI`)  
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -233,8 +233,8 @@ crowley.py
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.8.1"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.8.1 Agent Parity"` |
+| `CROWLEY_VERSION` | `"3.9.1"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.1 Repository & CI"` |
 
 ---
 
