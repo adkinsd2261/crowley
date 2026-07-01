@@ -1,0 +1,23 @@
+{
+  "tickets": [
+    {
+      "title": "Tickets schema + ticket_events",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add tickets and ticket_events tables to setup_db().",
+      "acceptance": [
+        "Tables created on setup_db",
+        "tests/test_tickets.py covers create/list"
+      ]
+    },
+    {
+      "title": "HTTP /api/tickets routes",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "GET/POST/PATCH /api/tickets and POST done endpoint in app.py.",
+      "acceptance": [
+        "curl create/list/update works on 8765"
+      ]
+    }
+  ]
+}

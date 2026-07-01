@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/session-start.sh",
+        "timeout": 30
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/prompt-submit.sh",
+        "timeout": 20
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/session-stop.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

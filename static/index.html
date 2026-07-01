@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crowley</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-brand">
+        <div class="header-title-row">
+          <h1>Crowley</h1>
+          <span class="health-dot" id="health-dot" title="Checking…"></span>
+        </div>
+      </div>
+      <div class="header-meta">
+        <p class="header-version" id="version-label" title="">—</p>
+        <p class="header-sub" id="brain-label">—</p>
+      </div>
+      <button type="button" id="refresh-panels" class="refresh-btn" title="Refresh context">
+        Refresh
+      </button>
+    </header>
+
+    <div class="workspace">
+      <section class="main-column">
+        <div class="workspace-pane">
+          <main class="workspace-stream" id="chat" aria-live="polite"></main>
+
+          <div class="thinking hidden" id="thinking" aria-live="polite">
+            <span class="thinking-orb" aria-hidden="true"></span>
+            <span class="thinking-label">Thinking</span>
+          </div>
+
+          <footer class="compose">
+            <div class="compose-inner">
+              <div class="compose-objective">
+                <span class="compose-objective-label">
+                  In the air
+                  <span class="compose-phase hidden" id="compose-phase"></span>
+                </span>
+                <span class="compose-objective-text is-placeholder" id="current-objective">
+                  Nothing pinned — just talk.
+                </span>
+              </div>
+              <div class="compose-field">
+                <textarea
+                  id="input"
+                  rows="1"
+                  placeholder="What's on your mind?"
+                  aria-label="What's on your mind"
+                ></textarea>
+                <button type="button" id="send" class="send-btn" aria-label="Send" title="Send">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Project state">
+        <h2 class="section-label">Project</h2>
+        <p class="inspector-project" id="world-project">—</p>
+        <div class="phase-progress hidden" id="phase-progress" aria-label="Phase progress">
+          <div class="phase-progress-meta">
+            <span class="phase-progress-label" id="phase-progress-label">—</span>
+            <span class="phase-progress-count" id="phase-progress-count">—</span>
+          </div>
+          <div class="phase-progress-track">
+            <div class="phase-progress-fill" id="phase-progress-fill"></div>
+          </div>
+        </div>
+        <p class="state-sync" id="state-sync" title="">—</p>
+        <dl class="state-list" id="world-state"></dl>
+        <button type="button" id="run-diagnostics" class="diagnostics-btn">
+          Run diagnostics
+        </button>
+      </aside>
+    </div>
+
+    <section class="context-drawer is-collapsed" id="context-drawer" aria-label="Intelligence">
+      <button
+        type="button"
+        class="context-toggle"
+        id="context-toggle"
+        aria-expanded="false"
+        aria-controls="context-body"
+      >
+        <span class="context-toggle-title">Intelligence</span>
+        <span class="live-sync-pill" id="live-sync-pill" title="Live dashboard sync">
+          <span class="live-sync-dot" aria-hidden="true"></span>
+          <span id="live-sync-label">Live</span>
+        </span>
+        <span class="context-summary" id="context-summary">—</span>
+        <span class="context-chevron" aria-hidden="true"></span>
+      </button>
+
+      <div class="context-body hidden" id="context-body">
+        <div class="context-tabs" role="tablist" aria-label="Intelligence views">
+          <button type="button" class="context-tab is-active" role="tab" data-tab="tickets" data-label="Tickets" aria-selected="true">
+            Tickets
+          </button>
+          <button type="button" class="context-tab" role="tab" data-tab="tasks" data-label="Tasks" aria-selected="false">
+            Tasks
+          </button>
+          <button type="button" class="context-tab" role="tab" data-tab="loops" data-label="Loops" aria-selected="false">
+            Loops
+          </button>
+          <button type="button" class="context-tab" role="tab" data-tab="decisions" data-label="Decisions" aria-selected="false">
+            Decisions
+          </button>
+          <button type="button" class="context-tab" role="tab" data-tab="memory" data-label="Memory" aria-selected="false">
+            Memory
+          </button>
+        </div>
+        <p class="context-panel-meta" id="context-panel-meta">—</p>
+        <div class="context-panels">
+          <div class="context-panel is-active" data-panel="tickets" role="tabpanel">
+            <ul class="panel-list" id="panel-tickets"></ul>
+          </div>
+          <div class="context-panel" data-panel="tasks" role="tabpanel" hidden>
+            <ul class="panel-list" id="panel-tasks"></ul>
+          </div>
+          <div class="context-panel" data-panel="loops" role="tabpanel" hidden>
+            <ul class="panel-list" id="panel-loops"></ul>
+          </div>
+          <div class="context-panel" data-panel="decisions" role="tabpanel" hidden>
+            <ul class="panel-list" id="panel-decisions"></ul>
+          </div>
+          <div class="context-panel" data-panel="memory" role="tabpanel" hidden>
+            <div class="memory-controls" aria-label="Memory filters">
+              <input id="memory-search" type="search" placeholder="Search memory" aria-label="Search memory" />
+              <select id="memory-source" aria-label="Memory source">
+                <option value="">All sources</option>
+                <option value="crowley">Crowley</option>
+                <option value="codex">Codex</option>
+                <option value="cursor">Cursor</option>
+                <option value="manual">Manual</option>
+                <option value="implicit">Implicit</option>
+                <option value="session_summary">Session</option>
+              </select>
+              <select id="memory-type" aria-label="Memory type">
+                <option value="">All types</option>
+                <option value="summary">Summary</option>
+                <option value="project_update">Project</option>
+                <option value="event">Event</option>
+                <option value="decision">Decision</option>
+                <option value="preference">Preference</option>
+                <option value="qa_result">QA</option>
+              </select>
+              <select id="memory-status" aria-label="Memory status">
+                <option value="active">Active</option>
+                <option value="all">All</option>
+                <option value="merged">Merged</option>
+                <option value="stale">Stale</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <p class="memory-count-summary" id="memory-count-summary">—</p>
+            <ul class="panel-list" id="panel-memory"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

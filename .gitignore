@@ -1,0 +1,14 @@
+.env
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+crowley.py.save
+crowley.db
+crowley.db-wal
+crowley.db-shm
+.crowley/*.log
+.crowley/inbox/*
+.crowley/processed/*
+!.crowley/inbox/.gitkeep
+!.crowley/processed/.gitkeep
