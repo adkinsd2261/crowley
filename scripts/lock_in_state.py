@@ -122,17 +122,16 @@ Project: Crowley
 
 ## Known Issues
 
-- No git baseline; no CI yet; some open_loops may remain until manually reviewed.
+- Some open_loops may remain until manually reviewed; test DB probe-row pollution possible.
 
 ## Open Loops
 
-- Automated CI test suite (P2)
-- git init for handoff file lists (P1)
 - Debounced canon synthesis after ingest (P3)
+- Plan agent feed UI tab (ticket #3)
 
 ## Next Action
 
-- Mr. Go picks next initiative; Codex runs --before, reads docs/WHERE_WE_ARE.md, decomposes the matching planning ticket, mints Cursor builder tickets.
+- Mr. Go returns with Cursor to plan ticketing; Codex/Cursor run --before, read docs/WHERE_WE_ARE.md, mint builder tickets from planning board.
 
 ## Do Not Build
 
@@ -178,22 +177,22 @@ def _close_shipped_loops(project_id: int) -> int:
 
 def _refresh_project_state(project_id: int) -> None:
     updates = {
-        "phase": "Post-V3.9 — stable hub; pick next initiative",
+        "phase": "Post-V3.9.1 — stable hub; plan next initiative",
         "focus": (
-            "Memory trail locked in (WHERE_WE_ARE.md, canon seed, handoffs, tickets). "
-            "Codex plans V3.9.1+ from minted planning tickets."
+            "V3.9.1 git/CI live on github.com/adkinsd2261/crowley; memory trail, tickets, "
+            "and handoffs with --from-git file lists. Next: ticketing planning session."
         ),
         "current_risk": (
-            "No CI pipeline yet; git not initialized; open_loops may include stale items "
-            "until reviewed; test DB accumulates QA probe rows."
+            "Stale open_loops may remain until reviewed; test DB accumulates QA probe rows; "
+            "bus must be restarted after version bumps to refresh /api/health."
         ),
         "next_action": (
-            "Codex: scripts/codex_sync.py --before → read docs/WHERE_WE_ARE.md → "
-            "refine planning ticket for Mr. Go's chosen next initiative → mint Cursor builder tickets."
+            "Mr. Go returns with Cursor to plan ticketing; run scripts/cursor_sync.py --before "
+            "or scripts/codex_sync.py --before → read docs/WHERE_WE_ARE.md → mint builder tickets."
         ),
         "what_changed": (
-            "V3.8 Memory Trail, V3.8.1 agent parity, V3.9 concurrent ticketing shipped; "
-            "state lock-in pass (canon, loops, tickets, Codex architect handoff)."
+            "V3.9.1 Repository & CI shipped; GitHub remote + Actions CI on main; "
+            "HTTPS git auth verified; handoff --from-git file lists operational."
         ),
     }
     for field, value in updates.items():

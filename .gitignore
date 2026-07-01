@@ -8,6 +8,7 @@ crowley.db
 crowley.db-wal
 crowley.db-shm
 .crowley/*.log
+.crowley/.cursor-session-pending-handoff
 .crowley/inbox/*
 .crowley/processed/*
 !.crowley/inbox/.gitkeep
