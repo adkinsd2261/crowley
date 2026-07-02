@@ -1522,22 +1522,6 @@ def classify_conversation_mode(message: str) -> str:
     if any(
         re.search(pattern, lower)
         for pattern in (
-            r"\bbug\b",
-            r"\bbroken\b",
-            r"doesn't work",
-            r"does not work",
-            r"\bnot working\b",
-            r"\bcrash",
-            r"\bfails?\b",
-            r"\bregression\b",
-            r"something broke",
-        )
-    ):
-        return "bug"
-
-    if any(
-        re.search(pattern, lower)
-        for pattern in (
             r"\bdebug\b",
             r"root cause",
             r"\btrace\b",
@@ -1547,6 +1531,29 @@ def classify_conversation_mode(message: str) -> str:
         )
     ):
         return "debug"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bbug\b",
+            r"\bbroken\b",
+            r"doesn't work",
+            r"does not work",
+            r"\bnot working\b",
+            r"\bcrash",
+            r"\bfails?\b",
+            r"\bregression\b",
+            r"something broke",
+            r"\bhanging\b",
+            r"\bhangs\b",
+            r"\bhang\b(?!\s+out)",
+            r"\bstuck\b",
+            r"something(?:'s| is|s) up",
+            r"\b(?:is|are|was|were|keeps?|still)\s+struggling\b",
+            r"\bstruggling\s+to\s+(?:load|stream|respond|connect|sync|start|finish|complete)\b",
+        )
+    ):
+        return "bug"
 
     if any(
         re.search(pattern, lower)

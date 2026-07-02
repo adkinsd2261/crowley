@@ -67,9 +67,33 @@ class ConversationModeClassifierTests(unittest.TestCase):
             "there is a bug in streaming completion",
             "the chat is broken after the last deploy",
             "ticket detail fails with a regression",
+            "the chat is hanging",
+            "streaming hangs on the last token",
+            "the dashboard is stuck",
+            "something is up with agent feed",
+            "something's up with ticket detail",
+            "somethings up with the bus",
+            "crowley is struggling to respond",
         ):
             with self.subTest(message=message):
                 self.assertEqual(crowley.classify_conversation_mode(message), "bug")
+
+    def test_trouble_report_debug_phrasings(self) -> None:
+        for message in (
+            "why is the chat hanging",
+            "figure out why we're stuck on loading",
+            "debug why streaming is struggling",
+        ):
+            with self.subTest(message=message):
+                self.assertEqual(crowley.classify_conversation_mode(message), "debug")
+
+    def test_trouble_report_does_not_false_positive_casual(self) -> None:
+        for message in (
+            "hey what's up",
+            "want to hang out later",
+        ):
+            with self.subTest(message=message):
+                self.assertEqual(crowley.classify_conversation_mode(message), "casual")
 
     def test_casual_phrasings(self) -> None:
         for message in (
