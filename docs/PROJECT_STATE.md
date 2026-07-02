@@ -93,7 +93,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 |------------|--------|-----------|
 | Read context API | ✅ V3.7 | `GET /api/context` (+ `knowledge_files`, `canon`, `agent_activity`) |
 | Agent sync API | ✅ V3.8 | `GET /api/agent/sync?agent=cursor\|codex` (+ `agent_activity`) |
-| Memory search API | ✅ V3.7 | `GET /api/retrieve` |
+| Memory search API | ✅ V3.9.2 | `GET /api/retrieve` — includes per-result `explanation` (source, type, score, status, pinned, is_canon, provenance) |
 | Memory list API | ✅ V3.8 | `GET /api/memory-items` (filters + pagination) |
 | Handoff ingest API | ✅ V3.7 | `POST /api/ingest` |
 | Bus health API | ✅ V3.7 | `GET /api/bus/health` |

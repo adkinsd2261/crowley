@@ -3728,6 +3728,51 @@ def _load_active_memory_item(conn: sqlite3.Connection, memory_id: int) -> sqlite
     ).fetchone()
 
 
+def _is_canon_memory_row(row: sqlite3.Row) -> bool:
+    return (
+        str(row["status"]) == "active"
+        and str(row["source"]) == "crowley"
+        and int(row["pinned"]) == 1
+        and str(row["memory_type"]) == "summary"
+        and str(row["content"]).startswith("Canon:")
+    )
+
+
+def _memory_provenance_ids(row: sqlite3.Row) -> dict[str, int | None]:
+    provenance: dict[str, int | None] = {"memory_item_id": int(row["id"])}
+    for key in ("message_id", "decision_id", "merged_into_id", "legacy_memory_id"):
+        raw = row[key] if key in row.keys() else None
+        provenance[key] = int(raw) if raw is not None else None
+    return provenance
+
+
+def _available_provenance_ids(provenance: dict[str, int | None]) -> dict[str, int]:
+    return {key: value for key, value in provenance.items() if value is not None}
+
+
+def _build_retrieval_explanation(
+    row: sqlite3.Row,
+    *,
+    score: float,
+    score_breakdown: dict[str, float],
+    retrieval_mode: str,
+) -> dict[str, object]:
+    provenance = _memory_provenance_ids(row)
+    return {
+        "source": str(row["source"]),
+        "memory_type": str(row["memory_type"]),
+        "status": str(row["status"]),
+        "pinned": bool(int(row["pinned"])),
+        "is_canon": _is_canon_memory_row(row),
+        "score": score,
+        "score_breakdown": score_breakdown,
+        "retrieval_mode": retrieval_mode,
+        "provenance": provenance,
+        "provenance_available": _available_provenance_ids(provenance),
+    }
+
+
+
 def _score_memory_item(
     row: sqlite3.Row,
     *,
@@ -3772,7 +3817,9 @@ def retrieve_memories(
 ) -> list[dict[str, object]]:
     """
     Hybrid retrieval over memory_items.
-    Returns scored dicts with id, type, content, score, and score_breakdown.
+    Returns scored dicts with id, type, content, score, score_breakdown,
+    status, is_canon, provenance, and read-only explanation metadata.
+    Ranking behavior is unchanged; explanation fields are diagnostic only.
     """
     global _last_retrieval_mode
 
@@ -3845,6 +3892,7 @@ def retrieve_memories(
                     "pinned": bool(int(row["pinned"])),
                     "score": score,
                     "score_breakdown": breakdown,
+                    "_row": row,
                 }
             )
 
@@ -3861,6 +3909,25 @@ def retrieve_memories(
             _last_retrieval_mode = "vector+keyword"
         else:
             _last_retrieval_mode = "keyword-only fallback"
+
+        mode = _last_retrieval_mode
+        finalized: list[dict[str, object]] = []
+        for item in results:
+            row = item.pop("_row")  # type: ignore[misc]
+            assert isinstance(row, sqlite3.Row)
+            explanation = _build_retrieval_explanation(
+                row,
+                score=float(item["score"]),
+                score_breakdown=dict(item["score_breakdown"]),  # type: ignore[arg-type]
+                retrieval_mode=mode,
+            )
+            item["status"] = explanation["status"]
+            item["is_canon"] = explanation["is_canon"]
+            item["provenance"] = explanation["provenance"]
+            item["provenance_available"] = explanation["provenance_available"]
+            item["explanation"] = explanation
+            finalized.append(item)
+        results = finalized
 
         top = results[:limit]
         if top:
@@ -5183,9 +5250,11 @@ def _debug_retrieve(query: str) -> None:
         print("[debug] no memory_items matched")
         return
     for item in results:
+        explanation = item.get("explanation") or {}
         print(
             f"[debug] #{item['id']} {item['memory_type']} "
-            f"score={item['score']} pinned={item['pinned']}"
+            f"score={item['score']} pinned={item['pinned']} "
+            f"status={item.get('status')} is_canon={item.get('is_canon')}"
         )
         print(f"  content: {item['content']}")
         breakdown = item["score_breakdown"]
@@ -5203,6 +5272,9 @@ def _debug_retrieve(query: str) -> None:
             f"  source={item['source']} project_id={item['project_id']} "
             f"created_at={item['created_at']}"
         )
+        if isinstance(explanation, dict):
+            print(f"  retrieval_mode={explanation.get('retrieval_mode')}")
+            print(f"  provenance_available={explanation.get('provenance_available')}")
 
 
 def _debug_knowledge(query: str) -> None:
