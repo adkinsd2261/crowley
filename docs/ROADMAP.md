@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.6 shipped · V4 connectivity next · **2026-07-02**
+**As of:** V3.9.7 shipped · V4 connectivity next · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -64,15 +64,18 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     Pre-V4 quality V3.9.6 ✅
                                       │
                                       ▼
+                    V3.9.7 Experience & Reliability ✅
+                                      │
+                                      ▼
                     V4 connectivity  ◄── YOU ARE HERE
                                       │
                                       ▼
-                    Future pre-V4 gates (V3.9.7–V3.9.9)
+                    Future pre-V4 gates (V3.9.8–V3.9.9)
 ```
 
-**Shipped through V3.9.6:** … conversation/model behavior (#25–#30), workspace polish — panel states, streaming, navigation, what-changed feed, livability (#31–#36).
+**Shipped through V3.9.7:** … workspace polish (#31–#36); experience & reliability — drawer/chat polish, embed/CI hardening, module extraction, metrics, preflight (#40–#49).
 
-**Active initiative:** V4 connectivity — Codex plans architecture and mints tickets; Cursor implements when assigned. Pre-V4 quality plan complete — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V4 connectivity — Codex plans architecture and mints tickets; Cursor implements when assigned. Pre-V4 quality plan and V3.9.7 experience batch complete — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md), [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md), and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -174,17 +177,17 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 | Item | Rationale | Complexity | Status |
 |------|-----------|------------|--------|
-| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**147** tests) |
+| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**157** tests; core deps) |
 | V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
 | V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
 | V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | ✅ Shipped on `main` (#19–#23) |
 | V3.9.5 Conversation + Model Behavior | Make Crowley pleasant and mode-aware for daily project work | Medium | ✅ Shipped on `main` (#25–#30) |
 | V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | ✅ Shipped on `main` (#31–#36) |
 | Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
+| V3.9.7 Workspace Experience & Reliability | UI catches up to backend depth; boring boot | Medium | ✅ Shipped on `main` (#40–#49) |
 | V4 connectivity | External collectors and integrations | High | **Next** — Codex plans, Cursor implements |
-| V3.9.7 Memory Freshness + Truth Maintenance | Keep state, loops, canon, and recency aligned | Medium | Future planning reserve |
 | V3.9.8 Work Intelligence | Make Crowley reason over the work board and shipped timeline | Medium | Future planning reserve |
-| V3.9.9 Operator Confidence / Preflight | Health, doc-lock, test, and V4 readiness checks | Medium | Future planning reserve |
+| V3.9.9 Operator Confidence / Preflight extensions | Extended readiness checks beyond V3.9.7 preflight | Medium | Future planning reserve |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
 | Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
@@ -231,11 +234,11 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
 | Debt | Impact | Suggested fix |
 |------|--------|---------------|
-| Monolithic `crowley.py` (~4000 LOC) | Navigation at scale | Module split when second contributor |
+| Monolithic `crowley.py` (~5600 LOC) | Navigation at scale | Partial — `diagnostics.py` + `tickets.py` extracted (V3.9.7) |
 | No migration version table | Schema changes risky | `schema_version` + incremental migrations |
 | Legacy `/api/sparks` | Confusing vs `memory_items` | Deprecate or redirect to summaries |
 | Silent extraction failures | Stale world model | Audit log or `/debug extract-log` |
-| `chromadb` unused | Install bloat | Remove from requirements |
+| `chromadb` unused | Install bloat | Optional via `requirements-ml.txt` only |
 | `tasks.project` free text | Inconsistent with `projects` | Normalize or document as alias |
 
 ---
@@ -254,9 +257,9 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.4** | Agent Visibility | ✅ Agent feed, ticket detail/history, work-board clarity, V4 doc lock |
 | **V3.9.5** | Conversation + Model Behavior | ✅ Mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
-| **V3.9.7** | Memory Freshness + Truth Maintenance | Planning reserve; no tickets yet |
+| **V3.9.7** | Experience & Reliability | ✅ UI polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics, preflight |
 | **V3.9.8** | Work Intelligence | Planning reserve; no tickets yet |
-| **V3.9.9** | Operator Confidence / Preflight | Planning reserve; no tickets yet |
+| **V3.9.9** | Operator Confidence extensions | Planning reserve; no tickets yet |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
 
 ---

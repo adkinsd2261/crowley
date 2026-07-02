@@ -1,7 +1,7 @@
 # Crowley Future Pre-V4 Release Ladder
 
 **Status:** Planning reserve — do not mint tickets until V4 connectivity is underway or re-scoped.
-**Baseline:** V3.9.6 shipped; Pre-V4 quality plan complete.
+**Baseline:** V3.9.7 shipped; Pre-V4 quality plan and experience batch complete.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
 ---
@@ -25,28 +25,18 @@ The target state before V4:
 |---------|-------|--------|
 | V3.9.5 | Conversation + Model Behavior | Shipped (#25–#30) |
 | V3.9.6 | Workspace Polish | Shipped (#31–#36) |
+| V3.9.7 | Workspace Experience & Reliability | Shipped (#40–#49) |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-V4 connectivity is the active initiative. Later V3.9.7–V3.9.9 releases remain planning reserve.
+V4 connectivity is the active initiative. V3.9.8–V3.9.9 remain planning reserve.
 
 ---
 
 ## 3. Likely future versions
 
-### V3.9.7 -- Memory Freshness + Truth Maintenance
+### V3.9.7 — Workspace Experience & Reliability (shipped)
 
-**Goal:** make Crowley stay current without constant babysitting.
-
-Likely focus:
-
-- Project state freshness.
-- Stale open-loop cleanup.
-- Better extraction-guard behavior for planned versus shipped version mentions.
-- Canon re-synthesis cadence after major releases.
-- Recency rules for "what changed?" and "where are we?"
-- Memory hygiene review workflow that remains non-destructive by default.
-
-Done when Crowley stops answering from old state when newer tickets, docs, or agent activity exist.
+Shipped as experience + reliability dual track — see [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md). Original "Memory Freshness" theme deferred to a future gate if needed.
 
 ### V3.9.8 -- Work Intelligence
 

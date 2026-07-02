@@ -120,7 +120,7 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **140 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
+- **157 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); CI uses `requirements-core.txt` with embed off
 - Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -134,7 +134,7 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 quality plan complete (V3.9.5 + V3.9.6). See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
+Pre-V4 quality plan complete (V3.9.5 + V3.9.6). **V3.9.7 Experience & Reliability shipped** (#40–#49). See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
@@ -143,6 +143,7 @@ Pre-V4 quality plan complete (V3.9.5 + V3.9.6). See [PRE_V4_QUALITY_PLAN.md](./P
 | **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
 | **V3.9.5 Conversation + Model Behavior** | Shipped on `main` | Tickets `#25–#30` |
 | **V3.9.6 Workspace Polish** | Shipped on `main` | Tickets `#31–#36` |
+| **V3.9.7 Experience & Reliability** | Shipped on `main` | Tickets `#40–#49` |
 | **Pre-V4 QA Hygiene** | Shipped on `main` | Ticket `#37` |
 
 **V4 connectivity** is the next initiative — Codex plans; Cursor implements when tickets are minted.
@@ -153,10 +154,14 @@ Pre-V4 quality plan complete (V3.9.5 + V3.9.6). See [PRE_V4_QUALITY_PLAN.md](./P
 
 | Path | Role |
 |------|------|
-| `crowley.py` | Engine |
+| `crowley.py` | Engine (core) |
+| `diagnostics.py` | Diagnostics domain |
+| `tickets.py` | Ticketing domain |
 | `app.py` | HTTP transport |
-| `.github/workflows/tests.yml` | CI regression gate |
-| `docs/PRE_V4_QUALITY_PLAN.md` | Active V3.9.5/V3.9.6 quality plan |
+| `.github/workflows/tests.yml` | CI regression gate (core deps) |
+| `scripts/preflight.py` | Release preflight |
+| `docs/V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md` | V3.9.7 release spec |
+| `docs/PRE_V4_QUALITY_PLAN.md` | Completed V3.9.5/V3.9.6 quality plan |
 | `docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md` | V3.9.5 release spec |
 | `docs/V3.9.6_WORKSPACE_POLISH.md` | V3.9.6 release spec |
 | `docs/V3.9.4_AGENT_VISIBILITY.md` | V3.9.4 spec + V4 readiness gate |

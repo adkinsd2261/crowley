@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.6 shipped · V4 connectivity next (2026-07-02)
+**As of:** V3.9.7 shipped · V4 connectivity next (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative
 
-**Active:** V4 connectivity planning. Pre-V4 quality plan (V3.9.5 + V3.9.6) is complete. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
+**Active:** V4 connectivity planning. Pre-V4 quality plan (V3.9.5 + V3.9.6) and V3.9.7 experience & reliability batch (#40–#49) are complete. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md).
 
 | Ticket theme | Status |
 |--------------|--------|
@@ -17,10 +17,11 @@
 | V3.9.5 Conversation + Model Behavior (#25–#30) | Shipped on `main` |
 | V3.9.6 Workspace Polish (#31–#36) | Shipped on `main` |
 | Pre-V4 QA hygiene (#37) | Shipped on `main` |
+| V3.9.7 Experience & Reliability (#40–#49) | Shipped on `main` |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
-Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`, `#25-#30`, `#31-#36`, `#37`; no active V3.9.6 implementation tickets remain.
+Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`, `#25-#30`, `#31-#36`, `#37`, `#40-#49`; no active V3.9.7 implementation tickets remain.
 
 ---
 
@@ -39,6 +40,7 @@ Resolved: test DB isolation (#13, shipped).
 ## Completed (recent)
 
 - **V3.9.5 Conversation + Model Behavior** — mode classifier (#25), depth (#26), personality (#27), diagnostics separation (#28), fixtures (#29), chat UX (#30)
+- **V3.9.7 Experience & Reliability** — drawer polish (#40), chat readability (#41), embed fallback (#42), CI slim deps (#43), cohesion (#44), work surfaces (#45), diagnostics module (#46), tickets module (#47), metrics (#48), preflight lock (#49)
 - **V3.9.6 Workspace Polish** — panel states (#31), streaming (#32), navigation (#33), what-changed feed (#34), livability (#35), docs lock (#36)
 - **V3.9.4 Agent Visibility** — Agent Feed (#19), ticket detail (#20), handoff links (#21), work-board clarity (#22), V4 doc lock (#23)
 - **V3.9.3 Planning Workflow** — packet template/validation, parent initiatives, cancel path (#14–#18)

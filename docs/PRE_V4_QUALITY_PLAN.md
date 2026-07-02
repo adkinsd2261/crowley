@@ -1,7 +1,7 @@
 # Crowley V3.9.5 + V3.9.6 -- Pre-V4 Quality Plan
 
-**Status:** Complete — V3.9.5 + V3.9.6 shipped (2026-07-02)
-**Baseline:** V3.9.6 (`Crowley V3.9.6 Workspace Polish`)
+**Status:** Complete — V3.9.5 + V3.9.6 shipped (2026-07-02); followed by **V3.9.7 Experience & Reliability** (#40–#49)
+**Baseline:** V3.9.7 (`Crowley V3.9.7 Workspace Experience & Reliability`)
 **Owner model:** Mr. Go sets intent; Codex plans and reviews; Cursor implements; Crowley stores truth.
 
 ---

@@ -18,6 +18,32 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-036 — V3.9.7 Workspace Experience & Reliability shipped
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.7`, `diagnostics.py`, `tickets.py`, `docs/V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md`, tickets `#40–#49`, **157 tests**, `scripts/preflight.py`, `/api/health` embed flags
+
+### Context
+
+External review: backend depth outran daily UX. V3.9.6 established the right direction; V3.9.7 closes the experience gap while hardening startup and CI underneath.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.7"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.7 Workspace Experience & Reliability"`
+- Ship experience polish (drawer, chat readability, cohesion, work surfaces) and reliability (embed fallback, CI slim deps)
+- Extract first monolith slices: `diagnostics.py`, `tickets.py`
+- Add operator metrics foundation and `scripts/preflight.py`
+- Pause V4 connectivity until Mr. Go browser QA approves polished workspace
+
+### Rejected
+
+- Deferring UI polish behind monolith extraction
+- Requiring Torch/sentence-transformers for CI or test runs
+- New chat personality or backend features in this release
+
+---
+
 ## ADR-035 — V3.9.6 Workspace Polish shipped (Pre-V4 quality plan complete)
 
 **Date:** 2026-07-02

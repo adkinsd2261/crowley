@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.6"` (`Crowley V3.9.6 Workspace Polish`)
+**Code version:** `CROWLEY_VERSION = "3.9.7"` (`Crowley V3.9.7 Workspace Experience & Reliability`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -25,6 +25,7 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 12. **Agent parity (V3.8.1)** — `agent_activity` in context/sync bundles; stop hook; activity-based verify.
 13. **Concurrent ticketing (V3.9)** — `tickets` board, sync mint/claim/close/cancel.
 14. **Pre-V4 quality (2026-07)** — V3.9.5 conversation/model behavior **shipped** (#25–#30); V3.9.6 workspace polish **shipped** (#31–#36).
+15. **V3.9.7 Experience & Reliability (2026-07)** — UI polish catch-up, embed/CI hardening, `diagnostics.py` + `tickets.py` extraction, operator metrics, preflight (#40–#49).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
 
@@ -34,10 +35,14 @@ Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet)
 
 | Path | Role |
 |------|------|
-| `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~6000 lines) |
+| `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~5600 lines) |
+| `diagnostics.py` | Diagnostics domain — gather, prompt, stream tokens (re-exported by engine) |
+| `tickets.py` | Ticketing domain — CRUD, summaries, changes feed (re-exported by engine) |
 | `app.py` | Web transport — FastAPI routes, SSE; no business logic |
-| `static/` | Browser workspace UI (V3.5) |
-| `requirements.txt` | Runtime dependencies |
+| `static/` | Browser workspace UI (V3.5+) |
+| `requirements-core.txt` | Core runtime deps (CI + slim installs) |
+| `requirements-ml.txt` | Optional ML stack (embeddings, sqlite-vec) |
+| `requirements.txt` | Full install (`-r` core + ml) |
 | `crowley.db` | SQLite database (gitignored) |
 | `.env` | Optional `OPENAI_API_KEY` (gitignored) |
 | `docs/` | Engineering documentation |
@@ -97,6 +102,8 @@ Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet)
 | **Memory** | Items, retrieval, sparks | `save_memory_item`, `retrieve_memories`, `save_memory` |
 | **Memory bus** | External read/write | `retrieve_memories_api`, `ingest_handoff` |
 | **World model** | Projects, state | `get_active_world_context`, `apply_state_proposals` |
+| **Diagnostics** | Read-only briefings | `diagnostics.py`: `gather_diagnostics_context`, `iter_diagnostics_tokens` |
+| **Ticketing** | Agent work board | `tickets.py`: `create_ticket`, `build_tickets_summary`, `build_recent_changes_feed` |
 | **Persistence** | SQLite | `connect_db`, `setup_db` |
 
 ---
@@ -144,7 +151,7 @@ Additive only. External `source` values (`cursor`, `chatgpt`, etc.) stored on `m
 
 ### 5.6 Diagnostics
 
-SQL-only `gather_diagnostics_context()` → format prompt → `call_model`. Zero writes.
+`diagnostics.py`: SQL-only `gather_diagnostics_context()` → format prompt → `iter_diagnostics_tokens()`. Zero writes. Re-exported from `crowley.py` for CLI and `/api/diagnostics`.
 
 ---
 
@@ -162,6 +169,7 @@ SQL-only `gather_diagnostics_context()` → format prompt → `call_model`. Zero
 Hybrid scoring: semantic (embedding cosine) + keyword + recency + importance + type inference + project match + pinned bonus.
 
 - Embeddings: OpenAI `text-embedding-3-small` or local `all-MiniLM-L6-v2` @ 384d
+- Provider gate: `CROWLEY_EMBED_PROVIDER` env (`off` | `auto` | `local` | `openai`); lazy backfill on retrieve (not at startup)
 - Index: sqlite-vec `memory_vec` when loadable; else blob cosine; else keyword-only
 
 `search_memories()` (bag-of-words) retained for legacy/debug.
@@ -220,13 +228,13 @@ See [PROJECT_STATE.md](./PROJECT_STATE.md#5-web-api-routes-apppy) for full route
 ## 12. Dependency graph (runtime)
 
 ```
-crowley.py
+crowley.py (+ diagnostics.py, tickets.py)
 ├── ollama
 ├── openai (lazy)
-├── sentence_transformers (lazy, local embed)
+├── sentence_transformers (lazy, local embed — optional via requirements-ml.txt)
 ├── sqlite_vec (optional)
 ├── fastapi / uvicorn (via app.py only)
-└── NOT USED: chromadb
+└── NOT USED at runtime: chromadb (listed in requirements-ml.txt only)
 ```
 
 ---
@@ -235,8 +243,8 @@ crowley.py
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.6"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.6 Workspace Polish"` |
+| `CROWLEY_VERSION` | `"3.9.7"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.7 Workspace Experience & Reliability"` |
 
 ---
 
@@ -273,3 +281,4 @@ crowley.py
 | `POST /api/tickets/{id}/done` | Close ticket | ✅ V3.9 |
 | `POST /api/tickets/{id}/cancel` | Cancel superseded ticket | ✅ V3.9.3 |
 | `GET /api/memory/hygiene` | Memory hygiene report | ✅ V3.9.2 |
+| `GET /api/metrics/summary` | 24h operator metrics rollups | ✅ V3.9.7 |

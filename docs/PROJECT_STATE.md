@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9.6 · Pre-V4 quality plan complete
+**As of:** V3.9.7 · Workspace Experience & Reliability shipped
 **Planning:** V4 connectivity — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) · completed quality arc — [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
-**Last doc sync:** 2026-07-02 (V3.9.6 shipped; Pre-V4 quality plan complete)
+**Last doc sync:** 2026-07-02 (V3.9.7 shipped; experience + reliability batch complete)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -33,6 +33,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **V3.9.4 shipped on `main`** — Agent Feed, ticket detail, handoff↔ticket links, work-board clarity, V4 onboarding lock
 - **V3.9.5 shipped on `main`** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30)
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
+- **V3.9.7 shipped on `main`** — drawer/chat polish, embed fallback, CI slim deps, `diagnostics.py`/`tickets.py` extraction, operator metrics, preflight (#40–#49)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -43,7 +44,9 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 
 | File | Status | Purpose |
 |------|--------|---------|
-| `crowley.py` | **Active** | Engine — CLI + all business logic |
+| `crowley.py` | **Active** | Engine — CLI + core business logic (~5600 lines) |
+| `diagnostics.py` | **Active** | Diagnostics domain (extracted V3.9.7) |
+| `tickets.py` | **Active** | Ticketing domain (extracted V3.9.7) |
 | `app.py` | **Active** | Web transport (FastAPI, SSE, context bridge routes) |
 | `static/` | **Active** | Workspace UI (HTML, CSS, JS) |
 | `scripts/ingest_inbox.py` | **Active** | Ingest `.crowley/inbox/` handoffs |
@@ -52,6 +55,8 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `scripts/cursor_sync.py` | **Active** | Cursor before/after/note/session hooks (V3.8.1) |
 | `scripts/agent_sync_lib.py` | **Active** | Shared sync + ticket API helpers (V3.8.1–V3.9) |
 | `scripts/ensure_crowley_bus.sh` | **Active** | Auto-start bus on 8765 (V3.8) |
+| `scripts/preflight.py` | **Active** | Release preflight — version, DB, health, optional quick tests (V3.9.7) |
+| `scripts/backfill_embeddings.py` | **Active** | Optional manual embedding backfill (V3.9.7) |
 | `scripts/lock_in_state.py` | **Active** | State lock-in: canon seed, loop hygiene, tickets (V3.9+) |
 | `scripts/sync_backlog.py` | **Active** | Dedupe tasks, seed open loops |
 | `scripts/finalize_live_ui_backlog.py` | **Active** | Close completed Live UI loops |
@@ -62,9 +67,11 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**147**; isolated DB; gated by GitHub Actions on `main`) |
-| `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
-| `requirements.txt` | **Active** | Dependencies |
+| `tests/` | **Active** | QA unit tests (**157**; isolated DB; gated by GitHub Actions on `main`) |
+| `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
+| `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
+| `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
+| `requirements.txt` | **Active** | Full install (`-r` core + ml) |
 | `VERSIONS.md` | **Active** | Release log |
 | `docs/TICKETS.md` | **Active** | Human-readable backlog mirror |
 | `crowley.db` | **Runtime** | Created by `setup_db()` |
@@ -90,6 +97,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.4 | Agent Visibility | Pre-V4 ladder complete; Agent Feed, ticket detail, handoff links, V4 doc lock |
 | V3.9.5 | Conversation + Model Behavior | Mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6 | Workspace Polish | Panel states, streaming, navigation, what-changed feed, livability, docs lock |
+| V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 
@@ -115,9 +123,12 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.1 | [adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `.github/workflows/tests.yml` |
+| Git + CI | ✅ V3.9.1 / V3.9.7 | GitHub Actions — core deps only; **157** tests with embed off |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
 | Canon synthesis | ✅ V3.9.2 | `scripts/synthesize_canon.py` — manual workflow; first run complete — see `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` |
+| Embed provider gate | ✅ V3.9.7 | `CROWLEY_EMBED_PROVIDER` env; lazy backfill; health flags |
+| Operator metrics | ✅ V3.9.7 | `system_metrics` table, `GET /api/metrics/summary`, Project tab 24h rollups |
+| Release preflight | ✅ V3.9.7 | `scripts/preflight.py` — version, DB, health, quick test mode |
 | Hybrid memory | ✅ V3.6 | `retrieve_memories()` |
 | Knowledge files | ✅ V3.7.2 | `load_knowledge_files_context()` |
 | Live UI dashboard | ✅ V3.7.2 | `GET /api/world` → `build_world_dashboard()` |
@@ -133,7 +144,8 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 
 | Method | Path | Role |
 |--------|------|------|
-| GET | `/api/health` | Version, brain, DB |
+| GET | `/api/health` | Version, brain, DB, embed_provider, sqlite_vec |
+| GET | `/api/metrics/summary` | 24h operator metrics rollups (V3.9.7) |
 | GET | `/api/context` | World + memory + knowledge files + canon bundle |
 | GET | `/api/agent/sync` | Per-agent sync bundle (V3.8) |
 | GET | `/api/retrieve` | Hybrid memory search |
@@ -172,7 +184,7 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**90** tests) |
+| CI pipeline | ✅ V3.9.7 | GitHub Actions — `requirements-core.txt`; **157** tests with embed off |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |
@@ -221,6 +233,7 @@ curl http://127.0.0.1:8765/api/bus/health
 - [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md)
 - [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
 - [V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
+- [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md)
 - [V3.9.6_WORKSPACE_POLISH.md](./V3.9.6_WORKSPACE_POLISH.md)
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
