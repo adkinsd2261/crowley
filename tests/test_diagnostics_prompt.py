@@ -37,7 +37,22 @@ class DiagnosticsPromptTests(unittest.TestCase):
         self.assertIn("GROUND TRUTH CONTEXT:", system)
         self.assertIn("Current Project", system)
         self.assertIn("System Health", system)
-        self.assertIn("No flourish", system)
+        self.assertIn("no greeting", system.lower())
+
+    def test_diagnostics_forbids_greeting_signoff_and_chat_openers(self) -> None:
+        system = self._diagnostics_system()
+        for fragment in (
+            'Do not write salutations such as "Good morning"',
+            "no greeting, sign-off, preamble, or conversational opener",
+            "Do not use co-founder phrasing",
+            "report-like, not conversational",
+            "never as a salutation",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, system)
+        sections = system.split("each line is a section heading):", 1)[-1].split("For System Health", 1)[0]
+        self.assertNotIn("Good morning", sections)
+        self.assertTrue(sections.strip().startswith("Current Project"))
 
     def test_diagnostics_excludes_chat_mode_depth_and_personality(self) -> None:
         system = self._diagnostics_system()
@@ -65,7 +80,7 @@ class DiagnosticsPromptTests(unittest.TestCase):
         self.assertEqual(len(messages), 2)
         self.assertEqual(messages[0]["role"], "system")
         self.assertEqual(messages[1]["role"], "user")
-        self.assertEqual(messages[1]["content"], "Produce the diagnostic briefing now.")
+        self.assertEqual(messages[1]["content"], "Produce the diagnostic briefing now. Begin with the Current Project heading — no greeting or conversational opener.")
 
 
 if __name__ == "__main__":

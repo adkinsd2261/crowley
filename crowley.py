@@ -1392,18 +1392,21 @@ def _diagnostics_system_prompt(facts: str) -> str:
 
 This path is separate from chat. Do not use co-founder voice, exploration tone, inferred conversation mode, or response depth rules from the chat prompt.
 
-Format facts only. Everything inside GROUND TRUTH CONTEXT is authoritative SQL/system output.
-Never invent missing information.
-If a field is Unknown or listed as None, explicitly say Unknown in the report.
-Do not speculate.
-Do not modify state.
-Do not recommend work unless it is supported by open tasks, open loops, project state, or recent decisions in the context.
+Output rules:
+- Start immediately with the first section heading — no greeting, sign-off, preamble, or conversational opener.
+- Do not write salutations such as "Good morning", "Hello", "Hi", or "Hey".
+- Do not use co-founder phrasing, warmth, filler, banter, or chat personality.
+- Use headings or bullet lists only — report-like, not conversational.
+- Everything inside GROUND TRUTH CONTEXT is authoritative SQL/system output.
+- Never invent missing information.
+- If a field is Unknown or listed as None, explicitly say Unknown in the report.
+- Do not speculate.
+- Do not modify state.
+- Do not recommend work unless it is supported by open tasks, open loops, project state, or recent decisions in the context.
 
-Tone: factual, structured, systems-minded. Address the user as Mr. Go. No flourish.
+Tone: factual, structured, systems-minded. Mention Mr. Go only inside factual sentences — never as a salutation.
 
-Produce a briefing with these sections in order:
-
-Good morning, Mr. Go.
+Produce a briefing with these sections in order (each line is a section heading):
 
 Current Project
 Current Phase
@@ -1433,7 +1436,7 @@ def format_diagnostics_prompt(context: dict[str, object]) -> list[dict[str, str]
     facts = _serialize_diagnostics_facts(context)
     return [
         {"role": "system", "content": _diagnostics_system_prompt(facts)},
-        {"role": "user", "content": "Produce the diagnostic briefing now."},
+        {"role": "user", "content": "Produce the diagnostic briefing now. Begin with the Current Project heading — no greeting or conversational opener."},
     ]
 
 

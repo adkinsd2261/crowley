@@ -79,11 +79,14 @@
       "diagnostics_contains": [
         "read-only operating-system diagnostic report",
         "authoritative SQL/system output",
-        "GROUND TRUTH CONTEXT:"
+        "GROUND TRUTH CONTEXT:",
+        "no greeting, sign-off, preamble, or conversational opener",
+        "Do not use co-founder phrasing"
       ],
       "diagnostics_excludes": [
         "project co-founder",
-        "Honor the inferred Response depth"
+        "Honor the inferred Response depth",
+        "Good morning, Mr. Go."
       ]
     }
   ]
