@@ -193,13 +193,32 @@ function updateLiveSyncLabel(syncedAt) {
   }
 }
 
-function updateTabBadges(counts = {}) {
+function changesItemsForDashboard(data = {}) {
+  if (Array.isArray(data.recent_changes) && data.recent_changes.length) {
+    return data.recent_changes;
+  }
+  const recent = data.agent_activity?.recent;
+  if (!Array.isArray(recent)) return [];
+  return recent.map((event) => ({
+    kind: "handoff",
+    id: `agent_fallback:${event.id ?? event.created_at ?? ""}`,
+    created_at: event.created_at,
+    source: event.source,
+    memory_type: event.memory_type,
+    summary: event.summary,
+    next_action: event.next_action,
+    linked_ticket_ids: event.linked_ticket_ids,
+  }));
+}
+
+function updateTabBadges(counts = {}, data = {}) {
+  const fallbackChanges = counts.recent_changes || changesItemsForDashboard(data).length;
   const map = {
     tickets: counts.tickets_open_total || counts.tickets_open || 0,
     tasks: counts.tasks_open || 0,
     loops: counts.loops_open || 0,
     decisions: counts.decisions || 0,
-    changes: counts.recent_changes || 0,
+    changes: fallbackChanges,
     agent_feed: counts.agent_feed || 0,
     memory: counts.memory || 0,
   };
@@ -324,7 +343,7 @@ function itemsForTab(data, tab) {
     case "decisions":
       return data.decisions || [];
     case "changes":
-      return data.recent_changes || [];
+      return changesItemsForDashboard(data);
     case "agent_feed":
       return (data.agent_activity && data.agent_activity.recent) || [];
     case "memory":
@@ -1298,7 +1317,7 @@ function renderDashboard(data, { animate = false } = {}) {
   if (shouldFlash) flashLiveUpdate();
 
   updateLiveSyncLabel(data.synced_at);
-  updateTabBadges(data.counts || {});
+  updateTabBadges(data.counts || {}, data);
 
   if (!data.project) {
     worldProjectEl.textContent = "No active project";
@@ -1376,7 +1395,7 @@ function renderDashboard(data, { animate = false } = {}) {
 
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
   renderAgentFeedPanel(agentEvents);
-  renderChangesPanel(data.recent_changes || []);
+  renderChangesPanel(changesItemsForDashboard(data));
 
   const memoryItems = [...(data.memory_items || [])].reverse();
   renderMemoryItems(memoryItems);

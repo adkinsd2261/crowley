@@ -77,6 +77,9 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn('id="panel-changes"', html)
         self.assertIn("renderChangesPanel", js)
         self.assertIn("recent_changes", js)
+        self.assertIn("changesItemsForDashboard", js)
+        self.assertIn("agent_fallback:", js)
+        self.assertIn("updateTabBadges(data.counts || {}, data)", js)
         self.assertIn("changes:", js)
         for token in (".change-row", ".change-kind-handoff", ".change-kind-ticket"):
             self.assertIn(token, css)
