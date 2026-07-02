@@ -27,6 +27,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **Multi-agent hub** (V3.8) — Codex/Cursor sync scripts, `/api/agent/sync`, Crowley-only messaging
 - **Agent parity** (V3.8.1) — `agent_activity` in all bundles, stop hook, shared verify lib
 - **V3.9 shipped** — concurrent ticketing (`tickets` table, `/api/tickets`, agent mint/claim/close)
+- **Pre-V4 plan approved** — V3.9.2 Memory Clarity, V3.9.3 Planning Workflow, V3.9.4 Agent Visibility before V4 connectivity
 - **V3.9.1 shipped** — GitHub repo on `main`, GitHub Actions CI, documentation sweep
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
@@ -103,7 +104,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Concurrent tickets | ✅ V3.9 | `tickets` table, `/api/tickets`, mint/claim/close via sync scripts |
 | Git + CI | ✅ V3.9.1 | [adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `.github/workflows/tests.yml` |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
-| Canon synthesis | ✅ V3.8 | `scripts/synthesize_canon.py` (manual `--write`) |
+| Canon synthesis | ✅ V3.9.2 | `scripts/synthesize_canon.py` — manual workflow; first run complete — see `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` |
 | Hybrid memory | ✅ V3.6 | `retrieve_memories()` |
 | Knowledge files | ✅ V3.7.2 | `load_knowledge_files_context()` |
 | Live UI dashboard | ✅ V3.7.2 | `GET /api/world` → `build_world_dashboard()` |
@@ -145,7 +146,7 @@ Bind: `127.0.0.1:8765`.
 
 | Item | Detail |
 |------|--------|
-| No canon rows yet | Run `scripts/synthesize_canon.py --write` when ready |
+| Canon re-synthesis | Manual — follow `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` after major releases |
 | Git baseline | [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley) on `main`; handoffs use `--from-git` |
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
@@ -186,8 +187,10 @@ curl http://127.0.0.1:8765/api/bus/health
 ./venv/bin/python3 scripts/crowley_handoff.py --source cursor --type builder_handoff --from-git
 ./venv/bin/python3 scripts/ingest_inbox.py
 
-# Canon synthesis
+# Canon synthesis (see docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
 ./venv/bin/python3 scripts/synthesize_canon.py --show-packet
+./venv/bin/python3 scripts/synthesize_canon.py              # dry-run
+./venv/bin/python3 scripts/synthesize_canon.py --write      # after validation passes
 ```
 
 ---

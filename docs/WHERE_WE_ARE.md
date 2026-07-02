@@ -34,6 +34,7 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | V3.8.1 | Agent parity — `agent_activity`, stop hook, shared verify |
 | V3.9 | Concurrent ticketing — `tickets` table, `/api/tickets`, mint/claim/close |
 | **V3.9.1** | **Repository & CI** — GitHub `main`, Actions test gate, doc sweep |
+| **V3.9.2–V3.9.4** | **Planned** — Memory Clarity, Planning Workflow, Agent Visibility |
 
 **Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`
 
@@ -49,11 +50,15 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | Agent activity | `last_by_source` on `/api/agent/sync` | When did Codex/Cursor last post |
 | Tickets | `/api/tickets`, sync bundle `tickets` | What work is open, assigned, blocked |
 | project_state | SQLite `project_state` | Phase, focus, risk, next_action (may lag docs slightly) |
-| Canon | Pinned `Canon:` rows in `memory_items` | Always-on continuity (after lock-in) |
+| Canon | Pinned `Canon:` rows in `memory_items` | Always-on continuity — **below** filesystem/project_state, **above** hybrid retrieval |
 | Handoffs | `.crowley/processed/*`, `memory_items` events | Session-by-session builder/architect log |
-| Hybrid retrieval | `/api/retrieve` | Supporting context only — lower authority |
+| Hybrid retrieval | `/api/retrieve` | Supporting context only — lowest authority |
 
-**Authoritative order for facts:** filesystem → tickets → agent_activity → project_state → canon → retrieval.
+**Authoritative order for facts:** filesystem → tickets → agent_activity → project_state → **canon** → retrieval.
+
+**Prompt injection order:** filesystem/knowledge files → **canon** → hybrid retrieval → chat.
+
+Operator workflow: [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
 
 ---
 
@@ -101,7 +106,7 @@ Hooks run `--before` automatically. After shipping:
 
 **Known gaps (honest):**
 
-- Canon synthesis still manual (`scripts/synthesize_canon.py --write`)
+- Canon synthesis is manual-first — first production run complete; re-run via [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
 - Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board)
 - Agent feed UI tab deferred (API exists)
 - Some `open_loops` may be stale until backlog hygiene runs
@@ -109,15 +114,17 @@ Hooks run `--before` automatically. After shipping:
 
 ---
 
-## 6. Where we are heading (pick one next)
+## 6. Where we are heading
+
+Pre-V4 work is now planned as a three-release ladder. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
-| **First canon synthesis** | Codex plans, manual `--write` | `scripts/synthesize_canon.py` |
-| **Agent feed UI tab** | Cursor builds | API exists; dedicated tab deferred from V3.8 |
-| **V4 connectivity** | Codex plans | Git collector, multi-project commands |
+| **V3.9.2 Memory Clarity** | Cursor builds from Codex tickets | Canon, retrieval explanations, hierarchy, hygiene, test isolation |
+| **V3.9.3 Planning Workflow** | Cursor builds from Codex tickets | Planning packets, validation, parent initiatives, cleanup |
+| **V3.9.4 Agent Visibility** | Cursor builds from Codex tickets | Agent feed, ticket detail/history, V4 readiness docs |
 
-Codex should **mint tickets** for the chosen initiative; Cursor fills by ticket ID.
+V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
 
 ---
 
@@ -129,6 +136,7 @@ Codex should **mint tickets** for the chosen initiative; Cursor fills by ticket 
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate |
 | `docs/V3.9.1_REPOSITORY_AND_CI.md` | V3.9.1 spec |
+| `docs/PRE_V4_RELEASE_PLAN.md` | Approved pre-V4 release ladder |
 | `docs/V3.9_CONCURRENT_TICKETING.md` | V3.9 spec |
 | `docs/V3.8_MEMORY_TRAIL.md` | Memory trail spec |
 | `CODEX.md` / `CURSOR.md` | Agent rituals |

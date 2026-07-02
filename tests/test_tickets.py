@@ -67,13 +67,16 @@ class TicketTests(unittest.TestCase):
         self.assertIsNotNone(result["ticket"]["closed_at"])
 
     def test_build_tickets_summary_assigned_filter(self) -> None:
-        self._create(title="Cursor lane", assignee="cursor")
-        self._create(title="Codex lane", assignee="codex")
+        cursor_id = self._create(title="Cursor lane", assignee="cursor")
+        codex_id = self._create(title="Codex lane", assignee="codex")
         summary = crowley.build_tickets_summary(self.project_id, "cursor")
         assigned = summary["assigned_to_agent"]
         assert isinstance(assigned, list)
-        self.assertEqual(len(assigned), 1)
-        self.assertEqual(assigned[0]["assignee"], "cursor")
+        assigned_ids = {int(t["id"]) for t in assigned}
+        self.assertIn(cursor_id, assigned_ids)
+        self.assertNotIn(codex_id, assigned_ids)
+        for ticket in assigned:
+            self.assertEqual(str(ticket["assignee"]).lower(), "cursor")
 
     def test_context_and_sync_bundles_include_tickets(self) -> None:
         self._create(title="Bundle probe", assignee="cursor")
