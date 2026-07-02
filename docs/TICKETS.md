@@ -1,19 +1,19 @@
 # Crowley — Backlog & Tickets
 
-**As of:** Pre-V4 ladder in progress (2026-07-02)
+**As of:** V3.9.4 · Pre-V4 ladder complete (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative
 
-**Pre-V4 release ladder approved.** See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). The source of truth for current implementation work is the `tickets` table.
+**Pre-V4 release ladder complete.** V4 connectivity is the next theme — Codex plans; Cursor implements when minted. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) and [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md).
 
 | Ticket theme | Status |
 |--------------|--------|
 | V3.9.2 Memory Clarity (#9–#13) | Shipped on `main` |
 | V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
-| V3.9.4 Agent Visibility (#19–#23) | In progress — #19–#22 shipped; #23 open |
+| V3.9.4 Agent Visibility (#19–#23) | Shipped on `main` |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
@@ -35,7 +35,7 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
-- **V3.9.4 partial** — Agent Feed (#19), ticket detail (#20), handoff links (#21), work-board clarity (#22)
+- **V3.9.4 Agent Visibility** — Agent Feed (#19), ticket detail (#20), handoff links (#21), work-board clarity (#22), V4 doc lock (#23)
 - **V3.9.3 Planning Workflow** — packet template/validation, parent initiatives, cancel path (#14–#18)
 - **V3.9.2 Memory Clarity** — canon workflow, retrieval explanations, hierarchy, hygiene, test isolation (#9–#13)
 - **V3.9.1 Repository & CI** — GitHub remote, `.github/workflows/tests.yml`, doc sweep

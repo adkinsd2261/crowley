@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.1"` (Pre-V4 features shipping on `main` under this constant)
+**Code version:** `CROWLEY_VERSION = "3.9.4"` (`Crowley V3.9.4 Agent Visibility`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -24,7 +24,7 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 11. **Multi-agent hub (V3.8)** — Codex/Cursor sync via `/api/agent/sync`; Crowley-only messaging.
 12. **Agent parity (V3.8.1)** — `agent_activity` in context/sync bundles; stop hook; activity-based verify.
 13. **Concurrent ticketing (V3.9)** — `tickets` board, sync mint/claim/close/cancel.
-14. **Pre-V4 ladder (2026-07)** — memory clarity, planning workflow, agent visibility UI — shipping on `main` without version bump until doc lock (#23).
+14. **Pre-V4 ladder (2026-07)** — memory clarity, planning workflow, agent visibility UI — **shipped**; doc lock at V3.9.4 (#23).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
 
@@ -235,8 +235,8 @@ crowley.py
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.1"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.1 Repository & CI"` |
+| `CROWLEY_VERSION` | `"3.9.4"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.4 Agent Visibility"` |
 
 ---
 

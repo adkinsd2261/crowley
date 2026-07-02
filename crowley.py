@@ -39,8 +39,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.1"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"
+CROWLEY_VERSION = "3.9.4"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -86,6 +86,7 @@ KNOWLEDGE_FILES = [
     "docs/MEMORY_HIERARCHY.md",
     "docs/ARCHITECTURE.md",
     "docs/V3.9.1_REPOSITORY_AND_CI.md",
+    "docs/V3.9.4_AGENT_VISIBILITY.md",
     "docs/V3.9.3_PLANNING_WORKFLOW.md",
     "docs/V3.9_CONCURRENT_TICKETING.md",
     "docs/V3.8.1_AGENT_PARITY.md",

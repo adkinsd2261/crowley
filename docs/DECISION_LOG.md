@@ -18,6 +18,30 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-033 — V4 doc lock at V3.9.4 (Pre-V4 ladder complete)
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version constants, `docs/V3.9.4_AGENT_VISIBILITY.md`, onboarding doc sweep (#23)
+
+### Context
+
+V3.9.2–V3.9.4 shipped on `main` under version constant `3.9.1` per ADR-032. Ticket `#23` required a single shipped label and locked onboarding docs before V4 external collectors.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
+- Mark Pre-V4 release ladder complete in `WHERE_WE_ARE`, `PROJECT_STATE`, `ROADMAP`, `TICKETS`, `VERSIONS`, `PRE_V4_RELEASE_PLAN`
+- Declare V4 readiness gate satisfied; V4 connectivity begins when Codex mints implementation tickets
+- Add `docs/V3.9.4_AGENT_VISIBILITY.md` as the release spec
+
+### Rejected
+
+- Bumping to `4.0.0` before any V4 connectivity ships
+- Per-slice version bumps (3.9.2, 3.9.3, 3.9.4 as separate constants mid-ladder)
+
+---
+
 ## ADR-032 — Pre-V4 release ladder is memory-led
 
 **Date:** 2026-07-01

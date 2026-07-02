@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9.1 baseline · Pre-V4 ladder shipping on `main`
-**Planning:** Shipped — [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md) · progress — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
-**Last doc sync:** 2026-07-02 (infra + onboarding sweep)
+**As of:** V3.9.4 · Pre-V4 ladder complete
+**Planning:** Shipped — [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md) · ladder — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
+**Last doc sync:** 2026-07-02 (V4 doc lock #23)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -27,10 +27,10 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **Multi-agent hub** (V3.8) — Codex/Cursor sync scripts, `/api/agent/sync`, Crowley-only messaging
 - **Agent parity** (V3.8.1) — `agent_activity` in all bundles, stop hook, shared verify lib
 - **V3.9 shipped** — concurrent ticketing (`tickets` table, `/api/tickets`, agent mint/claim/close)
-- **Pre-V4 plan approved** — V3.9.2–V3.9.4 slices shipping on `main` under version `3.9.1` until doc lock (#23)
+- **Pre-V4 ladder shipped** — V3.9.2 memory clarity, V3.9.3 planning workflow, V3.9.4 agent visibility + doc lock (#9–#23)
 - **V3.9.2 shipped on `main`** — retrieval explanations, memory hierarchy, hygiene API, test DB isolation
 - **V3.9.3 shipped on `main`** — planning workflow, packet validation, parent tickets, cancel path
-- **V3.9.4 partial** — Agent Feed tab, ticket detail view, handoff↔ticket links, work-board clarity (#19–#22)
+- **V3.9.4 shipped on `main`** — Agent Feed, ticket detail, handoff↔ticket links, work-board clarity, V4 onboarding lock
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -60,7 +60,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**89**; isolated DB; gated by GitHub Actions on `main`) |
+| `tests/` | **Active** | QA unit tests (**90**; isolated DB; gated by GitHub Actions on `main`) |
 | `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
 | `requirements.txt` | **Active** | Dependencies |
 | `VERSIONS.md` | **Active** | Release log |
@@ -85,6 +85,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.8.1 | Agent Parity | `agent_activity` bundles, stop hook, shared verify |
 | V3.9 | Concurrent Ticketing | Unified ticket board; mint/claim/close via sync |
 | V3.9.1 | Repository & CI | GitHub remote, Actions test gate, doc sweep |
+| V3.9.4 | Agent Visibility | Pre-V4 ladder complete; Agent Feed, ticket detail, handoff links, V4 doc lock |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 
@@ -167,7 +168,7 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**89** tests) |
+| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**90** tests) |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |
@@ -213,6 +214,7 @@ curl http://127.0.0.1:8765/api/bus/health
 
 ## 8. Related documents
 
+- [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md)
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
 - [V3.8.1_AGENT_PARITY.md](./V3.8.1_AGENT_PARITY.md)

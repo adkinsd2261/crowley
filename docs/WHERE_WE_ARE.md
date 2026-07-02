@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.1 baseline · Pre-V4 ladder in progress on `main` · **2026-07-02**
+**As of:** V3.9.4 · Pre-V4 ladder complete · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -36,9 +36,9 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.1** | **Repository & CI** — GitHub `main`, Actions test gate, doc sweep |
 | **V3.9.2** | **Shipped on `main`** — canon synthesis workflow, retrieval explanations, memory hierarchy, hygiene report, test DB isolation |
 | **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
-| **V3.9.4** | **In progress** — Agent Feed, ticket detail, handoff links, work-board clarity shipped (#19–#22); V4 doc lock (#23) open |
+| **V3.9.4** | **Shipped** — Agent Feed, ticket detail, handoff links, work-board clarity, V4 doc lock (#19–#23) |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"` (version bump deferred to ticket `#23`)
+**Current constants:** `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -117,7 +117,7 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **89 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
+- **90 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
 - Personality: Crowley = the running system; Jarvis-shaped; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -125,22 +125,21 @@ Hooks run `--before` automatically. After shipping:
 
 - Canon synthesis is manual-first — re-run via [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
 - Legacy `tasks` + `open_loops` coexist with `tickets` — see [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md) § Work board surfaces
-- Onboarding doc lock for V4 readiness (#23) not done yet
 - Some `open_loops` may be stale until backlog hygiene runs
 
 ---
 
 ## 6. Where we are heading
 
-Pre-V4 work is now planned as a three-release ladder. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md).
+Pre-V4 ladder is complete. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) and [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
 | **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
 | **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
-| **V3.9.4 Agent Visibility** | In progress | `#19–#22` shipped; `#23` open |
+| **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
 
-V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
+**V4 connectivity** (git collector, multi-project commands) is the next theme — gated until Codex mints implementation tickets. Readiness gate in the Pre-V4 plan is satisfied.
 
 ---
 
@@ -151,6 +150,7 @@ V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
 | `crowley.py` | Engine |
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate |
+| `docs/V3.9.4_AGENT_VISIBILITY.md` | V3.9.4 spec + V4 readiness gate |
 | `docs/V3.9.1_REPOSITORY_AND_CI.md` | V3.9.1 spec |
 | `docs/V3.9.3_PLANNING_WORKFLOW.md` | Planning packets, mint gate, cancel vs edit |
 | `docs/PRE_V4_RELEASE_PLAN.md` | Approved pre-V4 release ladder |

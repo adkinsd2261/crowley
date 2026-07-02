@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.1 (`Crowley V3.9.1 Repository & CI`)  
-**Next planned:** V3.9.2 Memory Clarity, V3.9.3 Planning Workflow, V3.9.4 Agent Visibility, then V4 connectivity
+**Current:** V3.9.4 (`Crowley V3.9.4 Agent Visibility`)
+**Next planned:** V4 connectivity (git collector, multi-project commands)
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -25,6 +25,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.8.1  | shipped  | 2026-07-01 | Agent parity — stop hook, shared verify, activity feed |
 | V3.9    | shipped  | 2026-07-01 | Concurrent ticketing — unified agent work board |
 | V3.9.1  | shipped  | 2026-07-01 | GitHub repo baseline + GitHub Actions CI |
+| V3.9.4  | shipped  | 2026-07-02 | Pre-V4 ladder complete — memory clarity, planning workflow, agent visibility, doc lock |
 
 ---
 
@@ -404,15 +405,34 @@ Plan: [docs/V3.9.1_REPOSITORY_AND_CI.md](./docs/V3.9.1_REPOSITORY_AND_CI.md)
 
 ---
 
-## Pre-V4 ladder (shipping on `main`, 2026-07-02)
+## V3.9.4 — Agent Visibility / Pre-V4 Readiness
 
-Features below ship on `main` under version constant `3.9.1` until ticket `#23` locks docs for V4.
+**Shipped:** 2026-07-02 · Tickets `#19–#23`
+
+| Area | Detail |
+|------|--------|
+| Agent Feed | Intelligence drawer tab from `agent_activity.recent` |
+| Ticket detail | Row click → `GET /api/tickets/{id}` + event timeline |
+| Handoff links | `handoff_linked` events; `linked_handoff` on detail API |
+| Work-board clarity | Panel role notes; tickets vs tasks vs open loops in docs/UI |
+| Doc lock | Version bump to `3.9.4`; onboarding docs locked for V4 readiness |
+| Tests | **90 tests** (GitHub Actions on `main`) |
+
+**Version:** `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
+
+Plan: [docs/V3.9.4_AGENT_VISIBILITY.md](./docs/V3.9.4_AGENT_VISIBILITY.md)
+
+---
+
+## Pre-V4 ladder (shipped on `main`, 2026-07-02)
+
+The three-release pre-V4 arc shipped under version constant `3.9.4` after ticket `#23` doc lock.
 
 | Theme | Tickets | Highlights | Tests (cumulative) |
 |-------|---------|------------|-------------------|
 | V3.9.2 Memory Clarity | #9–#13 | Canon workflow, retrieval `explanation`, hierarchy docs/UI, hygiene API, test DB isolation | 78+ |
 | V3.9.3 Planning Workflow | #14–#18 | Planning packet template, validation, `parent_id`, `cancel_ticket` | 81+ |
-| V3.9.4 Agent Visibility | #19–#23 | Agent Feed tab, ticket detail UI, handoff links, work-board clarity | **89** |
+| V3.9.4 Agent Visibility | #19–#23 | Agent Feed tab, ticket detail UI, handoff links, work-board clarity, V4 doc lock | **90** |
 
 ---
 

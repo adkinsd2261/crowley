@@ -290,8 +290,8 @@ Gate and apply logic should be deterministic; model output tested via fixtures/m
 
 ### 11.1 Dual version labels **(fact)**
 
-- `CROWLEY_VERSION` — `"3.9.1"`
-- `CROWLEY_RELEASE_LABEL` — `"Crowley V3.9.1 Repository & CI"`
+- `CROWLEY_VERSION` — `"3.9.4"`
+- `CROWLEY_RELEASE_LABEL` — `"Crowley V3.9.4 Agent Visibility"`
 
 ### 11.2 VERSIONS.md is release log **(fact)**
 

@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.1 baseline · Pre-V4 ladder in progress · **2026-07-02**
+**As of:** V3.9.4 · Pre-V4 ladder complete · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -55,15 +55,15 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                             V3.9.1 Repository & CI
                                       │
                                       ▼
-                    Pre-V4 ladder (V3.9.2–V3.9.4 on `main`)  ◄── YOU ARE HERE
+                    Pre-V4 ladder (V3.9.2–V3.9.4) ✅
                                       │
                                       ▼
-                              V4 connectivity (gated)
+                              V4 connectivity (next)  ◄── YOU ARE HERE
 ```
 
-**Shipped through V3.9.1:** … concurrent ticketing, **GitHub repo + Actions CI**.
+**Shipped through V3.9.4:** … concurrent ticketing, GitHub repo + Actions CI, memory clarity, planning workflow, agent visibility, V4 doc lock.
 
-**Active initiative:** Pre-V4 release ladder — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). V3.9.2–V3.9.3 shipped; V3.9.4 in progress (#19–#22 shipped, #23 open).
+**Active initiative:** V4 connectivity — git collector, multi-project commands. Pre-V4 readiness gate satisfied — see [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) §3 and [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md).
 
 ---
 
@@ -165,10 +165,10 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 | Item | Rationale | Complexity | Status |
 |------|-----------|------------|--------|
-| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**89** tests) |
+| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**90** tests) |
 | V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
 | V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
-| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | 🔄 In progress (#19–#22 shipped; #23 open) |
+| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | ✅ Shipped on `main` (#19–#23) |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
 | Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
@@ -235,7 +235,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.1** | Repository & CI | ✅ GitHub remote, Actions test gate, doc sweep |
 | **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy ([MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)), hygiene, test isolation |
 | **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
-| **V3.9.4** | Agent Visibility | Agent feed, ticket detail/history, V4 readiness docs |
+| **V3.9.4** | Agent Visibility | ✅ Agent feed, ticket detail/history, work-board clarity, V4 doc lock |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
 
 ---
@@ -258,6 +258,7 @@ When shipping a version:
 - [TICKETS.md](./TICKETS.md)
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [V3.7_CONTEXT_BRIDGE.md](./V3.7_CONTEXT_BRIDGE.md)
+- [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md)
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md)
