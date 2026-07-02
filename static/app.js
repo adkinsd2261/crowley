@@ -263,6 +263,7 @@ const PANEL_LISTS = {
 
 function renderPanelState(el, kind, message) {
   if (!el) return;
+  delete el.dataset.panelFingerprint;
   el.innerHTML =
     `<li class="panel-state panel-state-${kind}" role="status">` +
     `${escapeHtml(message)}</li>`;
@@ -1077,10 +1078,16 @@ function renderPanelList(el, items, renderItem, emptyMessage = "Nothing here yet
   }
 }
 
+function panelListNeedsRefresh(el) {
+  return Boolean(
+    el?.querySelector(".panel-state-loading, .panel-state-error")
+  );
+}
+
 function renderPanelListIfChanged(el, items, renderItem, emptyMessage, fingerprint) {
   if (!el) return;
   const key = fingerprint ?? String((items || []).length);
-  if (el.dataset.panelFingerprint === key) return;
+  if (el.dataset.panelFingerprint === key && !panelListNeedsRefresh(el)) return;
   el.dataset.panelFingerprint = key;
   renderPanelList(el, items, renderItem, emptyMessage);
 }

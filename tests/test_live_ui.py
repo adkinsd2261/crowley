@@ -148,6 +148,8 @@ class WorldDashboardTests(IsolatedDbTestCase):
             "syncSelectedTicketDetail",
             "fingerprintTickets",
             "renderPanelListIfChanged",
+            "panelListNeedsRefresh",
+            "delete el.dataset.panelFingerprint",
             "crowley.workspace.nav",
             "ticketDetailRequestId",
         ):
