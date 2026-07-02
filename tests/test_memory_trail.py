@@ -11,9 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
 import synthesize_canon  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 VALID_CANON_OUTPUT = """
@@ -37,9 +39,9 @@ Recent sessions wired agent sync and canon planning. Evidence: memory_items:87.
 """
 
 
-class MemoryTrailTests(unittest.TestCase):
+class MemoryTrailTests(IsolatedDbTestCase):
     def setUp(self) -> None:
-        crowley.setup_db()
+        super().setUp()
         self.conn = crowley.connect_db()
         self.project_id = crowley._active_project_id(self.conn)
         assert self.project_id is not None
@@ -54,6 +56,7 @@ class MemoryTrailTests(unittest.TestCase):
             )
             self.conn.commit()
         self.conn.close()
+        super().tearDown()
 
     def _insert_memory(
         self,
@@ -180,7 +183,6 @@ class MemoryTrailTests(unittest.TestCase):
         self.assertIn("builder", codex_sync["pipeline"]["cursor"])
 
     def test_crowley_prompt_includes_agent_activity(self) -> None:
-        crowley.setup_db()
         self._insert_memory(
             content=(
                 "# Crowley Handoff\n\nSource: cursor\nType: note\n\n"
@@ -208,7 +210,6 @@ class MemoryTrailTests(unittest.TestCase):
         self.assertIn("last contact probe alpha", str(summary["last_by_source"]["cursor"]["summary"]))
 
     def test_crowley_prompt_anchors_system_identity(self) -> None:
-        crowley.setup_db()
         system = crowley.build_prompt("what are you?")[0]["content"]
         self.assertIn("running system itself", system)
         self.assertIn("Codex architects", system)
@@ -238,9 +239,9 @@ class MemoryTrailTests(unittest.TestCase):
         self.assertLess(canon_idx, memory_idx)
 
 
-class SynthesizeCanonTests(unittest.TestCase):
+class SynthesizeCanonTests(IsolatedDbTestCase):
     def setUp(self) -> None:
-        crowley.setup_db()
+        super().setUp()
         self.conn = crowley.connect_db()
         self.project_slug = "qa-canon-test"
         now = crowley._now_iso()
@@ -275,6 +276,7 @@ class SynthesizeCanonTests(unittest.TestCase):
         self.conn.execute("DELETE FROM projects WHERE id = ?", (self.project_id,))
         self.conn.commit()
         self.conn.close()
+        super().tearDown()
 
     def _model(self, _messages: list[dict[str, str]]) -> str:
         return VALID_CANON_OUTPUT

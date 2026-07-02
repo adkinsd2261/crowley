@@ -10,8 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 def _unit_embedding(dim: int = crowley.EMBED_DIM) -> list[float]:
@@ -38,9 +40,9 @@ EXPLANATION_KEYS = {
 }
 
 
-class RetrievalExplanationTests(unittest.TestCase):
+class RetrievalExplanationTests(IsolatedDbTestCase):
     def setUp(self) -> None:
-        crowley.setup_db()
+        super().setUp()
         self.conn = crowley.connect_db()
         self.project_id = crowley._active_project_id(self.conn)
         assert self.project_id is not None
@@ -55,6 +57,7 @@ class RetrievalExplanationTests(unittest.TestCase):
             self.conn.execute("DELETE FROM memory_items WHERE id = ?", (self.memory_id,))
             self.conn.commit()
         self.conn.close()
+        super().tearDown()
 
     def _insert_probe(self, *, content: str, **kwargs: object) -> int:
         now = crowley._now_iso()

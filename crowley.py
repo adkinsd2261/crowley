@@ -42,8 +42,38 @@ _load_local_env()
 CROWLEY_VERSION = "3.9.1"
 CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"
 
-DB_PATH = Path(__file__).parent / "crowley.db"
 PROJECT_ROOT = Path(__file__).parent
+DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
+_db_path_override: Path | None = None
+
+
+def get_db_path() -> Path:
+    """Return the active SQLite database path (override, env, or default)."""
+    if _db_path_override is not None:
+        return _db_path_override
+    env_path = os.environ.get("CROWLEY_DB_PATH", "").strip()
+    if env_path:
+        return Path(env_path)
+    return DEFAULT_DB_PATH
+
+
+def set_db_path(path: Path | str) -> Path:
+    """Point Crowley at a specific database file (used by tests)."""
+    global _db_path_override, DB_PATH
+    _db_path_override = Path(path)
+    DB_PATH = _db_path_override
+    return DB_PATH
+
+
+def reset_db_path() -> Path:
+    """Clear test overrides and return to env/default database path."""
+    global _db_path_override, DB_PATH
+    _db_path_override = None
+    DB_PATH = get_db_path()
+    return DB_PATH
+
+
+DB_PATH = get_db_path()
 VERSIONS_MD_PATH = PROJECT_ROOT / "VERSIONS.md"
 PROJECT_STATE_MD_PATH = PROJECT_ROOT / "docs" / "PROJECT_STATE.md"
 PROJECT_FILES_EXCERPT_MAX = 480
@@ -502,7 +532,7 @@ def has_enough_signal_for_summary(messages: list[sqlite3.Row]) -> bool:
 
 def connect_db() -> sqlite3.Connection:
     """Open crowley.db with WAL mode and row factory."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(get_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

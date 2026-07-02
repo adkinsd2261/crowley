@@ -9,8 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 class PhaseProgressTests(unittest.TestCase):
@@ -32,9 +34,8 @@ class PhaseProgressTests(unittest.TestCase):
         self.assertIsNone(crowley.parse_phase_progress("V3.7.2 Knowledge Files"))
 
 
-class WorldDashboardTests(unittest.TestCase):
+class WorldDashboardTests(IsolatedDbTestCase):
     def test_dashboard_includes_filesystem_truth(self) -> None:
-        crowley.setup_db()
         dash = crowley.build_world_dashboard()
         self.assertIn("filesystem", dash)
         self.assertIn("agent_activity", dash)
@@ -44,7 +45,6 @@ class WorldDashboardTests(unittest.TestCase):
         self.assertIn("project_files", dash)
 
     def test_dashboard_includes_panels(self) -> None:
-        crowley.setup_db()
         dash = crowley.build_world_dashboard()
         self.assertIsNotNone(dash.get("project"))
         self.assertIn("tasks", dash)

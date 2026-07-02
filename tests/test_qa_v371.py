@@ -9,8 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 class VersionTruthTests(unittest.TestCase):
@@ -75,9 +77,8 @@ class ProjectFilesContextTests(unittest.TestCase):
         self.assertIn("authoritative", section.lower())
 
 
-class ContextBundleTests(unittest.TestCase):
+class ContextBundleTests(IsolatedDbTestCase):
     def test_api_context_reports_actual_version(self) -> None:
-        crowley.setup_db()
         bundle = crowley.build_context_bundle(q="health", limit=1)
         health = bundle["system_health"]
         self.assertEqual(health["version"], crowley.CROWLEY_VERSION)
@@ -88,7 +89,7 @@ class ContextBundleTests(unittest.TestCase):
         )
 
 
-class GreetingPromptTests(unittest.TestCase):
+class GreetingPromptTests(IsolatedDbTestCase):
     def test_mid_session_prompt_discourages_morning(self) -> None:
         original = crowley.list_chat_context_messages
 
@@ -107,7 +108,6 @@ class GreetingPromptTests(unittest.TestCase):
             crowley.list_chat_context_messages = original  # type: ignore[method-assign]
 
     def test_build_prompt_includes_greeting_and_project_files(self) -> None:
-        crowley.setup_db()
         messages = crowley.build_prompt("hello", exclude_message_id=None)
         system = messages[0]["content"]
         self.assertIn("When a fact about the project matters", system)

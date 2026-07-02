@@ -11,8 +11,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 def _unit_embedding(dim: int = crowley.EMBED_DIM) -> list[float]:
@@ -25,14 +27,15 @@ def _pack(vector: list[float]) -> bytes:
     return struct.pack(f"{len(vector)}f", *vector)
 
 
-class MemoryConsolidationTests(unittest.TestCase):
+class MemoryConsolidationTests(IsolatedDbTestCase):
     def setUp(self) -> None:
-        crowley.setup_db()
+        super().setUp()
         self.conn = crowley.connect_db()
 
     def tearDown(self) -> None:
         if self.conn is not None:
             self.conn.close()
+        super().tearDown()
 
     def _insert_item(
         self,

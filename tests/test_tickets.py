@@ -9,13 +9,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
-class TicketTests(unittest.TestCase):
+class TicketTests(IsolatedDbTestCase):
     def setUp(self) -> None:
-        crowley.setup_db()
+        super().setUp()
         self.conn = crowley.connect_db()
         self.project_id = crowley._active_project_id(self.conn)
         assert self.project_id is not None
@@ -34,6 +36,7 @@ class TicketTests(unittest.TestCase):
             )
             self.conn.commit()
         self.conn.close()
+        super().tearDown()
 
     def _create(self, **kwargs: object) -> int:
         result = crowley.create_ticket(

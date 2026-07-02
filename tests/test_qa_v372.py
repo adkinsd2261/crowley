@@ -9,8 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import crowley  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
 
 
 class KnowledgeFilesLoaderTests(unittest.TestCase):
@@ -44,16 +46,14 @@ class KnowledgeFilesLoaderTests(unittest.TestCase):
         self.assertFalse(any("crowley.db" in path for path in paths))
 
 
-class KnowledgePromptTests(unittest.TestCase):
+class KnowledgePromptTests(IsolatedDbTestCase):
     def test_build_prompt_includes_source_of_truth_section(self) -> None:
-        crowley.setup_db()
         messages = crowley.build_prompt("what version are we on?")
         system = messages[0]["content"]
         self.assertIn("Filesystem truth", system)
         self.assertIn(crowley.CROWLEY_VERSION, system)
 
     def test_knowledge_before_db_state_before_memory(self) -> None:
-        crowley.setup_db()
         messages = crowley.build_prompt("what version are we on?")
         system = messages[0]["content"]
         knowledge_idx = system.find("Filesystem truth")
@@ -66,9 +66,8 @@ class KnowledgePromptTests(unittest.TestCase):
         self.assertLess(state_idx, memory_idx)
 
 
-class ContextBundleKnowledgeTests(unittest.TestCase):
+class ContextBundleKnowledgeTests(IsolatedDbTestCase):
     def test_api_context_includes_knowledge_files(self) -> None:
-        crowley.setup_db()
         bundle = crowley.build_context_bundle(q="version history", limit=1)
         knowledge = bundle["knowledge_files"]
         self.assertIsInstance(knowledge, list)
