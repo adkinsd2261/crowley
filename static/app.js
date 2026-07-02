@@ -6,13 +6,6 @@ const healthDot = document.getElementById("health-dot");
 const versionLabel = document.getElementById("version-label");
 const brainLabel = document.getElementById("brain-label");
 const refreshBtn = document.getElementById("refresh-panels");
-const worldProjectEl = document.getElementById("world-project");
-const worldStateEl = document.getElementById("world-state");
-const phaseProgressEl = document.getElementById("phase-progress");
-const phaseProgressLabelEl = document.getElementById("phase-progress-label");
-const phaseProgressCountEl = document.getElementById("phase-progress-count");
-const phaseProgressFillEl = document.getElementById("phase-progress-fill");
-const stateSyncEl = document.getElementById("state-sync");
 const panelProjectEl = document.getElementById("panel-project");
 const panelTicketsEl = document.getElementById("panel-tickets");
 const ticketDetailEl = document.getElementById("ticket-detail");
@@ -242,7 +235,7 @@ function updateTabBadges(counts = {}, data = {}) {
 const PANEL_META = {
   project: {
     title: "Project state",
-    hint: "Live snapshot from /api/world — expanded view of the right rail.",
+    hint: "Live snapshot from /api/world.",
     empty: "No active project.",
     loading: "Loading project state…",
     describe: (_items, data = {}) => {
@@ -1177,7 +1170,7 @@ function showEmptyState() {
   const empty = document.createElement("p");
   empty.className = "empty-state";
   empty.textContent =
-    "Say anything — build, plan, or think out loud.";
+    "This is your workspace. Ask anything — build, plan, or think out loud.";
   chatEl.appendChild(empty);
 }
 
@@ -1291,53 +1284,6 @@ function restoreWorkspaceNav() {
   }
 }
 
-function renderWorldState(fields) {
-  worldStateEl.innerHTML = "";
-  for (const [label, value] of fields) {
-    const block = document.createElement("div");
-    block.innerHTML = `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`;
-    worldStateEl.appendChild(block);
-  }
-}
-
-function renderPhaseProgress(progress) {
-  if (!phaseProgressEl) return;
-  if (!progress || !progress.total) {
-    phaseProgressEl.classList.add("hidden");
-    return;
-  }
-  phaseProgressEl.classList.remove("hidden");
-  const pct = Math.round((progress.current / progress.total) * 100);
-  if (phaseProgressLabelEl) {
-    phaseProgressLabelEl.textContent = progress.label || `Phase ${progress.current}`;
-  }
-  if (phaseProgressCountEl) {
-    phaseProgressCountEl.textContent = `${progress.current} / ${progress.total}`;
-  }
-  if (phaseProgressFillEl) {
-    phaseProgressFillEl.style.width = `${pct}%`;
-  }
-}
-
-function renderStateSync(state, version, releaseLabel, filesystem = {}) {
-  if (!stateSyncEl) return;
-  const parts = [];
-  const fsAsOf = filesystem?.project_state_as_of;
-  if (fsAsOf) {
-    parts.push(String(fsAsOf).replace(/\*\*/g, "").trim());
-  } else if (version) {
-    parts.push(`v${version}`);
-  }
-  if (state?.updated_at) {
-    const rel = formatRelativeTime(state.updated_at);
-    const by = state.updated_by ? ` · ${state.updated_by}` : "";
-    parts.push(`DB ${rel}${by}`);
-  }
-  stateSyncEl.textContent = parts.join(" · ") || "—";
-  const fsTitle = filesystem?.versions_current || releaseLabel || "";
-  stateSyncEl.title = fsTitle || state?.updated_at || "";
-}
-
 function projectPanelFingerprint(data) {
   const project = data.project;
   const state = data.state || {};
@@ -1404,8 +1350,19 @@ function renderProjectPanel(data) {
 
   const progress = data.phase_progress;
   let phaseValue = state.phase || "(unset)";
+  let phaseProgressHtml = "";
   if (progress?.current && progress?.total) {
+    const pct = Math.round((progress.current / progress.total) * 100);
     phaseValue = `${phaseValue} (${progress.current}/${progress.total})`;
+    phaseProgressHtml =
+      `<div class="project-phase-progress" aria-label="Phase progress">` +
+      `<div class="project-phase-meta">` +
+      `<span>${escapeHtml(progress.label || `Phase ${progress.current}`)}</span>` +
+      `<span>${progress.current} / ${progress.total}</span>` +
+      `</div>` +
+      `<div class="project-phase-track">` +
+      `<div class="project-phase-fill" style="width:${pct}%"></div>` +
+      `</div></div>`;
   }
 
   const fields = [
@@ -1450,6 +1407,7 @@ function renderProjectPanel(data) {
     (syncParts.length
       ? `<p class="project-panel-sync">${escapeHtml(syncParts.join(" · "))}</p>`
       : "") +
+    phaseProgressHtml +
     `</header>` +
     `<dl class="project-state-grid">${fieldHtml}</dl>` +
     `<div class="project-counts" aria-label="Intelligence counts">${countItems}</div>` +
@@ -1468,11 +1426,7 @@ function renderDashboard(data, { animate = false } = {}) {
   updateTabBadges(data.counts || {}, data);
 
   if (!data.project) {
-    worldProjectEl.textContent = "No active project";
     updateCurrentObjective();
-    renderWorldState([]);
-    renderPhaseProgress(null);
-    renderStateSync(null, data.version, data.release_label);
     renderProjectPanel(data);
     renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
     renderPanelList(panelTasksEl, [], () => "", PANEL_META.tasks.empty);
@@ -1492,19 +1446,8 @@ function renderDashboard(data, { animate = false } = {}) {
     return;
   }
 
-  worldProjectEl.textContent = `${data.project.name} (${data.project.status})`;
   const state = data.state || {};
   updateCurrentObjective(state, data.phase_progress);
-  renderPhaseProgress(data.phase_progress);
-  renderStateSync(state, data.version, data.release_label, data.filesystem || {});
-  renderWorldState([
-    ["Phase", state.phase || "(unset)"],
-    ["Focus", state.focus || "(unset)"],
-    ["Risk", state.current_risk || "(unset)"],
-    ["Next action", state.next_action || "(unset)"],
-    ["What changed", state.what_changed || "(unset)"],
-  ]);
-
   renderProjectPanel(data);
 
   renderTicketsPanel(data.ticket_groups || [], data.tickets || []);

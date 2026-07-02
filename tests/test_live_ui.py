@@ -239,6 +239,30 @@ class WorldDashboardTests(IsolatedDbTestCase):
         ):
             self.assertIn(token, css)
 
+    def test_ui_cinematic_workspace_without_inspector(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn('class="inspector"', html)
+        self.assertNotIn("world-project", html)
+        self.assertNotIn("world-state", html)
+        self.assertIn('class="workspace"', html)
+        self.assertIn('class="workspace-pane"', html)
+        self.assertIn('id="run-diagnostics"', html)
+        diagnostics_pos = html.index('id="run-diagnostics"')
+        project_panel_pos = html.index('data-panel="project"')
+        self.assertLess(project_panel_pos, diagnostics_pos)
+        for token in (
+            "radial-gradient",
+            "backdrop-filter",
+            "--entry-width: 46rem",
+            ".workspace::before",
+            "linear-gradient(to top",
+        ):
+            self.assertIn(token, css)
+        self.assertNotIn("worldProjectEl", js)
+        self.assertNotIn("renderWorldState", js)
+
     def test_ui_narrow_viewport_overflow_guards(self) -> None:
         css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
@@ -246,7 +270,7 @@ class WorldDashboardTests(IsolatedDbTestCase):
         for token in (
             "overflow-x: clip",
             "grid-template-columns: auto minmax(0, 1fr) auto",
-            ".main-column",
+            ".workspace-pane",
             "min-width: 0",
             ".workspace-pane",
             ".context-drawer",
