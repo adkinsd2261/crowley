@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.4 (`Crowley V3.9.4 Agent Visibility`)
-**Next planned:** V3.9.5 Conversation + Model Behavior, then V3.9.6 Workspace Polish before V4 connectivity
+**Current:** V3.9.5 (`Crowley V3.9.5 Conversation + Model Behavior`)
+**Next planned:** V3.9.6 Workspace Polish. Future pre-V4 gates V3.9.7–V3.9.9 are planning reserve before V4 connectivity.
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -26,8 +26,11 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9    | shipped  | 2026-07-01 | Concurrent ticketing — unified agent work board |
 | V3.9.1  | shipped  | 2026-07-01 | GitHub repo baseline + GitHub Actions CI |
 | V3.9.4  | shipped  | 2026-07-02 | Pre-V4 ladder complete — memory clarity, planning workflow, agent visibility, doc lock |
-| V3.9.5  | planned  | TBD        | Conversation + Model Behavior — inferred modes, depth, co-founder voice |
+| V3.9.5  | shipped  | 2026-07-02 | Conversation + Model Behavior — mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6  | planned  | TBD        | Workspace Polish — states, streaming, navigation, recent changes, docs lock |
+| V3.9.7  | reserve  | TBD        | Memory Freshness + Truth Maintenance |
+| V3.9.8  | reserve  | TBD        | Work Intelligence |
+| V3.9.9  | reserve  | TBD        | Operator Confidence / Preflight |
 
 ---
 
@@ -423,6 +426,26 @@ Plan: [docs/V3.9.1_REPOSITORY_AND_CI.md](./docs/V3.9.1_REPOSITORY_AND_CI.md)
 **Version:** `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
 
 Plan: [docs/V3.9.4_AGENT_VISIBILITY.md](./docs/V3.9.4_AGENT_VISIBILITY.md)
+
+---
+
+## V3.9.5 — Conversation + Model Behavior
+
+**Shipped:** 2026-07-02 · Tickets `#25–#30`
+
+| Area | Detail |
+|------|--------|
+| Mode classifier | Deterministic inferred modes in `build_prompt()` with answer shapes |
+| Depth controller | `brief` / `standard` / `deep` from phrasing and mode |
+| Personality | Co-founder voice; order-neutral mode/depth honor line |
+| Diagnostics separation | `_diagnostics_system_prompt()` — factual, no chat persona |
+| Regression fixtures | `tests/fixtures/v3_9_5_model_behavior.json` |
+| Chat UX sweep | Empty/slash/model-error copy; streaming finalize/abort helpers |
+| Tests | **140 tests** (GitHub Actions on `main`) |
+
+**Version:** `CROWLEY_VERSION = "3.9.5"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"`
+
+Plan: [docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
 
 ---
 

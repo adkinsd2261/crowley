@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.4 · V3.9.5/V3.9.6 quality plan approved · **2026-07-02**
+**As of:** V3.9.5 shipped · V3.9.6 active · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -58,15 +58,21 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     Pre-V4 ladder (V3.9.2–V3.9.4) ✅
                                       │
                                       ▼
-                    Pre-V4 quality (V3.9.5–V3.9.6)  ◄── YOU ARE HERE
+                    Pre-V4 quality V3.9.5 ✅
+                                      │
+                                      ▼
+                    Pre-V4 quality V3.9.6  ◄── YOU ARE HERE
+                                      │
+                                      ▼
+                    Future pre-V4 gates (V3.9.7–V3.9.9)
                                       │
                                       ▼
                               V4 connectivity
 ```
 
-**Shipped through V3.9.4:** … concurrent ticketing, GitHub repo + Actions CI, memory clarity, planning workflow, agent visibility, V4 doc lock.
+**Shipped through V3.9.5:** … agent visibility, V4 doc lock, conversation mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX sweep.
 
-**Active initiative:** V3.9.5 + V3.9.6 pre-V4 quality — conversation/model behavior, then workspace polish. V4 connectivity waits until this quality gate ships — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
+**Active initiative:** V3.9.6 Workspace Polish — loading/error/empty states, streaming polish, navigation, what-changed feed. V4 connectivity waits until V3.9.6 ships — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -172,9 +178,12 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
 | V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
 | V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | ✅ Shipped on `main` (#19–#23) |
-| V3.9.5 Conversation + Model Behavior | Make Crowley pleasant and mode-aware for daily project work | Medium | Open (#25–#30) |
+| V3.9.5 Conversation + Model Behavior | Make Crowley pleasant and mode-aware for daily project work | Medium | ✅ Shipped on `main` (#25–#30) |
 | V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | Open (#31–#36) |
 | Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | Open (#37) |
+| V3.9.7 Memory Freshness + Truth Maintenance | Keep state, loops, canon, and recency aligned | Medium | Future planning reserve |
+| V3.9.8 Work Intelligence | Make Crowley reason over the work board and shipped timeline | Medium | Future planning reserve |
+| V3.9.9 Operator Confidence / Preflight | Health, doc-lock, test, and V4 readiness checks | Medium | Future planning reserve |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
 | Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
@@ -242,8 +251,11 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy ([MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)), hygiene, test isolation |
 | **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
 | **V3.9.4** | Agent Visibility | ✅ Agent feed, ticket detail/history, work-board clarity, V4 doc lock |
-| **V3.9.5** | Conversation + Model Behavior | Planned inferred modes, depth, co-founder voice |
+| **V3.9.5** | Conversation + Model Behavior | ✅ Mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | **V3.9.6** | Workspace Polish | Planned UI states, streaming, navigation, recent changes, docs lock |
+| **V3.9.7** | Memory Freshness + Truth Maintenance | Planning reserve; no tickets yet |
+| **V3.9.8** | Work Intelligence | Planning reserve; no tickets yet |
+| **V3.9.9** | Operator Confidence / Preflight | Planning reserve; no tickets yet |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
 
 ---
@@ -273,4 +285,5 @@ When shipping a version:
 - [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)
 - [V3.9.3_PLANNING_WORKFLOW.md](./V3.9.3_PLANNING_WORKFLOW.md)
 - [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
+- [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
 - [VERSIONS.md](../VERSIONS.md)

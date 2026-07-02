@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.4 · V3.9.5/V3.9.6 quality plan approved · **2026-07-02**
+**As of:** V3.9.5 · V3.9.6 Workspace Polish active · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -37,10 +37,10 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.2** | **Shipped on `main`** — canon synthesis workflow, retrieval explanations, memory hierarchy, hygiene report, test DB isolation |
 | **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
 | **V3.9.4** | **Shipped** — Agent Feed, ticket detail, handoff links, work-board clarity, V4 doc lock (#19–#23) |
-| **V3.9.5** | **Planned** — conversation mode classifier, depth controller, co-founder voice, diagnostics separation |
+| **V3.9.5** | **Shipped** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30) |
 | **V3.9.6** | **Planned** — loading/error/empty states, streaming polish, navigation flow, "what changed" feed |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
+**Current constants:** `CROWLEY_VERSION = "3.9.5"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"`
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -119,8 +119,8 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **90 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
-- Personality: Crowley = the running system; Jarvis-shaped; filesystem-first answers
+- **140 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
+- Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
 **Known gaps (honest):**
@@ -140,11 +140,11 @@ Pre-V4 ladder complete. The active pre-V4 quality plan adds two small releases b
 | **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
 | **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
 | **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
-| **V3.9.5 Conversation + Model Behavior** | Open | Tickets `#25–#30` |
+| **V3.9.5 Conversation + Model Behavior** | Shipped on `main` | Tickets `#25–#30` |
 | **V3.9.6 Workspace Polish** | Open | Tickets `#31–#36` |
-| **Pre-V4 QA Hygiene** | Open | Ticket `#37` — state lock-in + stale open-loop cleanup |
+| **Pre-V4 QA Hygiene** | Shipped on `main` | Ticket `#37` |
 
-**V4 connectivity** (git collector, multi-project commands) waits until V3.9.5 and V3.9.6 ship and docs are locked.
+**V4 connectivity** waits until V3.9.6 ships and docs are locked.
 
 ---
 

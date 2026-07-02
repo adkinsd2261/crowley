@@ -92,11 +92,14 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v394(self) -> None:
+    def test_onboarding_docs_locked_for_v395(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.4"', where)
-        self.assertIn("Pre-V4 ladder complete", where)
-        self.assertTrue((ROOT / "docs" / "V3.9.4_AGENT_VISIBILITY.md").is_file())
+        versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
+        self.assertIn('CROWLEY_VERSION = "3.9.5"', where)
+        self.assertIn("V3.9.5 Conversation + Model Behavior", versions)
+        self.assertIn("shipped", versions.lower())
+        self.assertTrue((ROOT / "docs" / "V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md").is_file())
+        self.assertIn("Shipped", (ROOT / "docs" / "V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

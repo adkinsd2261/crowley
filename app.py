@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.4 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
+"""Crowley V3.9.5 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
 
 from __future__ import annotations
 

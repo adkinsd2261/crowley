@@ -18,6 +18,30 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-034 — V3.9.5 Conversation + Model Behavior shipped
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.5`, `docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md`, tickets `#25–#30`, **140 tests**
+
+### Context
+
+Pre-V4 quality plan required deterministic prompt/controller behavior before workspace polish and V4 connectivity.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.5"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"`
+- Ship mode classifier, depth controller, co-founder personality trim, diagnostics tone separation, regression fixtures, and confirmed chat UX fixes
+- Lock onboarding docs to reflect V3.9.5 shipped; active initiative becomes V3.9.6
+
+### Rejected
+
+- Visible conversation-mode UI toggle
+- Live model-quality regression tests
+- Broad chat redesign in V3.9.5
+
+---
+
 ## ADR-033 — V4 doc lock at V3.9.4 (Pre-V4 ladder complete)
 
 **Date:** 2026-07-02

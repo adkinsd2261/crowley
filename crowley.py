@@ -39,8 +39,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.4"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"
+CROWLEY_VERSION = "3.9.5"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -83,6 +83,7 @@ KNOWLEDGE_FILES = [
     "docs/WHERE_WE_ARE.md",
     "docs/PROJECT_STATE.md",
     "docs/PRE_V4_QUALITY_PLAN.md",
+    "docs/PRE_V4_FUTURE_RELEASE_LADDER.md",
     "docs/PRE_V4_RELEASE_PLAN.md",
     "docs/MEMORY_HIERARCHY.md",
     "docs/ARCHITECTURE.md",

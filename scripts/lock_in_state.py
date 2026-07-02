@@ -69,23 +69,23 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields for the active V3.9.5/V3.9.6 quality batch."""
+    """Current world-model fields for the active V3.9.6 workspace polish batch."""
     return {
-        "phase": "V3.9.4 shipped — V3.9.5/V3.9.6 pre-V4 quality in progress",
+        "phase": "V3.9.5 shipped — V3.9.6 Workspace Polish in progress",
         "focus": (
-            "V3.9.5 Conversation + Model Behavior (#25–#30): mode classifier, "
-            "depth controller, co-founder voice"
+            "V3.9.6 Workspace Polish (#31–#36): loading/error/empty states, "
+            "streaming polish, navigation, what-changed feed"
         ),
         "current_risk": (
-            "Chat may cite stale memory over Agent Feed until #25/#26; ticket detail "
-            "flickers on poll until #33; restart bus after version bumps."
+            "Ticket detail flickers on poll until #33; restart bus after version bumps."
         ),
         "next_action": (
-            "Cursor: ship #25 mode classifier; Codex reviews each V3.9.5 slice before #26."
+            "Cursor: ship #31 loading/error/empty states; Codex reviews V3.9.6 slices."
         ),
         "what_changed": (
-            "Pre-V4 ladder complete at V3.9.4 (#9–#23); V3.9.5/V3.9.6 quality plan "
-            "active (#25–#36); state lock-in refreshed project_state and closed stale loops."
+            "V3.9.5 Conversation + Model Behavior shipped (#25–#30): mode classifier, "
+            "depth controller, co-founder voice, diagnostics separation, regression "
+            "fixtures, chat UX sweep. Version constants bumped to 3.9.5."
         ),
     }
 

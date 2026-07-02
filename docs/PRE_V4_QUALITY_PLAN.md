@@ -1,7 +1,7 @@
 # Crowley V3.9.5 + V3.9.6 -- Pre-V4 Quality Plan
 
-**Status:** Approved for ticketed implementation
-**Baseline:** V3.9.4 (`Crowley V3.9.4 Agent Visibility`)
+**Status:** V3.9.5 shipped · V3.9.6 active
+**Baseline:** V3.9.5 (`Crowley V3.9.5 Conversation + Model Behavior`)
 **Owner model:** Mr. Go sets intent; Codex plans and reviews; Cursor implements; Crowley stores truth.
 
 ---
@@ -15,7 +15,7 @@ Ship two small releases before V4 connectivity:
 2. **V3.9.6 -- Workspace Polish**
    Make the browser workspace livable for daily use by tightening loading, error, empty, streaming, navigation, and "what changed" flow.
 
-V4 connectivity waits until both releases are shipped and docs are locked.
+V4 connectivity waits until both releases are shipped and docs are locked. Later pre-V4 gates are captured in [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) and should not be ticketed until this active batch is reviewed.
 
 ---
 
@@ -37,15 +37,18 @@ That means:
 
 | Release | Goal | Ticket range |
 |---------|------|--------------|
-| V3.9.5 Conversation + Model Behavior | Make Crowley pleasant, mode-aware, and correctly terse/deep | #25-#30 |
+| V3.9.5 Conversation + Model Behavior | Make Crowley pleasant, mode-aware, and correctly terse/deep | #25-#30 ✅ |
 | V3.9.6 Workspace Polish | Make the browser workspace livable for a week of real use | #31-#36 |
-| V4 Connectivity | External collectors and multi-project behavior | After #25-#36 ship |
+| V3.9.7-V3.9.9 Future Gates | Memory freshness, work intelligence, operator preflight | Planning reserve |
+| V4 Connectivity | External collectors and multi-project behavior | After pre-V4 gates ship or are intentionally skipped |
 
 Ticket IDs assume this packet is minted after V3.9.4/#24.
 
 ---
 
 ## 4. V3.9.5 -- Conversation + Model Behavior
+
+**Status:** Shipped (2026-07-02) · Tickets `#25–#30` · Spec: [V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
 
 **Goal:** make Crowley pleasant to talk to daily.
 
@@ -98,14 +101,14 @@ Done when Crowley can be used for a week without the frontend feeling half broke
 
 Do not begin V4 connectivity until these are true:
 
-- V3.9.5 prompt/controller behavior is deterministic and covered by tests.
-- Quick status/check/update asks are brief by default.
-- Planning and exploration asks can become deep without a manual toggle.
-- Diagnostics tone is separate from chat tone.
-- Confirmed chat UX bugs are fixed without feature creep.
+- V3.9.5 prompt/controller behavior is deterministic and covered by tests. ✅
+- Quick status/check/update asks are brief by default. ✅
+- Planning and exploration asks can become deep without a manual toggle. ✅
+- Diagnostics tone is separate from chat tone. ✅
+- Confirmed chat UX bugs are fixed without feature creep. ✅
 - Workspace panels have loading/error/empty states.
 - Recent Cursor/Codex changes are obvious from the browser.
-- V3.9.5 and V3.9.6 docs are current.
+- V3.9.5 and V3.9.6 docs are current. (V3.9.5 locked 2026-07-02)
 - Full regression suite passes.
 
 ---
