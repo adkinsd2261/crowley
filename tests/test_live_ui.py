@@ -207,6 +207,31 @@ class WorldDashboardTests(IsolatedDbTestCase):
         ):
             self.assertIn(token, css)
 
+    def test_ui_narrow_viewport_overflow_guards(self) -> None:
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('content="width=device-width, initial-scale=1.0"', html)
+        for token in (
+            "overflow-x: clip",
+            "grid-template-columns: auto minmax(0, 1fr) auto",
+            ".main-column",
+            "min-width: 0",
+            ".workspace-pane",
+            ".context-drawer",
+            "max-width: 100%",
+            ".context-tabs",
+            "width: 100%",
+            "max-width: var(--entry-width)",
+            "@media (max-width: 840px)",
+            "--entry-width: 100%",
+            "@media (max-width: 520px)",
+            ".context-summary",
+            "display: none",
+            ".message-body.prose .code-block",
+            "max-width: 100%",
+        ):
+            self.assertIn(token, css)
+
 
 if __name__ == "__main__":
     unittest.main()
