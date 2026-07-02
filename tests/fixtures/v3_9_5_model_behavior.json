@@ -1,0 +1,90 @@
+{
+  "chat_prompts": [
+    {
+      "message": "what changed?",
+      "mode": "status",
+      "depth": "brief",
+      "prompt_contains": [
+        "Conversation mode (inferred): status",
+        "Response depth (inferred): brief",
+        "Expected answer shape:",
+        "Agent activity timestamps"
+      ]
+    },
+    {
+      "message": "any update from Cursor?",
+      "mode": "status",
+      "depth": "brief",
+      "prompt_contains": [
+        "Conversation mode (inferred): status",
+        "Response depth (inferred): brief"
+      ]
+    },
+    {
+      "message": "help me plan the next ticket slice",
+      "mode": "planning",
+      "depth": "deep",
+      "prompt_contains": [
+        "Conversation mode (inferred): planning",
+        "Response depth (inferred): deep",
+        "tradeoffs"
+      ]
+    },
+    {
+      "message": "thoughts on V4?",
+      "mode": "exploration",
+      "depth": "deep",
+      "prompt_contains": [
+        "Conversation mode (inferred): exploration",
+        "Response depth (inferred): deep",
+        "Thorough when warranted"
+      ]
+    },
+    {
+      "message": "the chat is hanging",
+      "mode": "bug",
+      "depth": "standard",
+      "prompt_contains": [
+        "Conversation mode (inferred): bug",
+        "Response depth (inferred): standard",
+        "Reproduce steps"
+      ]
+    },
+    {
+      "message": "why is the chat hanging",
+      "mode": "debug",
+      "depth": "standard",
+      "prompt_contains": [
+        "Conversation mode (inferred): debug",
+        "Response depth (inferred): standard",
+        "hypotheses"
+      ]
+    },
+    {
+      "message": "hey crowley hows it going",
+      "mode": "casual",
+      "depth": "standard",
+      "prompt_contains": [
+        "Conversation mode (inferred): casual",
+        "Response depth (inferred): standard",
+        "project co-founder"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "message": "run diagnostics",
+      "mode": "diagnostics",
+      "depth": "brief",
+      "diagnostics_contains": [
+        "read-only operating-system diagnostic report",
+        "authoritative SQL/system output",
+        "GROUND TRUTH CONTEXT:"
+      ],
+      "diagnostics_excludes": [
+        "project co-founder",
+        "Honor the inferred Response depth"
+      ]
+    }
+  ]
+}
