@@ -827,9 +827,34 @@ function renderMessage(role, content, extraClass = "") {
 function renderError(message) {
   const wrap = document.createElement("div");
   wrap.className = "message error";
+  wrap.setAttribute("role", "alert");
   wrap.textContent = message;
   chatEl.appendChild(wrap);
   chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function finalizeStreamingMessage(bubble, finalText) {
+  if (!bubble) return null;
+  bubble.classList.remove("streaming");
+  const text = String(finalText ?? bubble.dataset.raw ?? "").trim();
+  if (!text) {
+    bubble.remove();
+    return null;
+  }
+  setMessageContent(bubble, text, { streaming: false });
+  return bubble;
+}
+
+function abortStreamingMessage(bubble) {
+  hideThinking();
+  if (!bubble) return;
+  const raw = (bubble.dataset.raw || "").trim();
+  bubble.classList.remove("streaming");
+  if (!raw) {
+    bubble.remove();
+    return;
+  }
+  setMessageContent(bubble, raw, { streaming: false });
 }
 
 function renderDiagnosticsBlock(content, extraClass = "") {
@@ -1255,10 +1280,13 @@ async function sendMessage(text) {
         },
         done: (data) => {
           chatDone = true;
+          hideThinking();
           if (crowleyBubble) {
-            crowleyBubble.classList.remove("streaming");
-            const finalText = data.reply || crowleyBubble.dataset.raw || "";
-            setMessageContent(crowleyBubble, finalText, { streaming: false });
+            finalizeStreamingMessage(
+              crowleyBubble,
+              data.reply ?? crowleyBubble.dataset.raw ?? ""
+            );
+            crowleyBubble = null;
           } else if (data.reply) {
             renderMessage("assistant", data.reply);
           }
@@ -1266,11 +1294,15 @@ async function sendMessage(text) {
           scheduleExtractionRefresh();
         },
         error: (data) => {
+          abortStreamingMessage(crowleyBubble);
+          crowleyBubble = null;
           renderError(data.message || "Something went wrong.");
         },
       }
     );
   } catch {
+    abortStreamingMessage(crowleyBubble);
+    crowleyBubble = null;
     renderError("Could not reach Crowley.");
   } finally {
     setBusy(false);
@@ -1309,20 +1341,27 @@ async function runDiagnostics() {
       },
       done: (data) => {
         diagDone = true;
+        hideThinking();
         if (diagBlock) {
-          diagBlock.classList.remove("streaming");
-          const finalText = data.reply || diagBlock.dataset.raw || "";
-          setMessageContent(diagBlock, finalText, { streaming: false });
+          finalizeStreamingMessage(
+            diagBlock,
+            data.reply ?? diagBlock.dataset.raw ?? ""
+          );
+          diagBlock = null;
         } else if (data.reply) {
           renderDiagnosticsBlock(data.reply);
         }
         refreshPanels();
       },
       error: (data) => {
+        abortStreamingMessage(diagBlock);
+        diagBlock = null;
         renderError(data.message || "Diagnostics failed.");
       },
     });
   } catch {
+    abortStreamingMessage(diagBlock);
+    diagBlock = null;
     renderError("Could not run diagnostics.");
   } finally {
     setBusy(false);

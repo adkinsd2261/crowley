@@ -21,9 +21,23 @@ PORT = 8765
 STATIC_DIR = Path(__file__).parent / "static"
 
 SLASH_COMMAND_HINT = (
-    "Slash commands work in the terminal. "
-    "Run python crowley.py for /state, /task, /diagnostics, and other commands."
+    "Slash commands are for the terminal, not web chat. "
+    "Run: python crowley.py — then use /state, /task, /remember, and similar commands."
 )
+
+CHAT_USER_ERROR_MESSAGES = {
+    "model unavailable": (
+        "Crowley couldn't reach the model. Check your API key or Ollama, then try again."
+    ),
+    "empty response": (
+        "Crowley didn't get a response back. Try again in a moment."
+    ),
+}
+
+
+def chat_error_message(error: str) -> str:
+    """Map internal chat errors to clear user-facing copy."""
+    return CHAT_USER_ERROR_MESSAGES.get(error, error)
 
 app = FastAPI(title="Crowley", docs_url=None, redoc_url=None)
 
@@ -466,12 +480,12 @@ def _chat_sse_stream(message: str) -> Iterator[str]:
     thread.join(timeout=600)
 
     if not result_holder:
-        yield _sse_event("error", {"message": "Chat turn failed."})
+        yield _sse_event("error", {"message": "Chat turn failed. Try again."})
         return
 
     result = result_holder[0]
     if result.error:
-        yield _sse_event("error", {"message": result.error})
+        yield _sse_event("error", {"message": chat_error_message(result.error)})
         return
 
     yield _sse_event(
