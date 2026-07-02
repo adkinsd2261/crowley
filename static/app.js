@@ -158,17 +158,20 @@ function updateTabBadges(counts = {}) {
 
 const PANEL_META = {
   tickets: {
-    title: "Open tickets",
-    empty: "No open tickets.",
-    describe: (items) => `${items.length} ticket${items.length === 1 ? "" : "s"} on the board`,
+    title: "Agent work board",
+    hint: "Authoritative for Codex/Cursor assigned work.",
+    empty: "No open tickets on the board.",
+    describe: (items) => `${items.length} open ticket${items.length === 1 ? "" : "s"}`,
   },
   tasks: {
-    title: "Open tasks",
+    title: "Legacy tasks",
+    hint: "Lightweight todos — not the agent board.",
     empty: "No open tasks.",
-    describe: (items) => `${items.length} actionable item${items.length === 1 ? "" : "s"}`,
+    describe: (items) => `${items.length} todo${items.length === 1 ? "" : "s"}`,
   },
   loops: {
     title: "Open loops",
+    hint: "Unresolved questions and risks — not assigned work.",
     empty: "No open loops.",
     describe: (items) => {
       const p1 = items.filter((l) => Number(l.priority) === 1).length;
@@ -237,12 +240,13 @@ function updatePanelMeta(data, tab = activeContextTab) {
     contextPanelMeta.textContent = "";
     return;
   }
+  const hint = meta.hint ? `${meta.hint} ` : "";
   const items = itemsForTab(data, tab);
   if (!items.length) {
-    contextPanelMeta.textContent = meta.empty;
+    contextPanelMeta.textContent = `${hint}${meta.empty}`;
     return;
   }
-  contextPanelMeta.textContent = `${meta.title} — ${meta.describe(items, data)}`;
+  contextPanelMeta.textContent = `${hint}${meta.title} — ${meta.describe(items, data)}`;
 }
 
 function formatMemoryCounts(counts = {}, displayed = 0, totalOverride = null) {

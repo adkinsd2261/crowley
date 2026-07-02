@@ -412,7 +412,7 @@ Features below ship on `main` under version constant `3.9.1` until ticket `#23` 
 |-------|---------|------------|-------------------|
 | V3.9.2 Memory Clarity | #9–#13 | Canon workflow, retrieval `explanation`, hierarchy docs/UI, hygiene API, test DB isolation | 78+ |
 | V3.9.3 Planning Workflow | #14–#18 | Planning packet template, validation, `parent_id`, `cancel_ticket` | 81+ |
-| V3.9.4 Agent Visibility | #19–#23 | Agent Feed tab, ticket detail UI, handoff links (#21 pending) | **88** |
+| V3.9.4 Agent Visibility | #19–#23 | Agent Feed tab, ticket detail UI, handoff links, work-board clarity | **89** |
 
 ---
 

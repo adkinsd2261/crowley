@@ -30,7 +30,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **Pre-V4 plan approved** — V3.9.2–V3.9.4 slices shipping on `main` under version `3.9.1` until doc lock (#23)
 - **V3.9.2 shipped on `main`** — retrieval explanations, memory hierarchy, hygiene API, test DB isolation
 - **V3.9.3 shipped on `main`** — planning workflow, packet validation, parent tickets, cancel path
-- **V3.9.4 partial** — Agent Feed tab, ticket detail view; handoff links (#21) pending commit
+- **V3.9.4 partial** — Agent Feed tab, ticket detail view, handoff↔ticket links, work-board clarity (#19–#22)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -60,7 +60,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**88**; isolated DB; gated by GitHub Actions on `main`) |
+| `tests/` | **Active** | QA unit tests (**89**; isolated DB; gated by GitHub Actions on `main`) |
 | `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
 | `requirements.txt` | **Active** | Dependencies |
 | `VERSIONS.md` | **Active** | Release log |
@@ -167,10 +167,10 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**88** tests) |
+| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**89** tests) |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
-| Tasks vs tickets vs loops | Overlap in UI — clarification ticket `#22` open |
+| Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |
 
 ---
 

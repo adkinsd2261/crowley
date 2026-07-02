@@ -63,7 +63,7 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
 
 **Shipped through V3.9.1:** … concurrent ticketing, **GitHub repo + Actions CI**.
 
-**Active initiative:** Pre-V4 release ladder — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). V3.9.2 and V3.9.3 slices shipped on `main`; V3.9.4 in progress (#19–#20 done, #21–#23 open).
+**Active initiative:** Pre-V4 release ladder — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). V3.9.2–V3.9.3 shipped; V3.9.4 in progress (#19–#22 shipped, #23 open).
 
 ---
 
@@ -165,13 +165,14 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 | Item | Rationale | Complexity | Status |
 |------|-----------|------------|--------|
-| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**88** tests) |
+| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**89** tests) |
 | V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
 | V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
-| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | 🔄 In progress (#19–#20 shipped; #21–#23 open) |
+| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | 🔄 In progress (#19–#22 shipped; #23 open) |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
-| Ticket detail + handoff links | Live work board usability | Medium | Detail ✅ (#20); links local (#21) |
+| Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
+| Tasks vs tickets vs loops | Clarify Intelligence drawer roles | Low | ✅ Shipped (#22) |
 | `propose_handoff_updates()` | Handoff-tuned extraction prompt | Low | Open |
 | Sparks UI → `memory_items` | Legacy panel | Low–Medium | ✅ Memory tab |
 | `/task done <id>` | Task hygiene | Low | ✅ Shipped |

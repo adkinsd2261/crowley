@@ -747,6 +747,13 @@ body {
   color: var(--muted);
 }
 
+.panel-role-note {
+  margin: 0 0 0.35rem;
+  font-size: 0.625rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .memory-badge {
   display: inline-block;
   margin-right: 0.35rem;

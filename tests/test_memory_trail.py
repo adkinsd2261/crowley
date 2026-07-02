@@ -283,9 +283,13 @@ class MemoryTrailTests(IsolatedDbTestCase):
         finally:
             crowley.embed_text = original_embed  # type: ignore[assignment]
 
-        knowledge_idx = system.find("Filesystem truth")
+        knowledge_idx = system.find(
+            "Filesystem truth (primary readout — read before DB state and memory):"
+        )
         canon_idx = system.find("Canonical memory trail:")
-        memory_idx = system.find("Supporting memory")
+        memory_idx = system.find(
+            "Supporting memory (hybrid retrieval — lower authority than filesystem truth):"
+        )
         self.assertGreaterEqual(knowledge_idx, 0)
         self.assertGreaterEqual(canon_idx, 0)
         self.assertGreaterEqual(memory_idx, 0)

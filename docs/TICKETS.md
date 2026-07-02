@@ -13,7 +13,7 @@
 |--------------|--------|
 | V3.9.2 Memory Clarity (#9–#13) | Shipped on `main` |
 | V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
-| V3.9.4 Agent Visibility (#19–#23) | In progress — #19–#20 shipped; #21 local; #22–#23 open |
+| V3.9.4 Agent Visibility (#19–#23) | In progress — #19–#22 shipped; #23 open |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
@@ -35,7 +35,7 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
-- **V3.9.4 partial** — Agent Feed tab (#19), ticket detail view (#20) on `main`
+- **V3.9.4 partial** — Agent Feed (#19), ticket detail (#20), handoff links (#21), work-board clarity (#22)
 - **V3.9.3 Planning Workflow** — packet template/validation, parent initiatives, cancel path (#14–#18)
 - **V3.9.2 Memory Clarity** — canon workflow, retrieval explanations, hierarchy, hygiene, test isolation (#9–#13)
 - **V3.9.1 Repository & CI** — GitHub remote, `.github/workflows/tests.yml`, doc sweep

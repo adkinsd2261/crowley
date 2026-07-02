@@ -36,7 +36,7 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.1** | **Repository & CI** — GitHub `main`, Actions test gate, doc sweep |
 | **V3.9.2** | **Shipped on `main`** — canon synthesis workflow, retrieval explanations, memory hierarchy, hygiene report, test DB isolation |
 | **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
-| **V3.9.4** | **In progress** — Agent Feed tab, ticket detail view shipped; handoff↔ticket links local (#21); docs/tasks-vs-tickets (#22–#23) open |
+| **V3.9.4** | **In progress** — Agent Feed, ticket detail, handoff links, work-board clarity shipped (#19–#22); V4 doc lock (#23) open |
 
 **Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"` (version bump deferred to ticket `#23`)
 
@@ -59,6 +59,16 @@ See [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md) for the full reference. Summary
 | Hybrid retrieval | `/api/retrieve` | Supporting context only — lowest authority |
 
 **Authoritative order for facts:** filesystem → tickets → agent_activity → project_state → **canon** → retrieval → chat.
+
+### Work board surfaces (tickets vs tasks vs open loops)
+
+| Surface | Role | Agent board? |
+|---------|------|--------------|
+| **Tickets** | Authoritative work board — Codex mints; Cursor claims and ships | **Yes** |
+| **Tasks** | Lightweight legacy todos (due dates, quick hygiene) | No |
+| **Open loops** | Unresolved project questions, risks, and follow-ups | No |
+
+Cursor and Codex assigned work lives on **tickets**, not tasks or open loops. See [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md).
 
 **Prompt injection order:** filesystem → live DB state → agent activity → tickets → **canon** → hybrid retrieval → chat.
 
@@ -107,15 +117,14 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **88 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
+- **89 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
 - Personality: Crowley = the running system; Jarvis-shaped; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
 **Known gaps (honest):**
 
 - Canon synthesis is manual-first — re-run via [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
-- Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board; see ticket `#22`)
-- Handoff↔ticket cross-links shipped in code (#21) — commit pending Codex review
+- Legacy `tasks` + `open_loops` coexist with `tickets` — see [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md) § Work board surfaces
 - Onboarding doc lock for V4 readiness (#23) not done yet
 - Some `open_loops` may be stale until backlog hygiene runs
 
@@ -129,7 +138,7 @@ Pre-V4 work is now planned as a three-release ladder. See [PRE_V4_RELEASE_PLAN.m
 |------------|-------|-------|
 | **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
 | **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
-| **V3.9.4 Agent Visibility** | In progress | `#19–#20` shipped; `#21` local; `#22–#23` open |
+| **V3.9.4 Agent Visibility** | In progress | `#19–#22` shipped; `#23` open |
 
 V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
 

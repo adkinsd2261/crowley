@@ -41,7 +41,27 @@ Canon sits **above hybrid retrieval** in the prompt, but **below** filesystem tr
 
 ---
 
-## 3. UI labels (Memory tab)
+## 3. Work board surfaces (Intelligence drawer)
+
+Crowley tracks three related but distinct lists. Only **tickets** are the agent work board.
+
+| Surface | Table | Purpose | Agent board? |
+|---------|-------|---------|--------------|
+| **Tickets** | `tickets` | Assigned, prioritized work for Codex/Cursor — mint, claim, ship, close | **Yes** |
+| **Tasks** | `tasks` | Lightweight legacy todos with optional due dates | No |
+| **Open loops** | `open_loops` | Unresolved questions, risks, and follow-ups from extraction or planning | No |
+
+**Rules:**
+
+- Codex mints **tickets**; Cursor claims and closes them via sync (`--claim-ticket`, `--after --ticket`).
+- **Tasks** remain for quick personal todos — do not treat them as the Cursor backlog.
+- **Open loops** track uncertainty — they are not substitutes for ticket slices.
+
+Prompt and sync bundles treat **tickets** as authoritative for assigned work (`build_tickets_summary`, agent sync `tickets` block).
+
+---
+
+## 4. UI labels (Memory tab)
 
 | Label | Meaning |
 |-------|---------|
@@ -53,7 +73,7 @@ The Memory tab lists stored rows. Hybrid retrieval matches (used in chat) are la
 
 ---
 
-## 4. Related surfaces
+## 5. Related surfaces
 
 | Surface | Role |
 |---------|------|
@@ -64,7 +84,7 @@ The Memory tab lists stored rows. Hybrid retrieval matches (used in chat) are la
 
 ---
 
-## 5. Operator docs
+## 6. Operator docs
 
 - [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md) — manual canon write path
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md) — memory trail API and canon model

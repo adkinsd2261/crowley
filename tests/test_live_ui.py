@@ -82,6 +82,16 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("linked_ticket_ids", js)
         self.assertIn("has-detail", js)
 
+    def test_ui_contains_work_board_panel_notes(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("panel-role-note", html)
+        self.assertIn("Agent work board", html)
+        self.assertIn("not the Codex/Cursor work board", html)
+        self.assertIn("not assigned agent work", html)
+        self.assertIn("Agent work board", js)
+        self.assertIn("not the agent board", js)
+
 
 if __name__ == "__main__":
     unittest.main()
