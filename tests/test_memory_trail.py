@@ -265,7 +265,7 @@ class MemoryTrailTests(IsolatedDbTestCase):
 
     def test_crowley_prompt_anchors_system_identity(self) -> None:
         system = crowley.build_prompt("what are you?")[0]["content"]
-        self.assertIn("running system itself", system)
+        self.assertIn("running system on this machine", system)
         self.assertIn("Codex architects", system)
         self.assertIn("Cursor builds", system)
 
