@@ -1,0 +1,73 @@
+{
+  "objective": "Ship three focused pre-V4 releases (Memory Clarity, Planning Workflow, Agent Visibility) so Crowley is trustworthy before V4 connectivity.",
+  "context": "Baseline: V3.9.1 Repository & CI is live with git, Actions CI, memory trail, tickets, and multi-agent sync. Guiding principle: natural in conversation, auditable on demand. Full ticket slices also live in tickets/pre_v4_release_plan.json.",
+  "decisions": [
+    "Pre-V4 work is a memory-led three-release ladder: V3.9.2 → V3.9.3 → V3.9.4",
+    "Draft tickets #4-#8 are cancelled as superseded; active implementation tickets are #9-#23",
+    "V4 connectivity waits until canon, retrieval inspection, planning packets, agent visibility, and test isolation are in place",
+    "Crowley remains the only hub — no direct Codex-to-Cursor messaging"
+  ],
+  "non_goals": [
+    "V4 external collectors or multi-project commands in this initiative",
+    "Auto-delete or destructive memory cleanup",
+    "One giant Cursor prompt for all pre-V4 work"
+  ],
+  "risks": [
+    "project_state may lag filesystem docs until lock-in",
+    "Legacy tasks and open_loops coexist with tickets — tickets are the agent board",
+    "Planning packets minted before approval could send Cursor down stale paths"
+  ],
+  "qa_expectations": "Unit tests for new workflow surfaces; UI smoke on Memory/Tickets/Agent Feed; python -m unittest discover -s tests -q; manual Codex/Cursor sync + ticket close with handoff.",
+  "next_action": "After Mr. Go approves, Codex runs: ./venv/bin/python3 scripts/codex_sync.py --create-tickets tickets/pre_v4_release_plan.json",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-01",
+    "note": "Pre-V4 release plan approved as durable planning artifact. Example only — tickets already minted as #9-#23."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.3 Planning Workflow: document planning roles and Cursor-ready tickets",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Create docs/V3.9.3_PLANNING_WORKFLOW.md explaining how Mr. Go, Codex, Cursor, and Crowley collaborate.",
+      "non_goals": "Planning packet template implementation (ticket #15)",
+      "qa_expectation": "tests.test_planning_workflow passes",
+      "acceptance": [
+        "Doc explains roles: Mr. Go sets intent, Codex plans, Cursor builds, Crowley stores truth",
+        "Doc explains when to brainstorm versus when to mint tickets",
+        "Doc defines Cursor-ready tickets with scope, acceptance criteria, QA expectation, and non-goals",
+        "WHERE_WE_ARE links to the workflow doc in the agent ritual section",
+        "No wording implies direct Codex-to-Cursor messaging"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: add planning packet template",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add reusable planning packet JSON template and Pre-V4 example before ticket minting.",
+      "non_goals": "codex_sync validation logic (ticket #16)",
+      "qa_expectation": "tests.test_planning_workflow packet tests pass",
+      "acceptance": [
+        "Template includes objective, context, decisions, non-goals, risks, ticket slices, acceptance criteria, QA expectations, and next action",
+        "Template can be copied into a ticket JSON packet without losing core fields",
+        "Example packet uses the Pre-V4 release plan as a realistic reference",
+        "Docs explain that planning packet approval happens before Cursor implementation"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: add Agent Feed tab",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add Intelligence drawer Agent Feed tab from existing agent activity APIs.",
+      "non_goals": "Ticket detail view (ticket #20)",
+      "qa_expectation": "UI smoke + existing tests pass",
+      "acceptance": [
+        "Intelligence drawer includes an Agent Feed tab",
+        "Tab renders recent agent events newest-first with source, timestamp, and summary",
+        "Uses existing read APIs or dashboard snapshot",
+        "No direct agent-to-agent channel is introduced"
+      ]
+    }
+  ]
+}

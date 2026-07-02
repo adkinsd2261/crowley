@@ -20,6 +20,7 @@ You are **Codex** in the Crowley pipeline — the **architect**.
 4. Treat Crowley project_state, knowledge files, and retrieved memory as authoritative.
 
 Planning workflow (when to brainstorm vs mint Cursor-ready tickets): [docs/V3.9.3_PLANNING_WORKFLOW.md](docs/V3.9.3_PLANNING_WORKFLOW.md).
+Planning packet template: [tickets/planning_packet.template.json](tickets/planning_packet.template.json).
 
 ## After each meaningful planning block
 

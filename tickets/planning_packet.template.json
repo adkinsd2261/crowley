@@ -1,0 +1,35 @@
+{
+  "objective": "One sentence: what this initiative should achieve.",
+  "context": "Background Mr. Go and Cursor need: baseline version, constraints, links to docs.",
+  "decisions": [
+    "Decision already made that bounds the work"
+  ],
+  "non_goals": [
+    "Explicitly out of scope for this initiative"
+  ],
+  "risks": [
+    "Known risk or dependency to watch"
+  ],
+  "qa_expectations": "Regression bar for the initiative (e.g. unittest discover, focused module tests, manual QA).",
+  "next_action": "What happens immediately after Mr. Go approves this packet.",
+  "approval": {
+    "status": "pending",
+    "approved_by": null,
+    "approved_at": null,
+    "note": "Set status to approved only after Mr. Go signs off. Do not mint tickets while pending."
+  },
+  "tickets": [
+    {
+      "title": "Short outcome-oriented title",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Scope: what to build, which files or surfaces, and any constraints.",
+      "non_goals": "Per-slice exclusions (optional; merge into description when minting).",
+      "qa_expectation": "e.g. tests.test_foo passes; full suite N/N",
+      "acceptance": [
+        "Checkable acceptance criterion one",
+        "Checkable acceptance criterion two"
+      ]
+    }
+  ]
+}
