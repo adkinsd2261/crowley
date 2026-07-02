@@ -180,6 +180,8 @@ class WorldDashboardTests(IsolatedDbTestCase):
         css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         self.assertIn("loadMessages();", js)
+        self.assertIn("if (streaming) return;", js)
+        self.assertIn("if (refreshBtn) refreshBtn.disabled = busy;", js)
         self.assertIn("Refresh context panels and chat history", html)
         self.assertIn("Raw agent handoff timeline", html)
         for token in (

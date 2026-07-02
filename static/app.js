@@ -104,6 +104,7 @@ function setBusy(busy) {
   inputEl.disabled = busy;
   sendBtn.disabled = busy;
   if (diagnosticsBtn) diagnosticsBtn.disabled = busy;
+  if (refreshBtn) refreshBtn.disabled = busy;
   if (chatEl) chatEl.setAttribute("aria-busy", busy ? "true" : "false");
   if (!busy) {
     hideThinking();
@@ -1774,6 +1775,7 @@ inputEl.addEventListener("keydown", (e) => {
 });
 
 refreshBtn.addEventListener("click", () => {
+  if (streaming) return;
   refreshPanels();
   loadHealth();
   loadMessages();
