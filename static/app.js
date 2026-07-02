@@ -17,6 +17,7 @@ const panelTicketsEl = document.getElementById("panel-tickets");
 const panelTasksEl = document.getElementById("panel-tasks");
 const panelLoopsEl = document.getElementById("panel-loops");
 const panelDecisionsEl = document.getElementById("panel-decisions");
+const panelAgentFeedEl = document.getElementById("panel-agent-feed");
 const panelMemoryEl = document.getElementById("panel-memory");
 const memorySearchEl = document.getElementById("memory-search");
 const memorySourceEl = document.getElementById("memory-source");
@@ -141,6 +142,7 @@ function updateTabBadges(counts = {}) {
     tasks: counts.tasks_open || 0,
     loops: counts.loops_open || 0,
     decisions: counts.decisions || 0,
+    agent_feed: counts.agent_feed || 0,
     memory: counts.memory || 0,
   };
   contextTabs.forEach((tab) => {
@@ -178,6 +180,11 @@ const PANEL_META = {
     empty: "No recent decisions.",
     describe: (items) => `${items.length} logged decision${items.length === 1 ? "" : "s"}`,
   },
+  agent_feed: {
+    title: "Agent feed",
+    empty: "No agent handoffs yet.",
+    describe: (items) => `${items.length} recent event${items.length === 1 ? "" : "s"}`,
+  },
   memory: {
     title: "Stored memory",
     empty: "No memory items yet.",
@@ -212,6 +219,8 @@ function itemsForTab(data, tab) {
       return data.loops || [];
     case "decisions":
       return data.decisions || [];
+    case "agent_feed":
+      return (data.agent_activity && data.agent_activity.recent) || [];
     case "memory":
       return data.memory_items || [];
     default:
@@ -329,6 +338,38 @@ function renderTicketsPanel(groups = [], flat = []) {
     }
   }
   panelTicketsEl.innerHTML = blocks.join("");
+}
+
+function agentSourceClass(source) {
+  const normalized = String(source || "").toLowerCase();
+  if (normalized === "cursor") return "agent-source-cursor";
+  if (normalized === "codex") return "agent-source-codex";
+  if (normalized === "crowley") return "agent-source-crowley";
+  return "agent-source-other";
+}
+
+function renderAgentFeedPanel(events = []) {
+  if (!panelAgentFeedEl) return;
+  renderPanelList(panelAgentFeedEl, events, (event) => {
+    const source = String(event.source || "unknown");
+    const when = event.created_at ? formatRelativeTime(event.created_at) : "";
+    const typeMeta = event.memory_type ? escapeHtml(String(event.memory_type)) : "";
+    const summary = escapeHtml(String(event.summary || "(no summary)"));
+    const nextAction = event.next_action
+      ? `<span class="agent-feed-next">Next: ${escapeHtml(String(event.next_action))}</span>`
+      : "";
+    return (
+      `<span class="agent-feed-row">` +
+      `<span class="agent-feed-head">` +
+      `<span class="meta ${agentSourceClass(source)}">${escapeHtml(source)}</span> ` +
+      (typeMeta ? `<span class="meta">${typeMeta}</span> ` : "") +
+      (when ? `<span class="meta">· ${escapeHtml(when)}</span>` : "") +
+      `</span>` +
+      `<span class="agent-feed-summary">${summary}</span>` +
+      nextAction +
+      `</span>`
+    );
+  });
 }
 
 function loopPriorityClass(priority) {
@@ -689,6 +730,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelTasksEl, [], () => "");
     renderPanelList(panelLoopsEl, [], () => "");
     renderPanelList(panelDecisionsEl, [], () => "");
+    renderPanelList(panelAgentFeedEl, [], () => "");
     renderPanelList(panelMemoryEl, [], () => "");
     updateContextSummary(data, null);
     updatePanelMeta(data);
@@ -729,6 +771,9 @@ function renderDashboard(data, { animate = false } = {}) {
   renderPanelList(panelDecisionsEl, decisions, (d) =>
     `<span class="meta">[${d.id}]</span> ${escapeHtml(d.summary)}`
   );
+
+  const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
+  renderAgentFeedPanel(agentEvents);
 
   const memoryItems = [...(data.memory_items || [])].reverse();
   renderMemoryItems(memoryItems);
@@ -792,6 +837,9 @@ async function refreshPanels({ animate = false } = {}) {
     }
   } catch {
     if (liveSyncLabel) liveSyncLabel.textContent = "Offline";
+    if (activeContextTab === "agent_feed" && contextPanelMeta) {
+      contextPanelMeta.textContent = "Agent feed unavailable.";
+    }
   }
 }
 

@@ -1085,6 +1085,29 @@ def _handoff_summary_line(content: str) -> str:
     return _truncate(first, 160)
 
 
+def _handoff_next_action_line(content: str) -> str | None:
+    """First useful line from a handoff Next Action section."""
+    text = str(content or "").strip()
+    if not text:
+        return None
+    in_section = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        lower = stripped.lower()
+        if lower.startswith("## next action"):
+            in_section = True
+            continue
+        if in_section:
+            if lower.startswith("##"):
+                break
+            if stripped.startswith("- "):
+                value = stripped[2:].strip()
+                return value or None
+            if stripped:
+                return stripped
+    return None
+
+
 def _agent_activity_summary(
     project_id: int | None,
     *,
@@ -1102,6 +1125,7 @@ def _agent_activity_summary(
             "last_at": row["created_at"],
             "memory_type": row["memory_type"],
             "summary": _handoff_summary_line(str(row["content"])),
+            "next_action": _handoff_next_action_line(str(row["content"])),
         }
     return {
         "last_by_source": last_by_source,
@@ -1112,8 +1136,9 @@ def _agent_activity_summary(
                 "memory_type": row["memory_type"],
                 "created_at": row["created_at"],
                 "summary": _handoff_summary_line(str(row["content"])),
+                "next_action": _handoff_next_action_line(str(row["content"])),
             }
-            for row in rows[:8]
+            for row in rows
         ],
     }
 
@@ -4391,6 +4416,7 @@ def build_world_dashboard() -> dict[str, object]:
                 "tickets_open": 0,
                 "tickets_in_progress": 0,
                 "tickets_blocked": 0,
+                "agent_feed": 0,
                 **_memory_counts_payload(0),
             },
             "tasks": [],
@@ -4399,6 +4425,7 @@ def build_world_dashboard() -> dict[str, object]:
             "loops": [],
             "decisions": [],
             "memory_items": [],
+            "agent_activity": {"last_by_source": {}, "recent": []},
             "synced_at": _now_iso(),
         }
 
@@ -4416,6 +4443,8 @@ def build_world_dashboard() -> dict[str, object]:
     decisions = list_decisions(project_id, limit=10)
     memory_rows = list_recent_memory_items(10)
     memory_counts = _memory_counts_payload(len(memory_rows))
+    agent_activity = _agent_activity_summary(project_id)
+    recent_activity = agent_activity.get("recent") or []
 
     return {
         "project": row_to_dict(project),
@@ -4435,6 +4464,7 @@ def build_world_dashboard() -> dict[str, object]:
             "tickets_open_total": int(
                 (ticket_summary.get("counts") or {}).get("open_total", 0)
             ),
+            "agent_feed": len(recent_activity),
             **memory_counts,
         },
         "tasks": [row_to_dict(row) for row in tasks],
@@ -4445,7 +4475,7 @@ def build_world_dashboard() -> dict[str, object]:
         "memory_items": [_memory_item_api_dict(row) for row in memory_rows],
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
-        "agent_activity": _agent_activity_summary(project_id),
+        "agent_activity": agent_activity,
         "synced_at": _now_iso(),
     }
 

@@ -51,8 +51,25 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("loops", dash)
         self.assertIn("memory_items", dash)
         self.assertIn("counts", dash)
+        self.assertIn("agent_feed", dash["counts"])
         self.assertIn("synced_at", dash)
         self.assertEqual(dash["version"], crowley.CROWLEY_VERSION)
+
+    def test_dashboard_agent_feed_uses_recent_activity(self) -> None:
+        dash = crowley.build_world_dashboard()
+        activity = dash.get("agent_activity")
+        self.assertIsInstance(activity, dict)
+        recent = activity.get("recent") if isinstance(activity, dict) else []
+        assert isinstance(recent, list)
+        self.assertEqual(dash["counts"]["agent_feed"], len(recent))
+
+    def test_ui_contains_agent_feed_tab(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('data-tab="agent_feed"', html)
+        self.assertIn('id="panel-agent-feed"', html)
+        self.assertIn("renderAgentFeedPanel", js)
+        self.assertIn("agent_feed:", js)
 
 
 if __name__ == "__main__":

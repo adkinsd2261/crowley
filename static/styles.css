@@ -849,6 +849,40 @@ body {
   color: #9fd0ff;
 }
 
+.panel-list .agent-feed-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.panel-list .agent-feed-head {
+  display: block;
+}
+
+.panel-list .agent-feed-summary {
+  display: block;
+  line-height: 1.35;
+}
+
+.panel-list .agent-feed-next {
+  display: block;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.3;
+}
+
+.panel-list .meta.agent-source-cursor {
+  color: #9fd0ff;
+}
+
+.panel-list .meta.agent-source-codex {
+  color: #c9a8ff;
+}
+
+.panel-list .meta.agent-source-crowley {
+  color: #9fe0b8;
+}
+
 .panel-list li:not(:has(.task-row)) {
   overflow: hidden;
   text-overflow: ellipsis;

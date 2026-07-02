@@ -212,6 +212,26 @@ class MemoryTrailTests(IsolatedDbTestCase):
         self.assertIn("cursor", summary["last_by_source"])
         self.assertIn("last contact probe alpha", str(summary["last_by_source"]["cursor"]["summary"]))
 
+    def test_agent_activity_includes_next_action(self) -> None:
+        self._insert_memory(
+            content=(
+                "# Crowley Handoff\n\nSource: codex\nType: architect_handoff\n\n"
+                "## Summary\n\n- Planning slice approved\n\n"
+                "## Next Action\n\n- Cursor starts ticket #19"
+            ),
+            source="codex",
+            memory_type="project_update",
+        )
+        summary = crowley._agent_activity_summary(self.project_id)
+        codex = summary["last_by_source"].get("codex")
+        self.assertIsNotNone(codex)
+        assert codex is not None
+        self.assertEqual(codex.get("next_action"), "Cursor starts ticket #19")
+        recent = summary.get("recent")
+        assert isinstance(recent, list)
+        self.assertGreaterEqual(len(recent), 1)
+        self.assertEqual(recent[0].get("next_action"), "Cursor starts ticket #19")
+
     def test_crowley_prompt_anchors_system_identity(self) -> None:
         system = crowley.build_prompt("what are you?")[0]["content"]
         self.assertIn("running system itself", system)
