@@ -139,6 +139,22 @@ class WorldDashboardTests(IsolatedDbTestCase):
         ):
             self.assertIn(token, css)
 
+    def test_ui_contains_navigation_flow_helpers(self) -> None:
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        for token in (
+            "saveWorkspaceNav",
+            "restoreWorkspaceNav",
+            "syncSelectedTicketDetail",
+            "fingerprintTickets",
+            "renderPanelListIfChanged",
+            "crowley.workspace.nav",
+            "ticketDetailRequestId",
+        ):
+            self.assertIn(token, js)
+        self.assertIn("flex-wrap: wrap", css)
+        self.assertIn(".ticket-detail-meta", css)
+
 
 if __name__ == "__main__":
     unittest.main()

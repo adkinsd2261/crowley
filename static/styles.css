@@ -1404,6 +1404,22 @@ body {
     border-top: 1px solid var(--divider);
     max-height: 10rem;
   }
+
+  .context-tabs {
+    flex-wrap: wrap;
+  }
+
+  .context-body {
+    max-height: 14rem;
+  }
+
+  .context-panel {
+    max-height: 9rem;
+  }
+
+  .memory-controls {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1413,5 +1429,21 @@ body {
 
   .compose {
     padding: 0.25rem 1rem 0.85rem;
+  }
+
+  .context-toggle {
+    padding: 0 1rem;
+  }
+
+  .context-body {
+    padding: 0 1rem 0.75rem;
+  }
+
+  .memory-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-detail-meta {
+    grid-template-columns: 1fr;
   }
 }

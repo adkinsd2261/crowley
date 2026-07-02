@@ -48,6 +48,11 @@ let memorySearchTimer = null;
 let streamRenderFrame = null;
 let pendingStreamUpdate = null;
 let chatAutoscroll = true;
+let lastTicketsFingerprint = "";
+let lastTicketDetailId = null;
+let lastTicketDetailFingerprint = "";
+let ticketDetailRequestId = 0;
+const WORKSPACE_NAV_STORAGE_KEY = "crowley.workspace.nav";
 const EXTRACTION_REFRESH_MS = 2000;
 const LIVE_POLL_MS = 5000;
 const OBJECTIVE_FALLBACK = "Nothing pinned — just talk.";
@@ -342,16 +347,23 @@ function setMemoryCountSummary(text) {
 }
 
 function renderMemoryItems(items = []) {
-  renderPanelList(panelMemoryEl, items, (m) => {
-    const meta = [m.memory_type, m.source].filter(Boolean).join(" · ");
-    const when = m.created_at ? formatRelativeTime(m.created_at) : "";
-    const timeMeta = when ? ` · ${when}` : "";
-    return (
-      `${memoryLayerBadge(m)}` +
-      `<span class="meta">${escapeHtml(meta)}${escapeHtml(timeMeta)}</span> ` +
-      `${escapeHtml(m.display || m.content || "")}`
-    );
-  }, PANEL_META.memory.empty);
+  const fingerprint = fingerprintList(items, ["id", "created_at", "display", "content", "status"]);
+  renderPanelListIfChanged(
+    panelMemoryEl,
+    items,
+    (m) => {
+      const meta = [m.memory_type, m.source].filter(Boolean).join(" · ");
+      const when = m.created_at ? formatRelativeTime(m.created_at) : "";
+      const timeMeta = when ? ` · ${when}` : "";
+      return (
+        `${memoryLayerBadge(m)}` +
+        `<span class="meta">${escapeHtml(meta)}${escapeHtml(timeMeta)}</span> ` +
+        `${escapeHtml(m.display || m.content || "")}`
+      );
+    },
+    PANEL_META.memory.empty,
+    fingerprint
+  );
 }
 
 function memoryFilterParams() {
@@ -519,6 +531,7 @@ function renderTicketDetail(detail) {
 
 function clearTicketDetail(message = "", { kind = "empty" } = {}) {
   if (!ticketDetailEl) return;
+  ticketDetailRequestId += 1;
   if (message) {
     const stateClass = kind === "error" ? "ticket-detail-error" : "ticket-detail-empty";
     ticketDetailEl.innerHTML =
@@ -540,40 +553,88 @@ function highlightSelectedTicket() {
   });
 }
 
-async function loadTicketDetail(ticketId) {
+async function loadTicketDetail(ticketId, { force = false, silent = false } = {}) {
   if (!ticketDetailEl || !ticketId) return;
+  const requestId = ++ticketDetailRequestId;
+  const hasRenderedDetail = Boolean(
+    ticketDetailEl.querySelector(".ticket-detail-header")
+  );
+  const showLoading = !silent && !(lastTicketDetailId === ticketId && hasRenderedDetail);
+
   ticketDetailEl.classList.remove("hidden");
-  ticketDetailEl.innerHTML = `<p class="ticket-detail-loading">Loading ticket #${escapeHtml(String(ticketId))}…</p>`;
+  if (showLoading) {
+    ticketDetailEl.innerHTML = `<p class="ticket-detail-loading">Loading ticket #${escapeHtml(String(ticketId))}…</p>`;
+  }
   document
     .querySelector('.context-panel[data-panel="tickets"]')
     ?.classList.add("has-detail");
   try {
     const res = await fetch(`/api/tickets/${ticketId}`);
+    if (requestId !== ticketDetailRequestId) return;
     if (!res.ok) {
       clearTicketDetail("Ticket detail unavailable. Try Refresh.", { kind: "error" });
+      lastTicketDetailId = null;
+      lastTicketDetailFingerprint = "";
       return;
     }
     const detail = await res.json();
+    if (requestId !== ticketDetailRequestId) return;
     renderTicketDetail(detail);
+    const ticket = detail.ticket || {};
+    lastTicketDetailId = ticketId;
+    lastTicketDetailFingerprint = ticketDetailSummaryFingerprint(ticket);
     highlightSelectedTicket();
   } catch {
+    if (requestId !== ticketDetailRequestId) return;
     clearTicketDetail("Could not load ticket detail. Check the bus and try again.", {
       kind: "error",
     });
+    lastTicketDetailId = null;
+    lastTicketDetailFingerprint = "";
   }
+}
+
+function syncSelectedTicketDetail(groups, flat) {
+  if (!selectedTicketId) return;
+  const ticket = findTicketInBoard(selectedTicketId, groups, flat);
+  if (!ticket) {
+    selectedTicketId = null;
+    lastTicketDetailId = null;
+    lastTicketDetailFingerprint = "";
+    clearTicketDetail();
+    saveWorkspaceNav();
+    return;
+  }
+  const summaryFp = ticketDetailSummaryFingerprint(ticket);
+  if (
+    lastTicketDetailId === selectedTicketId &&
+    lastTicketDetailFingerprint === summaryFp &&
+    ticketDetailEl?.querySelector(".ticket-detail-header")
+  ) {
+    highlightSelectedTicket();
+    return;
+  }
+  const silent =
+    lastTicketDetailId === selectedTicketId &&
+    Boolean(ticketDetailEl?.querySelector(".ticket-detail-header"));
+  loadTicketDetail(selectedTicketId, { silent });
 }
 
 function selectTicket(ticketId) {
   if (!ticketId) return;
   if (selectedTicketId === ticketId) {
     selectedTicketId = null;
+    lastTicketDetailId = null;
+    lastTicketDetailFingerprint = "";
     clearTicketDetail();
     highlightSelectedTicket();
+    saveWorkspaceNav();
     return;
   }
   selectedTicketId = ticketId;
   highlightSelectedTicket();
-  loadTicketDetail(ticketId);
+  loadTicketDetail(ticketId, { force: true });
+  saveWorkspaceNav();
 }
 
 function ticketRowHtml(t, { child = false, initiative = false, selected = false } = {}) {
@@ -603,6 +664,12 @@ function ticketRowHtml(t, { child = false, initiative = false, selected = false 
 
 function renderTicketsPanel(groups = [], flat = []) {
   if (!panelTicketsEl) return;
+  const fingerprint = fingerprintTickets(groups, flat);
+  if (fingerprint === lastTicketsFingerprint) {
+    highlightSelectedTicket();
+    return;
+  }
+  lastTicketsFingerprint = fingerprint;
   const blocks = [];
   if (groups.length) {
     for (const group of groups) {
@@ -630,6 +697,7 @@ function renderTicketsPanel(groups = [], flat = []) {
     }
   }
   if (!blocks.length) {
+    lastTicketsFingerprint = "";
     renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
     return;
   }
@@ -646,7 +714,14 @@ function agentSourceClass(source) {
 
 function renderAgentFeedPanel(events = []) {
   if (!panelAgentFeedEl) return;
-  renderPanelList(
+  const fingerprint = fingerprintList(events, [
+    "id",
+    "created_at",
+    "summary",
+    "source",
+    "next_action",
+  ]);
+  renderPanelListIfChanged(
     panelAgentFeedEl,
     events,
     (event) => {
@@ -673,7 +748,10 @@ function renderAgentFeedPanel(events = []) {
       nextAction +
       `</span>`
     );
-  }, PANEL_META.agent_feed.empty);
+    },
+    PANEL_META.agent_feed.empty,
+    fingerprint
+  );
 }
 
 function loopPriorityClass(priority) {
@@ -999,6 +1077,96 @@ function renderPanelList(el, items, renderItem, emptyMessage = "Nothing here yet
   }
 }
 
+function renderPanelListIfChanged(el, items, renderItem, emptyMessage, fingerprint) {
+  if (!el) return;
+  const key = fingerprint ?? String((items || []).length);
+  if (el.dataset.panelFingerprint === key) return;
+  el.dataset.panelFingerprint = key;
+  renderPanelList(el, items, renderItem, emptyMessage);
+}
+
+function fingerprintList(items, fields) {
+  return (items || [])
+    .map((item) => fields.map((field) => String(item[field] ?? "")).join(":"))
+    .join("|");
+}
+
+function fingerprintTickets(groups, flat) {
+  const parts = [];
+  const pushTicket = (ticket) => {
+    if (!ticket?.id) return;
+    parts.push(
+      [ticket.id, ticket.status, ticket.updated_at || "", ticket.title || "", ticket.assignee || ""]
+        .map((value) => String(value))
+        .join(":")
+    );
+  };
+  if (groups?.length) {
+    for (const group of groups) {
+      pushTicket(group.ticket);
+      for (const child of group.children || []) pushTicket(child);
+    }
+  } else {
+    for (const ticket of flat || []) pushTicket(ticket);
+  }
+  return parts.join("|");
+}
+
+function findTicketInBoard(ticketId, groups, flat) {
+  if (!ticketId) return null;
+  const id = Number(ticketId);
+  if (groups?.length) {
+    for (const group of groups) {
+      if (Number(group.ticket?.id) === id) return group.ticket;
+      for (const child of group.children || []) {
+        if (Number(child.id) === id) return child;
+      }
+    }
+  }
+  return (flat || []).find((ticket) => Number(ticket.id) === id) || null;
+}
+
+function ticketDetailSummaryFingerprint(ticket) {
+  if (!ticket) return "";
+  return [ticket.id, ticket.status, ticket.updated_at || "", ticket.title || ""]
+    .map((value) => String(value))
+    .join(":");
+}
+
+function saveWorkspaceNav() {
+  try {
+    sessionStorage.setItem(
+      WORKSPACE_NAV_STORAGE_KEY,
+      JSON.stringify({
+        tab: activeContextTab,
+        ticketId: selectedTicketId,
+        drawerCollapsed: contextDrawer?.classList.contains("is-collapsed") ?? true,
+      })
+    );
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+function restoreWorkspaceNav() {
+  try {
+    const raw = sessionStorage.getItem(WORKSPACE_NAV_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.tab) setContextTab(saved.tab, { persist: false });
+    if (saved.ticketId) {
+      selectedTicketId = Number(saved.ticketId) || null;
+    }
+    if (contextDrawer && saved.drawerCollapsed === false) {
+      contextDrawer.classList.remove("is-collapsed");
+      contextBody?.classList.remove("hidden");
+      contextToggle?.setAttribute("aria-expanded", "true");
+    }
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
 function renderWorldState(fields) {
   worldStateEl.innerHTML = "";
   for (const [label, value] of fields) {
@@ -1071,6 +1239,9 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
     selectedTicketId = null;
+    lastTicketsFingerprint = "";
+    lastTicketDetailId = null;
+    lastTicketDetailFingerprint = "";
     updateContextSummary(data, null);
     updatePanelMeta(data);
     return;
@@ -1090,30 +1261,41 @@ function renderDashboard(data, { animate = false } = {}) {
   ]);
 
   renderTicketsPanel(data.ticket_groups || [], data.tickets || []);
-  if (selectedTicketId) {
-    loadTicketDetail(selectedTicketId);
-  }
+  syncSelectedTicketDetail(data.ticket_groups || [], data.tickets || []);
 
-  renderPanelList(panelTasksEl, data.tasks || [], (t) =>
-    `<span class="task-row">` +
-    `<span class="task-text"><span class="meta">#${t.id}</span> ${escapeHtml(t.title)}</span>` +
-    `<button type="button" class="task-done-btn" data-task-id="${t.id}" title="Mark done" aria-label="Mark task ${t.id} done">✓</button>` +
-    `</span>`,
-    PANEL_META.tasks.empty
+  renderPanelListIfChanged(
+    panelTasksEl,
+    data.tasks || [],
+    (t) =>
+      `<span class="task-row">` +
+      `<span class="task-text"><span class="meta">#${t.id}</span> ${escapeHtml(t.title)}</span>` +
+      `<button type="button" class="task-done-btn" data-task-id="${t.id}" title="Mark done" aria-label="Mark task ${t.id} done">✓</button>` +
+      `</span>`,
+    PANEL_META.tasks.empty,
+    fingerprintList(data.tasks || [], ["id", "status", "title"])
   );
 
-  renderPanelList(panelLoopsEl, data.loops || [], (l) => {
-    const pClass = loopPriorityClass(l.priority);
-    return (
-      `<span class="meta ${pClass}">P${l.priority}</span>` +
-      `<span class="meta">#${l.id}</span> ${escapeHtml(l.description)}`
-    );
-  }, PANEL_META.loops.empty);
+  renderPanelListIfChanged(
+    panelLoopsEl,
+    data.loops || [],
+    (l) => {
+      const pClass = loopPriorityClass(l.priority);
+      return (
+        `<span class="meta ${pClass}">P${l.priority}</span>` +
+        `<span class="meta">#${l.id}</span> ${escapeHtml(l.description)}`
+      );
+    },
+    PANEL_META.loops.empty,
+    fingerprintList(data.loops || [], ["id", "priority", "description", "status"])
+  );
 
   const decisions = [...(data.decisions || [])].reverse();
-  renderPanelList(panelDecisionsEl, decisions, (d) =>
-    `<span class="meta">[${d.id}]</span> ${escapeHtml(d.summary)}`,
-    PANEL_META.decisions.empty
+  renderPanelListIfChanged(
+    panelDecisionsEl,
+    decisions,
+    (d) => `<span class="meta">[${d.id}]</span> ${escapeHtml(d.summary)}`,
+    PANEL_META.decisions.empty,
+    fingerprintList(decisions, ["id", "summary"])
   );
 
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
@@ -1180,7 +1362,7 @@ async function refreshPanels({ animate = false } = {}) {
     const data = await res.json();
     renderDashboard(data, { animate });
     if (hasMemoryFilters()) {
-      loadMemoryItems();
+      loadMemoryItems({ silent: Boolean(lastDashboardData) });
     }
   } catch {
     if (isInitialLoad) {
@@ -1195,9 +1377,12 @@ async function refreshPanels({ animate = false } = {}) {
   }
 }
 
-async function loadMemoryItems() {
+async function loadMemoryItems({ silent = false } = {}) {
   if (!panelMemoryEl) return;
-  renderPanelState(panelMemoryEl, "loading", PANEL_META.memory.loading);
+  const hasContent = Boolean(panelMemoryEl.querySelector("li:not(.panel-state)"));
+  if (!silent || !hasContent) {
+    renderPanelState(panelMemoryEl, "loading", PANEL_META.memory.loading);
+  }
   const params = new URLSearchParams();
   const filters = memoryFilterParams();
   params.set("limit", "10");
@@ -1263,7 +1448,7 @@ function updateContextSummary(data = {}, state = null) {
   contextSummary.textContent = parts.length ? parts.join(" • ") : "No open context";
 }
 
-function setContextTab(name) {
+function setContextTab(name, { persist = true } = {}) {
   activeContextTab = name;
   contextTabs.forEach((tab) => {
     const active = tab.dataset.tab === name;
@@ -1276,6 +1461,7 @@ function setContextTab(name) {
     panel.hidden = !active;
   });
   if (lastDashboardData) updatePanelMeta(lastDashboardData, name);
+  if (persist) saveWorkspaceNav();
 }
 
 function toggleContextDrawer() {
@@ -1283,6 +1469,7 @@ function toggleContextDrawer() {
   const collapsed = contextDrawer.classList.toggle("is-collapsed");
   contextBody.classList.toggle("hidden", collapsed);
   contextToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  saveWorkspaceNav();
 }
 
 function scheduleExtractionRefresh() {
@@ -1572,6 +1759,7 @@ if (chatEl) {
 }
 
 autoGrowInput();
+restoreWorkspaceNav();
 loadHealth();
 loadMessages();
 refreshPanels();
