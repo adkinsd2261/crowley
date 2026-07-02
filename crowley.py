@@ -1467,6 +1467,153 @@ def is_diagnostics_request(message: str) -> bool:
     return False
 
 
+CONVERSATION_MODES = frozenset({
+    "status",
+    "planning",
+    "exploration",
+    "debug",
+    "diagnostics",
+    "bug",
+    "casual",
+})
+
+_CONVERSATION_MODE_SHAPES: dict[str, str] = {
+    "status": (
+        "Brief bullets. Lead with filesystem truth, tickets, and Agent activity "
+        "timestamps — never hybrid memory alone for agent timing. No preamble."
+    ),
+    "planning": (
+        "Structured: context, options, tradeoffs, suggested next steps or "
+        "ticket-ready slices."
+    ),
+    "exploration": (
+        "Think with Mr. Go — open, substantive, willing to go deep when the "
+        "question warrants it."
+    ),
+    "debug": (
+        "Methodical: what you know, hypotheses, what to check next. No guesses "
+        "presented as fact."
+    ),
+    "diagnostics": (
+        "Factual briefing tone — structured sections; say Unknown when data is "
+        "missing."
+    ),
+    "bug": (
+        "Reproduce steps, likely cause from evidence, concrete next fix or "
+        "investigation step."
+    ),
+    "casual": (
+        "Natural and warm — match the energy; stay useful without over-performing."
+    ),
+}
+
+
+def classify_conversation_mode(message: str) -> str:
+    """Infer conversation mode from user phrasing — deterministic, no model call."""
+    trimmed = _normalize_text(message)
+    if not trimmed:
+        return "casual"
+
+    lower = trimmed.lower()
+
+    if is_diagnostics_request(trimmed):
+        return "diagnostics"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bbug\b",
+            r"\bbroken\b",
+            r"doesn't work",
+            r"does not work",
+            r"\bnot working\b",
+            r"\bcrash",
+            r"\bfails?\b",
+            r"\bregression\b",
+            r"something broke",
+        )
+    ):
+        return "bug"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bdebug\b",
+            r"root cause",
+            r"\btrace\b",
+            r"investigate why",
+            r"why (is|are|does|did|won't|isn't|wasn't)",
+            r"figure out why",
+        )
+    ):
+        return "debug"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bstatus\b",
+            r"quick status",
+            r"what changed",
+            r"any update",
+            r"where are we",
+            r"what(?:'s| is) open",
+            r"what tickets are open",
+            r"which tickets are open",
+            r"last heard from",
+            r"when (?:did|was).{0,24}(?:cursor|codex)",
+            r"update from (?:cursor|codex)",
+            r"catch me up",
+            r"what shipped",
+        )
+    ):
+        return "status"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bplan(?:ning)?\b",
+            r"\broadmap\b",
+            r"next step",
+            r"break (?:this )?down",
+            r"how should we",
+            r"\bprioritize\b",
+            r"ticket slice",
+            r"mint ticket",
+            r"strategy for",
+        )
+    ):
+        return "planning"
+
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"thoughts on",
+            r"what if",
+            r"\bexplore\b",
+            r"brainstorm",
+            r"ideas for",
+            r"long[- ]horizon",
+            r"long[- ]term",
+            r"\beventually\b",
+            r"your opinion",
+            r"walk me through",
+        )
+    ):
+        return "exploration"
+
+    return "casual"
+
+
+def conversation_mode_answer_shape(mode: str) -> str:
+    """Expected answer shape for an inferred conversation mode."""
+    return _CONVERSATION_MODE_SHAPES.get(mode, _CONVERSATION_MODE_SHAPES["casual"])
+
+
+def _format_conversation_mode_prompt_section(mode: str) -> str:
+    shape = conversation_mode_answer_shape(mode)
+    return f"Conversation mode (inferred): {mode}\nExpected answer shape: {shape}"
+
+
 # --- autonomous world model (V3 Phase 3) ------------------------------------
 
 
@@ -5304,6 +5451,9 @@ def build_prompt(
         task_lines.append(f"- #{t['id']} {t['title']} (due: {due}, project: {project})")
 
     system_parts = [_personality_prompt(), _greeting_behavior_prompt()]
+
+    mode = classify_conversation_mode(user_message)
+    system_parts.append(_format_conversation_mode_prompt_section(mode))
 
     knowledge_entries = load_knowledge_files_context(user_message)
     system_parts.append(_format_knowledge_files_prompt_section(knowledge_entries))
