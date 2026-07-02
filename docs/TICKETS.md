@@ -1,6 +1,6 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.1 shipped (2026-07-01)  
+**As of:** Pre-V4 ladder in progress (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
@@ -9,11 +9,11 @@
 
 **Pre-V4 release ladder approved.** See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). The source of truth for current implementation work is the `tickets` table.
 
-| Ticket theme | Assignee | Priority |
-|--------------|----------|------------|
-| V3.9.2 Memory Clarity | Cursor builds | P1 |
-| V3.9.3 Planning Workflow | Cursor builds | P1 |
-| V3.9.4 Agent Visibility / Pre-V4 Readiness | Cursor builds | P1 |
+| Ticket theme | Status |
+|--------------|--------|
+| V3.9.2 Memory Clarity (#9–#13) | Shipped on `main` |
+| V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
+| V3.9.4 Agent Visibility (#19–#23) | In progress — #19–#20 shipped; #21 local; #22–#23 open |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
@@ -26,15 +26,19 @@ Draft tickets `#4-#8` were created during planning and are cancelled as supersed
 | Priority | Item |
 |----------|------|
 | P1 | LLM merge of duplicate content bodies (deferred) |
-| P2 | QA test isolation / probe row pollution |
 | P3 | Debounced canon synthesis after ingest |
 | P4 | QA autonomous extraction |
+
+Resolved: test DB isolation (#13, shipped).
 
 ---
 
 ## Completed (recent)
 
-- **V3.9.1 Repository & CI** — GitHub remote, `.github/workflows/tests.yml`, full doc sweep
+- **V3.9.4 partial** — Agent Feed tab (#19), ticket detail view (#20) on `main`
+- **V3.9.3 Planning Workflow** — packet template/validation, parent initiatives, cancel path (#14–#18)
+- **V3.9.2 Memory Clarity** — canon workflow, retrieval explanations, hierarchy, hygiene, test isolation (#9–#13)
+- **V3.9.1 Repository & CI** — GitHub remote, `.github/workflows/tests.yml`, doc sweep
 - Git repository baseline — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 - V3.9 Concurrent Ticketing (`tickets` API, sync mint/claim/close, UI tab, prompt block)
 - V3.8 Memory Trail (truthful counts, memory filters, canon path, synthesis script)

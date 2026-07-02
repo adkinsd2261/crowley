@@ -357,7 +357,9 @@ function formatTicketEventDetail(event) {
     case "claimed":
       return String(payload.status || "claimed");
     case "handoff_linked":
-      return payload.memory_id ? `linked memory #${payload.memory_id}` : "handoff linked";
+      return payload.memory_id
+        ? `handoff memory #${payload.memory_id}`
+        : "handoff linked";
     default:
       return Object.keys(payload).length ? JSON.stringify(payload) : String(event.event_type || "");
   }
@@ -378,6 +380,18 @@ function renderTicketDetail(detail) {
   const descriptionHtml = parsed.body
     ? `<section class="ticket-detail-section"><h5>Description</h5><p class="ticket-detail-text">${escapeHtml(parsed.body)}</p></section>`
     : "";
+  const linked = detail.linked_handoff;
+  const linkedHtml =
+    linked && linked.memory_id
+      ? `<section class="ticket-detail-section"><h5>Linked handoff</h5><p class="ticket-detail-text">` +
+        `memory #${escapeHtml(String(linked.memory_id))}` +
+        (linked.source ? ` · ${escapeHtml(String(linked.source))}` : "") +
+        (linked.memory_type ? ` · ${escapeHtml(String(linked.memory_type))}` : "") +
+        (linked.summary ? ` — ${escapeHtml(String(linked.summary))}` : "") +
+        `</p></section>`
+      : ticket.linked_memory_id
+        ? `<section class="ticket-detail-section"><h5>Linked handoff</h5><p class="ticket-detail-text">memory #${escapeHtml(String(ticket.linked_memory_id))}</p></section>`
+        : "";
   const eventsHtml = events.length
     ? `<section class="ticket-detail-section"><h5>History</h5><ul class="ticket-detail-events">${events
         .map((event) => {
@@ -408,6 +422,7 @@ function renderTicketDetail(detail) {
     `<div><dt>Created</dt><dd>${formatTicketTimestamp(ticket.created_at)}</dd></div>` +
     `<div><dt>Updated</dt><dd>${formatTicketTimestamp(ticket.updated_at)}</dd></div>` +
     `</dl>` +
+    linkedHtml +
     descriptionHtml +
     acceptanceHtml +
     eventsHtml;
@@ -541,6 +556,10 @@ function renderAgentFeedPanel(events = []) {
     const when = event.created_at ? formatRelativeTime(event.created_at) : "";
     const typeMeta = event.memory_type ? escapeHtml(String(event.memory_type)) : "";
     const summary = escapeHtml(String(event.summary || "(no summary)"));
+    const ticketLinks = Array.isArray(event.linked_ticket_ids) ? event.linked_ticket_ids : [];
+    const ticketMeta = ticketLinks.length
+      ? `<span class="meta">· ticket #${escapeHtml(String(ticketLinks[0]))}</span> `
+      : "";
     const nextAction = event.next_action
       ? `<span class="agent-feed-next">Next: ${escapeHtml(String(event.next_action))}</span>`
       : "";
@@ -549,6 +568,7 @@ function renderAgentFeedPanel(events = []) {
       `<span class="agent-feed-head">` +
       `<span class="meta ${agentSourceClass(source)}">${escapeHtml(source)}</span> ` +
       (typeMeta ? `<span class="meta">${typeMeta}</span> ` : "") +
+      ticketMeta +
       (when ? `<span class="meta">· ${escapeHtml(when)}</span>` : "") +
       `</span>` +
       `<span class="agent-feed-summary">${summary}</span>` +

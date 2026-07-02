@@ -1,8 +1,8 @@
 # Crowley — System Architecture
 
 **Document status:** Reverse-engineered from codebase  
-**Last reviewed against code:** 2026-07-01  
-**Code version:** `CROWLEY_VERSION = "3.9.1"` (`Crowley V3.9.1 Repository & CI`)  
+**Last reviewed against code:** 2026-07-02
+**Code version:** `CROWLEY_VERSION = "3.9.1"` (Pre-V4 features shipping on `main` under this constant)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -23,6 +23,8 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 10. **Memory Trail (V3.8)** — truthful memory counts, canon read path, filtered memory API/UI.
 11. **Multi-agent hub (V3.8)** — Codex/Cursor sync via `/api/agent/sync`; Crowley-only messaging.
 12. **Agent parity (V3.8.1)** — `agent_activity` in context/sync bundles; stop hook; activity-based verify.
+13. **Concurrent ticketing (V3.9)** — `tickets` board, sync mint/claim/close/cancel.
+14. **Pre-V4 ladder (2026-07)** — memory clarity, planning workflow, agent visibility UI — shipping on `main` without version bump until doc lock (#23).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
 
@@ -32,7 +34,7 @@ Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet)
 
 | Path | Role |
 |------|------|
-| `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~4000 lines) |
+| `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~6000 lines) |
 | `app.py` | Web transport — FastAPI routes, SSE; no business logic |
 | `static/` | Browser workspace UI (V3.5) |
 | `requirements.txt` | Runtime dependencies |
@@ -267,3 +269,7 @@ crowley.py
 | `POST /api/consolidate` | Memory consolidation | ✅ V3.7.3 |
 | `GET /api/memory-items` | Filtered memory list | ✅ V3.8 |
 | `GET /api/agent/sync` | Per-agent sync + canon | ✅ V3.8 |
+| `GET/POST/PATCH /api/tickets` | Concurrent ticketing | ✅ V3.9 |
+| `POST /api/tickets/{id}/done` | Close ticket | ✅ V3.9 |
+| `POST /api/tickets/{id}/cancel` | Cancel superseded ticket | ✅ V3.9.3 |
+| `GET /api/memory/hygiene` | Memory hygiene report | ✅ V3.9.2 |

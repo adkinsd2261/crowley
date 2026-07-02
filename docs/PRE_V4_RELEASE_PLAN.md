@@ -20,6 +20,16 @@ The guiding principle:
 
 Existing draft tickets `#4-#8` are cancelled as superseded. Cursor implementation work is tracked by tickets `#9-#23`.
 
+### Progress (2026-07-02)
+
+| Release | Tickets | Status |
+|---------|---------|--------|
+| V3.9.2 Memory Clarity | #9–#13 | ✅ Shipped on `main` |
+| V3.9.3 Planning Workflow | #14–#18 | ✅ Shipped on `main` |
+| V3.9.4 Agent Visibility | #19–#23 | 🔄 #19–#20 shipped; #21 local; #22–#23 open |
+
+`CROWLEY_VERSION` remains `3.9.1` until ticket `#23` locks docs for V4 readiness.
+
 ---
 
 ## 2. Release Ladder
@@ -69,8 +79,8 @@ Do not begin V4 connectivity until these are true:
 - Canon exists and is understandable.
 - Memory retrieval can be inspected enough to debug bad answers.
 - Planning packets can produce small Cursor tickets without relying on chat history.
-- Agent/ticket activity is visible in the browser.
-- Tests are isolated from the real working database.
+- Agent/ticket activity is visible in the browser. ✅ Agent Feed + ticket detail (#19–#20); handoff↔ticket links (#21) pending commit
+- Tests are isolated from the real working database. ✅ `tests/db_helpers.py` (#13)
 
 ---
 
@@ -78,7 +88,7 @@ Do not begin V4 connectivity until these are true:
 
 - Unit tests for canon synthesis validation, memory retrieval explanation payloads, ticket packet validation, parent/child ticket behavior, and ticket event timeline APIs.
 - UI smoke checks for Memory, Tickets, and Agent Feed tabs on desktop and mobile widths.
-- Regression check: `python -m unittest discover -s tests -q`.
+- Regression check: `python -m unittest discover -s tests -q` (**88** tests as of 2026-07-02).
 - Manual QA: run Codex/Cursor sync flow, mint a small test ticket packet, close a ticket with handoff, verify Crowley can explain current work from tickets and agent activity.
 
 ---

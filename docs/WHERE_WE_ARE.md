@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.1 (`Crowley V3.9.1 Repository & CI`) · **2026-07-01**  
+**As of:** V3.9.1 baseline · Pre-V4 ladder in progress on `main` · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -34,9 +34,11 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | V3.8.1 | Agent parity — `agent_activity`, stop hook, shared verify |
 | V3.9 | Concurrent ticketing — `tickets` table, `/api/tickets`, mint/claim/close |
 | **V3.9.1** | **Repository & CI** — GitHub `main`, Actions test gate, doc sweep |
-| **V3.9.2–V3.9.4** | **Planned** — Memory Clarity, Planning Workflow, Agent Visibility |
+| **V3.9.2** | **Shipped on `main`** — canon synthesis workflow, retrieval explanations, memory hierarchy, hygiene report, test DB isolation |
+| **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
+| **V3.9.4** | **In progress** — Agent Feed tab, ticket detail view shipped; handoff↔ticket links local (#21); docs/tasks-vs-tickets (#22–#23) open |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`
+**Current constants:** `CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"` (version bump deferred to ticket `#23`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -101,20 +103,21 @@ Hooks run `--before` automatically. After shipping:
 
 **Done and stable:**
 
-- Web UI + SSE chat, markdown replies, intelligence drawer (Tasks, **Tickets**, Loops, Decisions, Memory)
-- Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py`
+- Web UI + SSE chat, markdown replies, intelligence drawer (**Tickets**, Tasks, Loops, Decisions, **Agent Feed**, Memory)
+- Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
+- Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **52 unit tests** — local run + **GitHub Actions** on push/PR to `main`
+- **88 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); local run + **GitHub Actions** on push/PR to `main`
 - Personality: Crowley = the running system; Jarvis-shaped; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
 **Known gaps (honest):**
 
-- Canon synthesis is manual-first — first production run complete; re-run via [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
-- Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board)
-- Agent feed UI tab deferred (API exists)
+- Canon synthesis is manual-first — re-run via [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
+- Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board; see ticket `#22`)
+- Handoff↔ticket cross-links shipped in code (#21) — commit pending Codex review
+- Onboarding doc lock for V4 readiness (#23) not done yet
 - Some `open_loops` may be stale until backlog hygiene runs
-- Test suite uses isolated temp DB per test — see `tests/db_helpers.py`
 
 ---
 
@@ -124,9 +127,9 @@ Pre-V4 work is now planned as a three-release ladder. See [PRE_V4_RELEASE_PLAN.m
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
-| **V3.9.2 Memory Clarity** | Cursor builds from Codex tickets | Canon, retrieval explanations, hierarchy, hygiene, test isolation |
-| **V3.9.3 Planning Workflow** | Cursor builds from Codex tickets | Planning packets, validation, parent initiatives, cleanup |
-| **V3.9.4 Agent Visibility** | Cursor builds from Codex tickets | Agent feed, ticket detail/history, V4 readiness docs |
+| **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
+| **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
+| **V3.9.4 Agent Visibility** | In progress | `#19–#20` shipped; `#21` local; `#22–#23` open |
 
 V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
 
@@ -140,6 +143,7 @@ V4 connectivity waits until the readiness gate in the Pre-V4 plan is satisfied.
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate |
 | `docs/V3.9.1_REPOSITORY_AND_CI.md` | V3.9.1 spec |
+| `docs/V3.9.3_PLANNING_WORKFLOW.md` | Planning packets, mint gate, cancel vs edit |
 | `docs/PRE_V4_RELEASE_PLAN.md` | Approved pre-V4 release ladder |
 | `docs/V3.9_CONCURRENT_TICKETING.md` | V3.9 spec |
 | `docs/V3.8_MEMORY_TRAIL.md` | Memory trail spec |

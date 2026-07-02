@@ -82,8 +82,11 @@ KNOWLEDGE_FILES = [
     "VERSIONS.md",
     "docs/WHERE_WE_ARE.md",
     "docs/PROJECT_STATE.md",
+    "docs/PRE_V4_RELEASE_PLAN.md",
+    "docs/MEMORY_HIERARCHY.md",
     "docs/ARCHITECTURE.md",
     "docs/V3.9.1_REPOSITORY_AND_CI.md",
+    "docs/V3.9.3_PLANNING_WORKFLOW.md",
     "docs/V3.9_CONCURRENT_TICKETING.md",
     "docs/V3.8.1_AGENT_PARITY.md",
     "docs/V3.8_MEMORY_TRAIL.md",
@@ -1085,6 +1088,52 @@ def _handoff_summary_line(content: str) -> str:
     return _truncate(first, 160)
 
 
+def _ticket_linked_handoff(memory_id: int | None) -> dict[str, object] | None:
+    if memory_id is None:
+        return None
+    conn = connect_db()
+    try:
+        row = _load_active_memory_item(conn, int(memory_id))
+    finally:
+        conn.close()
+    if row is None:
+        return {
+            "memory_id": int(memory_id),
+            "summary": "(memory not found)",
+        }
+    return {
+        "memory_id": int(memory_id),
+        "source": row["source"],
+        "memory_type": row["memory_type"],
+        "created_at": row["created_at"],
+        "summary": _handoff_summary_line(str(row["content"])),
+    }
+
+
+def _tickets_by_linked_memory_ids(memory_ids: list[int]) -> dict[int, list[int]]:
+    if not memory_ids:
+        return {}
+    marks = ",".join("?" for _ in memory_ids)
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT id, linked_memory_id
+            FROM tickets
+            WHERE linked_memory_id IN ({marks})
+            ORDER BY id ASC
+            """,
+            memory_ids,
+        ).fetchall()
+    finally:
+        conn.close()
+    linked: dict[int, list[int]] = {}
+    for row in rows:
+        mem_id = int(row["linked_memory_id"])
+        linked.setdefault(mem_id, []).append(int(row["id"]))
+    return linked
+
+
 def _handoff_next_action_line(content: str) -> str | None:
     """First useful line from a handoff Next Action section."""
     text = str(content or "").strip()
@@ -1127,6 +1176,8 @@ def _agent_activity_summary(
             "summary": _handoff_summary_line(str(row["content"])),
             "next_action": _handoff_next_action_line(str(row["content"])),
         }
+    memory_ids = [int(row["id"]) for row in rows]
+    linked_tickets = _tickets_by_linked_memory_ids(memory_ids)
     return {
         "last_by_source": last_by_source,
         "recent": [
@@ -1137,6 +1188,7 @@ def _agent_activity_summary(
                 "created_at": row["created_at"],
                 "summary": _handoff_summary_line(str(row["content"])),
                 "next_action": _handoff_next_action_line(str(row["content"])),
+                "linked_ticket_ids": linked_tickets.get(int(row["id"]), []),
             }
             for row in rows
         ],
@@ -2594,6 +2646,7 @@ def update_ticket(
     params: list[object] = []
     now = _now_iso()
     old_status = str(row["status"])
+    old_linked_memory_id = row["linked_memory_id"]
 
     if status is not None:
         status_norm = _validate_ticket_status(status)
@@ -2672,6 +2725,23 @@ def update_ticket(
                     "priority_change",
                     actor,
                     {"from": int(row["priority"]), "to": max(1, min(int(priority), 4))},
+                )
+            )
+
+    if linked_memory_id is not None:
+        new_linked = int(linked_memory_id)
+        old_linked = (
+            int(old_linked_memory_id)
+            if old_linked_memory_id is not None
+            else None
+        )
+        if old_linked != new_linked:
+            event_ids.append(
+                append_ticket_event(
+                    ticket_id,
+                    "handoff_linked",
+                    actor,
+                    {"memory_id": new_linked},
                 )
             )
 
@@ -2757,7 +2827,12 @@ def get_ticket_detail(ticket_id: int, *, event_limit: int = 20) -> dict[str, obj
         }
         for event in list_ticket_events(ticket_id, limit=event_limit)
     ]
-    return {"ticket": _ticket_row_to_dict(row), "events": events}
+    ticket = _ticket_row_to_dict(row)
+    linked_memory_id = ticket.get("linked_memory_id")
+    linked_handoff = _ticket_linked_handoff(
+        int(linked_memory_id) if linked_memory_id is not None else None
+    )
+    return {"ticket": ticket, "events": events, "linked_handoff": linked_handoff}
 
 
 def group_tickets_by_parent(

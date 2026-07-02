@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9.1 (`CROWLEY_VERSION = "3.9.1"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.1 Repository & CI"`)  
-**Planning:** Shipped — [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)  
-**Last doc sync:** 2026-07-01 (V3.9.1 release)  
+**As of:** V3.9.1 baseline · Pre-V4 ladder shipping on `main`
+**Planning:** Shipped — [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md) · progress — [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
+**Last doc sync:** 2026-07-02 (infra + onboarding sweep)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -27,8 +27,10 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **Multi-agent hub** (V3.8) — Codex/Cursor sync scripts, `/api/agent/sync`, Crowley-only messaging
 - **Agent parity** (V3.8.1) — `agent_activity` in all bundles, stop hook, shared verify lib
 - **V3.9 shipped** — concurrent ticketing (`tickets` table, `/api/tickets`, agent mint/claim/close)
-- **Pre-V4 plan approved** — V3.9.2 Memory Clarity, V3.9.3 Planning Workflow, V3.9.4 Agent Visibility before V4 connectivity
-- **V3.9.1 shipped** — GitHub repo on `main`, GitHub Actions CI, documentation sweep
+- **Pre-V4 plan approved** — V3.9.2–V3.9.4 slices shipping on `main` under version `3.9.1` until doc lock (#23)
+- **V3.9.2 shipped on `main`** — retrieval explanations, memory hierarchy, hygiene API, test DB isolation
+- **V3.9.3 shipped on `main`** — planning workflow, packet validation, parent tickets, cancel path
+- **V3.9.4 partial** — Agent Feed tab, ticket detail view; handoff links (#21) pending commit
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -52,12 +54,13 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `scripts/sync_backlog.py` | **Active** | Dedupe tasks, seed open loops |
 | `scripts/finalize_live_ui_backlog.py` | **Active** | Close completed Live UI loops |
 | `scripts/consolidate_memories.py` | **Active** | Memory consolidation jobs (V3.7.3) |
+| `scripts/synthesize_canon.py` | **Active** | Manual canon synthesis (V3.9.2) |
 | `CODEX.md` | **Active** | Codex multi-agent ritual |
 | `.cursor/rules/crowley-memory.mdc` | **Active** | Cursor pre/post task memory sync |
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (52; gated by GitHub Actions on `main`) |
+| `tests/` | **Active** | QA unit tests (**88**; isolated DB; gated by GitHub Actions on `main`) |
 | `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
 | `requirements.txt` | **Active** | Dependencies |
 | `VERSIONS.md` | **Active** | Release log |
@@ -101,7 +104,12 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Handoff templates | ✅ V3.7 | `scripts/crowley_handoff.py` |
 | Codex sync | ✅ V3.8 | `scripts/codex_sync.py`, `CODEX.md` |
 | Cursor sync | ✅ V3.8.1 | `cursor_sync.py`, hooks (start/prompt/stop), `agent_sync_lib` |
-| Concurrent tickets | ✅ V3.9 | `tickets` table, `/api/tickets`, mint/claim/close via sync scripts |
+| Concurrent tickets | ✅ V3.9 | `tickets` table, `/api/tickets`, mint/claim/close/cancel via sync |
+| Ticket detail API | ✅ V3.9.4 | `GET /api/tickets/{id}` + event history; UI row-click detail |
+| Agent Feed UI | ✅ V3.9.4 | Intelligence drawer tab from `agent_activity.recent` |
+| Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
+| Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
+| Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
 | Git + CI | ✅ V3.9.1 | [adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `.github/workflows/tests.yml` |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
 | Canon synthesis | ✅ V3.9.2 | `scripts/synthesize_canon.py` — manual workflow; first run complete — see `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` |
@@ -131,7 +139,15 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | POST | `/api/tasks/{id}/done` | Mark task done |
 | GET | `/api/loops` | Open loops |
 | GET | `/api/decisions` | Recent decisions |
+| GET | `/api/tickets` | Ticket list (open default) |
+| GET | `/api/tickets/{id}` | Ticket detail + events |
+| POST | `/api/tickets` | Create ticket |
+| PATCH | `/api/tickets/{id}` | Update ticket / link handoff memory |
+| POST | `/api/tickets/{id}/done` | Mark done |
+| POST | `/api/tickets/{id}/cancel` | Cancel with comment (Codex cleanup) |
 | GET | `/api/memory-items` | Filtered `memory_items` for UI (V3.8) |
+| GET | `/api/memory/hygiene` | Memory hygiene report (V3.9.2) |
+| GET | `/api/events/recent` | Recent agent memory events |
 | POST | `/api/consolidate` | Memory consolidation jobs |
 | GET | `/api/sparks` | Legacy sparks (`memories` table) |
 | GET | `/api/messages` | Chat history |
@@ -151,10 +167,10 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | Accepted, not persisted |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` |
+| CI pipeline | ✅ V3.9.1 | GitHub Actions — `.github/workflows/tests.yml` on push/PR to `main` (**88** tests) |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
-| Agent feed UI tab | Deferred — API exists, dedicated tab does not |
+| Tasks vs tickets vs loops | Overlap in UI — clarification ticket `#22` open |
 
 ---
 

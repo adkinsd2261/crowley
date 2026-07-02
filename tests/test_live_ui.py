@@ -78,6 +78,8 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("renderTicketDetail", js)
         self.assertIn("loadTicketDetail", js)
         self.assertIn("ticketStatusClass", js)
+        self.assertIn("linked_handoff", js)
+        self.assertIn("linked_ticket_ids", js)
         self.assertIn("has-detail", js)
 
 

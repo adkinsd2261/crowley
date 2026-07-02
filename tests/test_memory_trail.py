@@ -232,6 +232,37 @@ class MemoryTrailTests(IsolatedDbTestCase):
         self.assertGreaterEqual(len(recent), 1)
         self.assertEqual(recent[0].get("next_action"), "Cursor starts ticket #19")
 
+    def test_agent_activity_links_closed_ticket_handoff(self) -> None:
+        ticket_id = crowley.create_ticket(
+            "Activity ticket link probe",
+            assignee="cursor",
+            project_id=self.project_id,
+        )["ticket"]["id"]
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            (
+                "# Crowley Handoff\n\nSource: cursor\n\n"
+                "## Summary\n\n- activity ticket cross-reference probe"
+            ),
+            source="cursor",
+            project_id=self.project_id,
+        )
+        self.assertIsNotNone(mem_id)
+        assert mem_id is not None
+        crowley.update_ticket(
+            int(ticket_id),
+            actor="cursor",
+            status="done",
+            linked_memory_id=mem_id,
+        )
+        summary = crowley._agent_activity_summary(self.project_id)
+        recent = summary.get("recent")
+        assert isinstance(recent, list)
+        match = next((item for item in recent if int(item["id"]) == mem_id), None)
+        self.assertIsNotNone(match)
+        assert match is not None
+        self.assertIn(int(ticket_id), match.get("linked_ticket_ids", []))
+
     def test_crowley_prompt_anchors_system_identity(self) -> None:
         system = crowley.build_prompt("what are you?")[0]["content"]
         self.assertIn("running system itself", system)

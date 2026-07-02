@@ -404,6 +404,18 @@ Plan: [docs/V3.9.1_REPOSITORY_AND_CI.md](./docs/V3.9.1_REPOSITORY_AND_CI.md)
 
 ---
 
+## Pre-V4 ladder (shipping on `main`, 2026-07-02)
+
+Features below ship on `main` under version constant `3.9.1` until ticket `#23` locks docs for V4.
+
+| Theme | Tickets | Highlights | Tests (cumulative) |
+|-------|---------|------------|-------------------|
+| V3.9.2 Memory Clarity | #9–#13 | Canon workflow, retrieval `explanation`, hierarchy docs/UI, hygiene API, test DB isolation | 78+ |
+| V3.9.3 Planning Workflow | #14–#18 | Planning packet template, validation, `parent_id`, `cancel_ticket` | 81+ |
+| V3.9.4 Agent Visibility | #19–#23 | Agent Feed tab, ticket detail UI, handoff links (#21 pending) | **88** |
+
+---
+
 ## V3+ — Planned
 
 - External collectors (Git, calendar) writing to `memory_items`

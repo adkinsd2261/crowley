@@ -201,6 +201,52 @@ class TicketTests(IsolatedDbTestCase):
         self.assertIn("status_change", event_types)
         self.assertIn("comment", event_types)
 
+    def test_close_with_linked_handoff_records_event_and_detail(self) -> None:
+        ticket_id = self._create(title="Handoff link probe", assignee="cursor")
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            (
+                "# Crowley Handoff\n\nSource: cursor\nType: builder_handoff\n\n"
+                "## Summary\n\n- shipped handoff link probe unique phrase"
+            ),
+            source="cursor",
+            project_id=self.project_id,
+        )
+        self.assertIsNotNone(mem_id)
+        assert mem_id is not None
+
+        crowley.update_ticket(
+            ticket_id,
+            actor="cursor",
+            status="done",
+            linked_memory_id=mem_id,
+        )
+        detail = crowley.get_ticket_detail(ticket_id)
+        assert detail is not None
+        self.assertEqual(int(detail["ticket"]["linked_memory_id"]), mem_id)
+        linked = detail.get("linked_handoff")
+        assert isinstance(linked, dict)
+        self.assertEqual(int(linked["memory_id"]), mem_id)
+        self.assertIn("handoff link probe", str(linked.get("summary", "")).lower())
+
+        event_types = {str(event["event_type"]) for event in detail["events"]}
+        self.assertIn("handoff_linked", event_types)
+        handoff_event = next(
+            event for event in detail["events"] if event["event_type"] == "handoff_linked"
+        )
+        self.assertEqual(str(handoff_event["actor"]), "cursor")
+        payload = handoff_event["payload"]
+        assert isinstance(payload, dict)
+        self.assertEqual(int(payload["memory_id"]), mem_id)
+
+        activity = crowley._agent_activity_summary(self.project_id)
+        recent = activity.get("recent")
+        assert isinstance(recent, list)
+        linked_event = next((item for item in recent if int(item["id"]) == mem_id), None)
+        self.assertIsNotNone(linked_event)
+        assert linked_event is not None
+        self.assertIn(ticket_id, linked_event.get("linked_ticket_ids", []))
+
     def test_cancel_ticket_excludes_from_open_summary(self) -> None:
         ticket_id = self._create(title="Draft superseded probe", assignee="cursor")
         result = crowley.cancel_ticket(
