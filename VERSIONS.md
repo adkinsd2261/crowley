@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.6 (`Crowley V3.9.6 Workspace Polish`)
-**Next planned:** V4 connectivity. Future pre-V4 gates V3.9.7–V3.9.9 are planning reserve.
+**Current:** V3.9.7 (`Crowley V3.9.7 Workspace Experience & Reliability`)
+**Next planned:** V4 connectivity.
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -28,7 +28,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.4  | shipped  | 2026-07-02 | Pre-V4 ladder complete — memory clarity, planning workflow, agent visibility, doc lock |
 | V3.9.5  | shipped  | 2026-07-02 | Conversation + Model Behavior — mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6  | shipped  | 2026-07-02 | Workspace Polish — panel states, streaming, navigation, what-changed feed, livability, docs lock |
-| V3.9.7  | reserve  | TBD        | Memory Freshness + Truth Maintenance |
+| V3.9.7  | shipped  | 2026-07-02 | Workspace Experience & Reliability — UI polish, embed fallback, CI slim deps, module extraction, metrics |
 | V3.9.8  | reserve  | TBD        | Work Intelligence |
 | V3.9.9  | reserve  | TBD        | Operator Confidence / Preflight |
 

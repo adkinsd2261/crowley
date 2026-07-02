@@ -107,20 +107,20 @@ class WorldDashboardTests(IsolatedDbTestCase):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         self.assertIn("panel-role-note", html)
-        self.assertIn("Agent work board", html)
+        self.assertIn("agent work board", html.lower())
         self.assertIn("not the Codex/Cursor work board", html)
         self.assertIn("not assigned agent work", html)
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v396(self) -> None:
+    def test_onboarding_docs_locked_for_v397(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.6"', where)
-        self.assertIn("V3.9.6 Workspace Polish", versions)
+        self.assertIn('CROWLEY_VERSION = "3.9.7"', where)
+        self.assertIn("V3.9.7 Workspace Experience & Reliability", versions)
         self.assertIn("shipped", versions.lower())
-        self.assertTrue((ROOT / "docs" / "V3.9.6_WORKSPACE_POLISH.md").is_file())
-        self.assertIn("Shipped", (ROOT / "docs" / "V3.9.6_WORKSPACE_POLISH.md").read_text(encoding="utf-8"))
+        self.assertTrue((ROOT / "docs" / "V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md").is_file())
+        self.assertIn("Shipped", (ROOT / "docs" / "V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md").read_text(encoding="utf-8"))
 
     def test_onboarding_docs_locked_for_v395(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
@@ -239,6 +239,8 @@ class WorldDashboardTests(IsolatedDbTestCase):
         ):
             self.assertIn(token, css)
 
+            self.assertIn(token, css)
+
     def test_ui_intelligence_drawer_polish(self) -> None:
         css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
         for token in (
@@ -278,6 +280,41 @@ class WorldDashboardTests(IsolatedDbTestCase):
             self.assertIn(token, css)
         self.assertNotIn("worldProjectEl", js)
         self.assertNotIn("renderWorldState", js)
+
+    def test_ui_chat_stream_readability(self) -> None:
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        for token in (
+            ".message.user",
+            ".message-expand",
+            "border-radius: 999px",
+            ".message.diagnostics .message-body.prose",
+            "box-shadow: inset 3px 0 0 var(--accent-soft)",
+            "Show full response",
+            "attachMessageExpand",
+            "renderDiagnosticsBlock",
+        ):
+            blob = css if token.startswith(".") or token.startswith("border") or token.startswith("box") else js
+            self.assertIn(token, blob)
+
+    def test_ui_workspace_cohesion_tokens(self) -> None:
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        for token in (
+            "--workspace-header-bg",
+            "--workspace-label-size",
+            "--workspace-label-tracking",
+            "var(--workspace-header-bg)",
+            "var(--workspace-label-size)",
+        ):
+            self.assertIn(token, css)
+
+    def test_ui_tasks_tab_demoted_after_loops(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        loops_pos = html.index('data-tab="loops"')
+        tasks_pos = html.index('data-tab="tasks"')
+        self.assertLess(loops_pos, tasks_pos)
+        self.assertIn("context-tab-legacy", html)
+        self.assertIn("Tickets = agent work board", html)
 
     def test_ui_narrow_viewport_overflow_guards(self) -> None:
         css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")

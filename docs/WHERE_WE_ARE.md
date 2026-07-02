@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.6 · Pre-V4 quality plan complete · **2026-07-02**
+**As of:** V3.9.7 · Workspace Experience & Reliability shipped · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -39,8 +39,9 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.4** | **Shipped** — Agent Feed, ticket detail, handoff links, work-board clarity, V4 doc lock (#19–#23) |
 | **V3.9.5** | **Shipped** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30) |
 | **V3.9.6** | **Shipped** — panel states, streaming polish, navigation flow, what-changed feed, livability pass (#31–#36) |
+| **V3.9.7** | **Shipped** — drawer/chat polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics (#40–#49) |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
+**Current constants:** `CROWLEY_VERSION = "3.9.7"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.7 Workspace Experience & Reliability"`
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 

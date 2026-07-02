@@ -75,20 +75,19 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.6 ship."""
+    """Current world-model fields after V3.9.7 ship."""
     return {
-        "phase": "V3.9.6 shipped — Pre-V4 quality plan complete",
-        "focus": "V4 connectivity planning — Codex mints implementation tickets",
+        "phase": "V3.9.7 shipped — Workspace Experience & Reliability",
+        "focus": "V4 connectivity planning after Mr. Go browser QA on polished workspace",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Codex: V4 connectivity planning/ticketing; Mr. Go validates workspace in browser."
+            "Mr. Go browser QA — desktop + 390px; Codex mints V4 connectivity when approved."
         ),
         "what_changed": (
-            "V3.9.6 Workspace Polish shipped (#31–#36): panel states, streaming polish, "
-            "navigation flow, what-changed feed, livability pass, Changes fallback, "
-            "version lock. Constants bumped to 3.9.6."
+            "V3.9.7 Experience & Reliability: drawer/chat polish, embed fallback, CI slim deps, "
+            "diagnostics/tickets modules, operator metrics, preflight. Constants bumped to 3.9.7."
         ),
     }
 

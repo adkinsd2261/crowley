@@ -25,10 +25,10 @@ from lock_in_state import (  # noqa: E402
 class LockInStateTests(IsolatedDbTestCase):
     def test_project_state_updates_reference_quality_batch(self) -> None:
         updates = project_state_updates()
-        self.assertIn("V3.9.6 shipped", updates["phase"])
+        self.assertIn("V3.9.7 shipped", updates["phase"])
         self.assertIn("V4 connectivity", updates["focus"])
-        self.assertIn("#31", updates["what_changed"])
-        self.assertIn("3.9.6", updates["what_changed"])
+        self.assertIn("V3.9.7", updates["what_changed"])
+        self.assertIn("3.9.7", updates["what_changed"])
 
     def test_close_shipped_loops_closes_superseded_items(self) -> None:
         pid = self._seed_project()
@@ -64,7 +64,7 @@ class LockInStateTests(IsolatedDbTestCase):
         )
         state = crowley.get_project_state(pid)
         assert state is not None
-        self.assertIn("V3.9.6 shipped", str(state["phase"]))
+        self.assertIn("V3.9.7 shipped", str(state["phase"]))
         self.assertIn("V4 connectivity", str(state["focus"]))
 
     def test_run_lock_in_dry_run_does_not_mutate(self) -> None:

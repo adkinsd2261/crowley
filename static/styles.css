@@ -32,6 +32,9 @@
 
   --workspace-glass: rgba(18, 18, 22, 0.82);
   --workspace-glass-border: rgba(255, 255, 255, 0.09);
+  --workspace-header-bg: rgba(18, 18, 22, 0.72);
+  --workspace-label-size: 0.625rem;
+  --workspace-label-tracking: 0.04em;
   --drawer-body-max-h: min(44vh, 24rem);
   --drawer-panel-max-h: min(38vh, 20rem);
 }
@@ -77,7 +80,7 @@ body {
   gap: 1rem;
   padding: 0 clamp(1rem, 4vw, 2rem);
   border-bottom: 1px solid var(--divider);
-  background: rgba(18, 18, 22, 0.72);
+  background: var(--workspace-header-bg);
   backdrop-filter: blur(10px);
   min-width: 0;
   max-width: 100%;
@@ -280,11 +283,24 @@ body {
 .empty-state {
   max-width: var(--entry-width);
   margin: clamp(4rem, 14vh, 7rem) auto;
+  padding: 0 1rem;
   text-align: center;
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.7;
   letter-spacing: -0.01em;
+}
+
+.empty-state::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #d4743f, var(--accent) 55%, #8a4518);
+  box-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0.75;
 }
 
 /* Thinking orb */
@@ -362,9 +378,9 @@ body {
 }
 
 .compose-objective-label {
-  font-size: 0.625rem;
+  font-size: var(--workspace-label-size);
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--workspace-label-tracking);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -594,6 +610,18 @@ body {
 @keyframes drawer-flash {
   0%, 100% { background: var(--bg-raised); }
   40% { background: rgba(120, 200, 140, 0.06); }
+}
+
+.context-tab.context-tab-legacy {
+  opacity: 0.78;
+}
+
+.context-tab.context-tab-legacy::after {
+  content: " · legacy";
+  font-size: 0.5625rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .context-summary {
@@ -888,6 +916,13 @@ body {
 .project-count-pill strong {
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.project-metrics-summary {
+  margin: 0.55rem 0 0;
+  font-size: 0.625rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
 }
 
 .project-panel .panel-state {
@@ -1356,9 +1391,9 @@ body {
 
 .message-label {
   display: block;
-  font-size: 0.625rem;
+  font-size: var(--workspace-label-size);
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--workspace-label-tracking);
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 0.65rem;
@@ -1368,12 +1403,23 @@ body {
   word-break: break-word;
 }
 
+.message.user {
+  padding-left: 0.15rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.message.user .message-label {
+  color: var(--text-secondary);
+  letter-spacing: var(--workspace-label-tracking);
+}
+
 .message-body.user-body p {
   margin: 0 0 0.85rem;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.82;
-  letter-spacing: -0.01em;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.78;
+  letter-spacing: -0.015em;
+  font-weight: 500;
 }
 
 .message-body.user-body p:last-child {
@@ -1551,24 +1597,31 @@ body {
 .message-body.prose.is-collapsible.is-collapsed {
   max-height: 22rem;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent);
-  mask-image: linear-gradient(180deg, #000 68%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent);
+  mask-image: linear-gradient(180deg, #000 62%, transparent);
 }
 
 .message-expand {
-  display: block;
-  margin: 0.55rem 0 0 1rem;
-  padding: 0;
-  border: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0 1rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--divider-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--accent-soft);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .message-expand:hover {
-  text-decoration: underline;
+  border-color: var(--accent-line);
+  background: var(--accent-muted);
+  text-decoration: none;
 }
 
 .message.crowley .message-label,
@@ -1589,9 +1642,25 @@ body {
   margin-bottom: 2.5rem;
 }
 
+.message.diagnostics .message-label::before {
+  content: "◆ ";
+  opacity: 0.55;
+}
+
 .message.diagnostics .message-body.prose {
-  padding: 0.85rem 0 0.85rem 1rem;
-  background: linear-gradient(90deg, var(--accent-muted), transparent 70%);
+  padding: 0.95rem 0.85rem 0.95rem 1rem;
+  background: linear-gradient(90deg, var(--accent-muted), transparent 72%);
+  border: 1px solid var(--accent-line);
+  border-radius: 0 8px 8px 0;
+  box-shadow: inset 3px 0 0 var(--accent-soft);
+}
+
+.message.diagnostics .message-body.prose h2,
+.message.diagnostics .message-body.prose h3 {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent-soft);
 }
 
 .message.error {

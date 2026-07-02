@@ -1,7 +1,2 @@
-ollama
-openai
-fastapi
-uvicorn
-chromadb
-sentence-transformers
-sqlite-vec
+-r requirements-core.txt
+-r requirements-ml.txt

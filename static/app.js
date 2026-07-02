@@ -1058,9 +1058,12 @@ function attachMessageExpand(wrap, raw) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "message-expand";
-  btn.textContent = "Show full response";
+  btn.setAttribute("aria-expanded", "false");
+  const lines = String(raw || "").split("\n").length;
+  btn.textContent = `Show full response (${lines} lines)`;
   btn.addEventListener("click", () => {
     body.classList.remove("is-collapsed");
+    btn.setAttribute("aria-expanded", "true");
     btn.remove();
   });
   wrap.appendChild(btn);
@@ -1170,7 +1173,7 @@ function showEmptyState() {
   const empty = document.createElement("p");
   empty.className = "empty-state";
   empty.textContent =
-    "This is your workspace. Ask anything — build, plan, or think out loud.";
+    "Your workspace is ready. Ask anything — build, plan, or think out loud with Crowley.";
   chatEl.appendChild(empty);
 }
 
@@ -1396,6 +1399,15 @@ function renderProjectPanel(data) {
     )
     .join("");
 
+  const metrics = data.operator_metrics || {};
+  const metricsLine = [
+    metrics.chat_errors ? `${metrics.chat_errors} chat err` : "",
+    metrics.ingest_ok ? `${metrics.ingest_ok} ingest` : "",
+    metrics.ticket_events ? `${metrics.ticket_events} ticket evt` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   el.innerHTML =
     `<div class="project-panel-body">` +
     `<header class="project-panel-head">` +
@@ -1411,6 +1423,11 @@ function renderProjectPanel(data) {
     `</header>` +
     `<dl class="project-state-grid">${fieldHtml}</dl>` +
     `<div class="project-counts" aria-label="Intelligence counts">${countItems}</div>` +
+    (metricsLine
+      ? `<p class="project-metrics-summary" aria-label="Last 24 hours">${escapeHtml(
+          `24h — ${metricsLine}`
+        )}</p>`
+      : "") +
     `</div>`;
 }
 

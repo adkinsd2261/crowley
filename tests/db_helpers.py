@@ -6,6 +6,7 @@ Convention: any unittest that writes to Crowley tables should inherit
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from collections.abc import Iterator
@@ -35,6 +36,7 @@ class IsolatedDbTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        os.environ["CROWLEY_EMBED_PROVIDER"] = "off"
         self._tmpdir = tempfile.TemporaryDirectory(prefix="crowley-test-")
         crowley.set_db_path(Path(self._tmpdir.name) / "test.db")
         crowley.setup_db()

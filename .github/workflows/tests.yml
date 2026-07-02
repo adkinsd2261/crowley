@@ -18,13 +18,12 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install core dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-core.txt
 
       - name: Run unit tests
         env:
-          HF_HOME: ${{ github.workspace }}/.cache/huggingface
-          TRANSFORMERS_CACHE: ${{ github.workspace }}/.cache/huggingface
+          CROWLEY_EMBED_PROVIDER: off
         run: python -m unittest discover -s tests -q

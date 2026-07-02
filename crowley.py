@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.7 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -39,8 +39,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.6"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"
+CROWLEY_VERSION = "3.9.7"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.7 Workspace Experience & Reliability"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -88,6 +88,7 @@ KNOWLEDGE_FILES = [
     "docs/MEMORY_HIERARCHY.md",
     "docs/ARCHITECTURE.md",
     "docs/V3.9.6_WORKSPACE_POLISH.md",
+    "docs/V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md",
     "docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md",
     "docs/V3.9.1_REPOSITORY_AND_CI.md",
     "docs/V3.9.4_AGENT_VISIBILITY.md",
@@ -135,9 +136,18 @@ MEMORY_LINE_MAX = 300
 CHAT_CONTEXT_LIMIT = 8
 CHAT_CONTEXT_MESSAGE_MAX_LEN = 600
 
-MEMORY_EMBED_PROVIDER = "auto"
+def _resolve_embed_provider_setting() -> str:
+    raw = os.environ.get("CROWLEY_EMBED_PROVIDER", "auto").strip().lower()
+    if raw in ("off", "auto", "local", "openai"):
+        return raw
+    return "auto"
+
+
+MEMORY_EMBED_PROVIDER = _resolve_embed_provider_setting()
 EMBED_MODEL_LOCAL = "all-MiniLM-L6-v2"
 EMBED_DIM = 384
+
+_embed_backfill_attempted = False
 
 MEMORY_RETRIEVE_VECTOR_CANDIDATES = 20
 MEMORY_RETRIEVE_KEYWORD_CANDIDATES = 20
@@ -680,10 +690,23 @@ def setup_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_ticket_events_ticket
                 ON ticket_events(ticket_id, created_at);
+            CREATE TABLE IF NOT EXISTS system_metrics (
+                id INTEGER PRIMARY KEY,
+                recorded_at TEXT NOT NULL,
+                metric_type TEXT NOT NULL,
+                value REAL,
+                label TEXT,
+                payload TEXT NOT NULL DEFAULT '{}'
+            );
+            CREATE INDEX IF NOT EXISTS idx_system_metrics_type_time
+                ON system_metrics(metric_type, recorded_at);
             """
         )
         _seed_default_project(conn)
-        _ensure_memory_backend(conn)
+        try:
+            _ensure_memory_backend(conn)
+        except Exception:
+            pass
         conn.commit()
     finally:
         conn.close()
@@ -1270,198 +1293,13 @@ def list_recent_agent_events(
         conn.close()
 
 
-def gather_diagnostics_context() -> dict[str, object]:
-    """Gather structured facts from SQLite only. No inference, no writes."""
-    project = get_active_project()
-    state = None
-    decisions: list[sqlite3.Row] = []
-    open_loops: list[sqlite3.Row] = []
-    if project is not None:
-        pid = int(project["id"])
-        state = get_project_state(pid)
-        decisions = list_decisions(pid, limit=DIAGNOSTICS_DECISIONS_LIMIT)
-        open_loops = list_open_loops(pid, status="open", limit=LOOPS_LIMIT)
-
-    open_tasks = list_tasks(status="open")[:DIAGNOSTICS_TASKS_LIMIT]
-    recent_summary_sparks = list_recent_summary_sparks()
-
-    resolved = get_model_provider()
-    brain_label = "OpenAI" if resolved == "openai" else "Ollama"
-
-    return {
-        "project": project,
-        "state": state,
-        "decisions": decisions,
-        "open_loops": open_loops,
-        "open_tasks": open_tasks,
-        "recent_summary_sparks": recent_summary_sparks,
-        "system_health": {
-            "brain": brain_label,
-            "memory": "online",
-            "tasks": "online",
-            "world_model": "online",
-            "version": CROWLEY_RELEASE_LABEL,
-        },
-    }
-
-
-def _serialize_diagnostics_facts(context: dict[str, object]) -> str:
-    """Render diagnostics context as plain text ground truth for the model."""
-    lines: list[str] = []
-    project = context.get("project")
-    state = context.get("state")
-
-    if project is None:
-        lines.append("Current Project: Unknown")
-        lines.append("Current Phase: Unknown")
-        lines.append("Current Focus: Unknown")
-        lines.append("What Changed Recently: Unknown")
-        lines.append("Current Risk: Unknown")
-        lines.append("Recommended Next Action: Unknown")
-    else:
-        lines.append(f"Current Project: {project['name']} ({project['status']})")
-        if state is None:
-            lines.append("Current Phase: Unknown")
-            lines.append("Current Focus: Unknown")
-            lines.append("What Changed Recently: Unknown")
-            lines.append("Current Risk: Unknown")
-            lines.append("Recommended Next Action: Unknown")
-        else:
-            lines.append(f"Current Phase: {_diag_val(state['phase'])}")
-            lines.append(f"Current Focus: {_diag_val(state['focus'])}")
-            lines.append(f"What Changed Recently: {_diag_val(state['what_changed'])}")
-            lines.append(f"Current Risk: {_diag_val(state['current_risk'])}")
-            lines.append(f"Recommended Next Action: {_diag_val(state['next_action'])}")
-
-    lines.append("")
-    lines.append("Open Tasks:")
-    tasks = context.get("open_tasks") or []
-    if not tasks:
-        lines.append("- None")
-    else:
-        for t in tasks:
-            due = t["due_date"] or "no due date"
-            proj = t["project"] or "general"
-            lines.append(f"- #{t['id']} {t['title']} (due: {due}, project: {proj})")
-
-    lines.append("")
-    lines.append("Open Loops:")
-    loops = context.get("open_loops") or []
-    if not loops:
-        lines.append("- None")
-    else:
-        for loop in loops:
-            lines.append(f"- #{loop['id']} [priority {loop['priority']}] {loop['description']}")
-
-    lines.append("")
-    lines.append("Recent Decisions:")
-    decisions = context.get("decisions") or []
-    if not decisions:
-        lines.append("- None")
-    else:
-        for d in reversed(decisions):
-            entry = f"- [{d['id']}] {d['summary']}"
-            if d["detail"]:
-                entry += f" — {d['detail']}"
-            lines.append(entry)
-
-    lines.append("")
-    lines.append("Recent Summary Sparks:")
-    sparks = context.get("recent_summary_sparks") or []
-    if not sparks:
-        lines.append("- None")
-    else:
-        for s in reversed(sparks):
-            lines.append(f"- [{s['id']}] {s['content']}")
-
-    health = context["system_health"]
-    lines.append("")
-    lines.append("System Health:")
-    lines.append(f"- Brain: {health['brain']}")
-    lines.append(f"- Memory: {health['memory']}")
-    lines.append(f"- Tasks: {health['tasks']}")
-    lines.append(f"- World Model: {health['world_model']}")
-    lines.append(f"- Version: {health['version']}")
-
-    return "\n".join(lines)
-
-
-def _diagnostics_system_prompt(facts: str) -> str:
-    """Factual diagnostics briefing — separate from chat personality/mode/depth."""
-    return f"""You are Crowley producing a read-only operating-system diagnostic report for Mr. Go.
-
-This path is separate from chat. Do not use co-founder voice, exploration tone, inferred conversation mode, or response depth rules from the chat prompt.
-
-Output rules:
-- Start immediately with the first section heading — no greeting, sign-off, preamble, or conversational opener.
-- Do not write salutations such as "Good morning", "Hello", "Hi", or "Hey".
-- Do not use co-founder phrasing, warmth, filler, banter, or chat personality.
-- Use headings or bullet lists only — report-like, not conversational.
-- Everything inside GROUND TRUTH CONTEXT is authoritative SQL/system output.
-- Never invent missing information.
-- If a field is Unknown or listed as None, explicitly say Unknown in the report.
-- Do not speculate.
-- Do not modify state.
-- Do not recommend work unless it is supported by open tasks, open loops, project state, or recent decisions in the context.
-
-Tone: factual, structured, systems-minded. Mention Mr. Go only inside factual sentences — never as a salutation.
-
-Produce a briefing with these sections in order (each line is a section heading):
-
-Current Project
-Current Phase
-Current Focus
-What Changed Recently
-Open Tasks
-Open Loops
-Recent Decisions
-Recent Summary Sparks
-Current Risk
-Recommended Next Action
-System Health
-
-For System Health, report exactly:
-Brain: (from context)
-Memory: Online
-Tasks: Online
-World Model: Online
-Version: {CROWLEY_RELEASE_LABEL}
-
-GROUND TRUTH CONTEXT:
-{facts}"""
-
-
-def format_diagnostics_prompt(context: dict[str, object]) -> list[dict[str, str]]:
-    """Build the diagnostics-only prompt from structured facts."""
-    facts = _serialize_diagnostics_facts(context)
-    return [
-        {"role": "system", "content": _diagnostics_system_prompt(facts)},
-        {"role": "user", "content": "Produce the diagnostic briefing now. Begin with the Current Project heading — no greeting or conversational opener."},
-    ]
-
-
-def run_diagnostics() -> str | None:
-    """Read-only diagnostics pipeline: gather facts, stream briefing, no writes."""
-    print("Crowley: thinking...", flush=True)
-    started = False
-    parts: list[str] = []
-    for token in iter_diagnostics_tokens():
-        started = _print_stream_token(token, started)
-        parts.append(token)
-    if not started:
-        print("\rCrowley: (no response)", flush=True)
-        return None
-    print(flush=True)
-    reply = "".join(parts).strip()
-    return reply if reply else None
-
-
-def iter_diagnostics_tokens() -> Iterator[str]:
-    """Yield diagnostics briefing tokens. Read-only — no DB writes."""
-    context = gather_diagnostics_context()
-    messages = format_diagnostics_prompt(context)
-    yield from iter_model_tokens(messages, quiet=True)
-
+from diagnostics import (  # noqa: E402
+    format_diagnostics_prompt,
+    gather_diagnostics_context,
+    iter_diagnostics_tokens,
+    run_diagnostics,
+    _serialize_diagnostics_facts,
+)
 
 def is_diagnostics_request(message: str) -> bool:
     """True if natural-language message should trigger read-only diagnostics."""
@@ -2569,781 +2407,29 @@ def complete_task(task_id: int) -> bool:
     return update_task_status(task_id, "done")
 
 
-# --- concurrent ticketing (V3.9) ----------------------------------------------
-
-
-TICKET_STATUSES = frozenset({
-    "open",
-    "claimed",
-    "in_progress",
-    "blocked",
-    "done",
-    "cancelled",
-})
-TICKET_OPEN_STATUSES = frozenset({"open", "claimed", "in_progress", "blocked"})
-TICKET_ASSIGNEES = frozenset({"codex", "cursor", "crowley", "mr_go", "unassigned"})
-TICKET_SOURCES = frozenset({"codex", "cursor", "crowley", "mr_go", "manual", "system"})
-TICKET_EVENT_TYPES = frozenset({
-    "created",
-    "claimed",
-    "status_change",
-    "cancelled",
-    "comment",
-    "handoff_linked",
-    "assignee_change",
-    "priority_change",
-})
-
-
-def _validate_ticket_status(status: str) -> str:
-    normalized = status.strip().lower()
-    if normalized not in TICKET_STATUSES:
-        raise ValueError(f"invalid ticket status: {status}")
-    return normalized
-
-
-def _validate_ticket_assignee(assignee: str) -> str:
-    normalized = assignee.strip().lower()
-    if normalized not in TICKET_ASSIGNEES:
-        raise ValueError(f"invalid ticket assignee: {assignee}")
-    return normalized
-
-
-def _validate_ticket_source(source: str) -> str:
-    normalized = source.strip().lower()
-    if normalized not in TICKET_SOURCES:
-        raise ValueError(f"invalid ticket source: {source}")
-    return normalized
-
-
-def _ticket_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
-    return row_to_dict(row)
-
-
-def append_ticket_event(
-    ticket_id: int,
-    event_type: str,
-    actor: str,
-    payload: dict[str, object] | None = None,
-) -> int:
-    if event_type not in TICKET_EVENT_TYPES:
-        raise ValueError(f"invalid ticket event type: {event_type}")
-    now = _now_iso()
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            """
-            INSERT INTO ticket_events (ticket_id, event_type, actor, payload, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (ticket_id, event_type, actor.strip().lower(), json.dumps(payload or {}), now),
-        )
-        conn.commit()
-        return int(cur.lastrowid)
-    finally:
-        conn.close()
-
-
-def create_ticket(
-    title: str,
-    *,
-    description: str = "",
-    assignee: str = "unassigned",
-    priority: int = 2,
-    parent_id: int | None = None,
-    blocked_by_ticket_id: int | None = None,
-    source: str = "manual",
-    actor: str = "system",
-    project_id: int | None = None,
-    linked_memory_id: int | None = None,
-    status: str = "open",
-) -> dict[str, object]:
-    """Create a ticket and initial event. Returns {ticket, event_id}."""
-    title_text = _normalize_text(title)
-    if not title_text:
-        raise ValueError("ticket title is required")
-
-    if project_id is None:
-        project = get_active_project()
-        if project is None:
-            raise ValueError("no active project")
-        project_id = int(project["id"])
-
-    status_norm = _validate_ticket_status(status)
-    assignee_norm = _validate_ticket_assignee(assignee)
-    source_norm = _validate_ticket_source(source)
-    priority_val = max(1, min(int(priority), 4))
-    now = _now_iso()
-
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            """
-            INSERT INTO tickets (
-                project_id, title, description, status, assignee, priority,
-                parent_id, blocked_by_ticket_id, source,
-                created_at, updated_at, closed_at, linked_memory_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
-            """,
-            (
-                project_id,
-                title_text,
-                description.strip(),
-                status_norm,
-                assignee_norm,
-                priority_val,
-                parent_id,
-                blocked_by_ticket_id,
-                source_norm,
-                now,
-                now,
-                linked_memory_id,
-            ),
-        )
-        ticket_id = int(cur.lastrowid)
-        conn.commit()
-    finally:
-        conn.close()
-
-    event_id = append_ticket_event(
-        ticket_id,
-        "created",
-        actor,
-        {
-            "title": title_text,
-            "assignee": assignee_norm,
-            "priority": priority_val,
-            "source": source_norm,
-        },
-    )
-    ticket = get_ticket_by_id(ticket_id)
-    if ticket is None:
-        raise RuntimeError("ticket create failed")
-    return {"ticket": _ticket_row_to_dict(ticket), "event_id": event_id}
-
-
-def get_ticket_by_id(ticket_id: int) -> sqlite3.Row | None:
-    conn = connect_db()
-    try:
-        return conn.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
-    finally:
-        conn.close()
-
-
-def list_ticket_events(ticket_id: int, *, limit: int = 20) -> list[sqlite3.Row]:
-    limit = max(1, min(int(limit), 100))
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM ticket_events
-            WHERE ticket_id = ?
-            ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ?
-            """,
-            (ticket_id, limit),
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
-
-
-def list_recent_ticket_events_for_project(
-    project_id: int,
-    *,
-    limit: int = 20,
-) -> list[sqlite3.Row]:
-    """Recent ticket board events across a project (newest first)."""
-    limit = max(1, min(int(limit), 50))
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT
-                te.id AS event_id,
-                te.ticket_id,
-                te.event_type,
-                te.actor,
-                te.payload,
-                te.created_at,
-                t.title AS ticket_title,
-                t.status AS ticket_status
-            FROM ticket_events te
-            INNER JOIN tickets t ON t.id = te.ticket_id
-            WHERE t.project_id = ?
-            ORDER BY datetime(te.created_at) DESC, te.id DESC
-            LIMIT ?
-            """,
-            (project_id, limit),
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
-
-
-def _format_ticket_event_feed_summary(
-    event_type: str,
-    actor: str,
-    payload: dict[str, object],
-    *,
-    ticket_id: int,
-    ticket_title: str,
-) -> str:
-    title = _truncate(str(ticket_title or f"Ticket #{ticket_id}"), 80)
-    normalized = str(event_type or "event")
-    if normalized == "status_change":
-        return (
-            f"Ticket #{ticket_id} {title} — "
-            f"{payload.get('from', '?')} → {payload.get('to', '?')}"
-        )
-    if normalized == "created":
-        return f"Ticket #{ticket_id} opened — {title}"
-    if normalized == "claimed":
-        return f"Ticket #{ticket_id} claimed by {actor} — {title}"
-    if normalized == "cancelled":
-        reason = str(payload.get("reason") or "").strip()
-        base = f"Ticket #{ticket_id} cancelled — {title}"
-        return f"{base} ({reason})" if reason else base
-    if normalized == "handoff_linked":
-        mem = payload.get("memory_id")
-        return f"Ticket #{ticket_id} linked handoff memory #{mem} — {title}"
-    if normalized == "comment":
-        text = _truncate(str(payload.get("text") or ""), 120)
-        return f"Ticket #{ticket_id} comment — {text}" if text else f"Ticket #{ticket_id} comment — {title}"
-    if normalized == "assignee_change":
-        return (
-            f"Ticket #{ticket_id} assignee {payload.get('from', '?')} → "
-            f"{payload.get('to', '?')} — {title}"
-        )
-    if normalized == "priority_change":
-        return (
-            f"Ticket #{ticket_id} priority P{payload.get('from', '?')} → "
-            f"P{payload.get('to', '?')} — {title}"
-        )
-    return f"Ticket #{ticket_id} {normalized} — {title}"
-
-
-def build_recent_changes_feed(
-    project_id: int | None,
-    *,
-    limit: int = 20,
-) -> dict[str, object]:
-    """Unified recent-changes timeline from handoffs and ticket events."""
-    if project_id is None:
-        return {"items": []}
-
-    limit = max(1, min(int(limit), 50))
-    per_source = max(5, limit // 2)
-
-    agent_rows = list_recent_agent_events(limit=per_source, project_id=project_id)
-    memory_ids = [int(row["id"]) for row in agent_rows]
-    linked_tickets = _tickets_by_linked_memory_ids(memory_ids)
-    ticket_rows = list_recent_ticket_events_for_project(project_id, limit=per_source)
-
-    items: list[dict[str, object]] = []
-    for row in agent_rows:
-        items.append(
-            {
-                "kind": "handoff",
-                "id": f"handoff:{row['id']}",
-                "created_at": row["created_at"],
-                "source": row["source"],
-                "memory_type": row["memory_type"],
-                "summary": _handoff_summary_line(str(row["content"])),
-                "next_action": _handoff_next_action_line(str(row["content"])),
-                "linked_ticket_ids": linked_tickets.get(int(row["id"]), []),
-            }
-        )
-
-    for row in ticket_rows:
-        payload_raw = row["payload"]
-        try:
-            payload = json.loads(str(payload_raw or "{}"))
-        except json.JSONDecodeError:
-            payload = {}
-        if not isinstance(payload, dict):
-            payload = {}
-        ticket_id = int(row["ticket_id"])
-        items.append(
-            {
-                "kind": "ticket",
-                "id": f"ticket_event:{row['event_id']}",
-                "created_at": row["created_at"],
-                "source": str(row["actor"] or "system"),
-                "event_type": row["event_type"],
-                "ticket_id": ticket_id,
-                "ticket_title": row["ticket_title"],
-                "summary": _format_ticket_event_feed_summary(
-                    str(row["event_type"]),
-                    str(row["actor"]),
-                    payload,
-                    ticket_id=ticket_id,
-                    ticket_title=str(row["ticket_title"] or ""),
-                ),
-            }
-        )
-
-    items.sort(
-        key=lambda item: (str(item.get("created_at") or ""), str(item.get("id") or "")),
-        reverse=True,
-    )
-    return {"items": items[:limit]}
-
-
-def list_tickets(
-    *,
-    project_id: int | None = None,
-    status: str | None = None,
-    open_only: bool = False,
-    assignee: str | None = None,
-    priority_max: int | None = None,
-    parent_id: int | None = None,
-    limit: int = 50,
-    offset: int = 0,
-) -> list[sqlite3.Row]:
-    limit = max(1, min(int(limit), 200))
-    offset = max(0, int(offset))
-    clauses = ["1=1"]
-    params: list[object] = []
-
-    if project_id is not None:
-        clauses.append("project_id = ?")
-        params.append(project_id)
-
-    if open_only:
-        marks = ",".join("?" for _ in TICKET_OPEN_STATUSES)
-        clauses.append(f"status IN ({marks})")
-        params.extend(sorted(TICKET_OPEN_STATUSES))
-    elif status is not None:
-        if status.strip().lower() == "all":
-            pass
-        elif "," in status:
-            statuses = [_validate_ticket_status(part) for part in status.split(",")]
-            marks = ",".join("?" for _ in statuses)
-            clauses.append(f"status IN ({marks})")
-            params.extend(statuses)
-        else:
-            clauses.append("status = ?")
-            params.append(_validate_ticket_status(status))
-
-    if assignee is not None:
-        clauses.append("assignee = ?")
-        params.append(_validate_ticket_assignee(assignee))
-
-    if priority_max is not None:
-        clauses.append("priority <= ?")
-        params.append(max(1, min(int(priority_max), 4)))
-
-    if parent_id is not None:
-        clauses.append("parent_id = ?")
-        params.append(parent_id)
-
-    params.extend([limit, offset])
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            f"""
-            SELECT * FROM tickets
-            WHERE {' AND '.join(clauses)}
-            ORDER BY priority ASC, datetime(updated_at) DESC, id DESC
-            LIMIT ? OFFSET ?
-            """,
-            params,
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
-
-
-def count_tickets(
-    *,
-    project_id: int | None = None,
-    status: str | None = None,
-    open_only: bool = False,
-    assignee: str | None = None,
-) -> int:
-    clauses = ["1=1"]
-    params: list[object] = []
-    if project_id is not None:
-        clauses.append("project_id = ?")
-        params.append(project_id)
-    if open_only:
-        marks = ",".join("?" for _ in TICKET_OPEN_STATUSES)
-        clauses.append(f"status IN ({marks})")
-        params.extend(sorted(TICKET_OPEN_STATUSES))
-    elif status is not None:
-        clauses.append("status = ?")
-        params.append(_validate_ticket_status(status))
-    if assignee is not None:
-        clauses.append("assignee = ?")
-        params.append(_validate_ticket_assignee(assignee))
-
-    conn = connect_db()
-    try:
-        row = conn.execute(
-            f"SELECT COUNT(*) AS c FROM tickets WHERE {' AND '.join(clauses)}",
-            params,
-        ).fetchone()
-        return int(row["c"]) if row is not None else 0
-    finally:
-        conn.close()
-
-
-def update_ticket(
-    ticket_id: int,
-    *,
-    actor: str,
-    status: str | None = None,
-    assignee: str | None = None,
-    priority: int | None = None,
-    description: str | None = None,
-    blocked_by_ticket_id: int | None = None,
-    comment: str | None = None,
-    linked_memory_id: int | None = None,
-    clear_blocked_by: bool = False,
-) -> dict[str, object]:
-    row = get_ticket_by_id(ticket_id)
-    if row is None:
-        raise ValueError(f"ticket not found: {ticket_id}")
-
-    fields: list[str] = []
-    params: list[object] = []
-    now = _now_iso()
-    old_status = str(row["status"])
-    old_linked_memory_id = row["linked_memory_id"]
-
-    if status is not None:
-        status_norm = _validate_ticket_status(status)
-        fields.append("status = ?")
-        params.append(status_norm)
-        if status_norm in {"done", "cancelled"}:
-            fields.append("closed_at = ?")
-            params.append(now)
-        elif old_status in {"done", "cancelled"}:
-            fields.append("closed_at = NULL")
-
-    if assignee is not None:
-        fields.append("assignee = ?")
-        params.append(_validate_ticket_assignee(assignee))
-
-    if priority is not None:
-        fields.append("priority = ?")
-        params.append(max(1, min(int(priority), 4)))
-
-    if description is not None:
-        fields.append("description = ?")
-        params.append(description.strip())
-
-    if clear_blocked_by:
-        fields.append("blocked_by_ticket_id = NULL")
-    elif blocked_by_ticket_id is not None:
-        fields.append("blocked_by_ticket_id = ?")
-        params.append(blocked_by_ticket_id)
-
-    if linked_memory_id is not None:
-        fields.append("linked_memory_id = ?")
-        params.append(linked_memory_id)
-
-    if not fields and not comment:
-        ticket = get_ticket_by_id(ticket_id)
-        assert ticket is not None
-        return {"ticket": _ticket_row_to_dict(ticket), "events": []}
-
-    event_ids: list[int] = []
-    if fields:
-        fields.append("updated_at = ?")
-        params.append(now)
-        params.append(ticket_id)
-        conn = connect_db()
-        try:
-            conn.execute(
-                f"UPDATE tickets SET {', '.join(fields)} WHERE id = ?",
-                params,
-            )
-            conn.commit()
-        finally:
-            conn.close()
-
-        if status is not None and _validate_ticket_status(status) != old_status:
-            event_ids.append(
-                append_ticket_event(
-                    ticket_id,
-                    "status_change",
-                    actor,
-                    {"from": old_status, "to": _validate_ticket_status(status)},
-                )
-            )
-        if assignee is not None and _validate_ticket_assignee(assignee) != str(row["assignee"]):
-            event_ids.append(
-                append_ticket_event(
-                    ticket_id,
-                    "assignee_change",
-                    actor,
-                    {"from": str(row["assignee"]), "to": _validate_ticket_assignee(assignee)},
-                )
-            )
-        if priority is not None and int(priority) != int(row["priority"]):
-            event_ids.append(
-                append_ticket_event(
-                    ticket_id,
-                    "priority_change",
-                    actor,
-                    {"from": int(row["priority"]), "to": max(1, min(int(priority), 4))},
-                )
-            )
-
-    if linked_memory_id is not None:
-        new_linked = int(linked_memory_id)
-        old_linked = (
-            int(old_linked_memory_id)
-            if old_linked_memory_id is not None
-            else None
-        )
-        if old_linked != new_linked:
-            event_ids.append(
-                append_ticket_event(
-                    ticket_id,
-                    "handoff_linked",
-                    actor,
-                    {"memory_id": new_linked},
-                )
-            )
-
-    if comment and comment.strip():
-        event_ids.append(
-            append_ticket_event(
-                ticket_id,
-                "comment",
-                actor,
-                {"text": comment.strip()},
-            )
-        )
-
-    ticket = get_ticket_by_id(ticket_id)
-    assert ticket is not None
-    return {"ticket": _ticket_row_to_dict(ticket), "event_ids": event_ids}
-
-
-def complete_ticket(ticket_id: int, *, actor: str = "system") -> dict[str, object]:
-    return update_ticket(ticket_id, actor=actor, status="done")
-
-
-def cancel_ticket(
-    ticket_id: int,
-    *,
-    actor: str,
-    comment: str,
-) -> dict[str, object]:
-    reason = comment.strip()
-    if not reason:
-        raise ValueError("cancellation comment is required")
-    row = get_ticket_by_id(ticket_id)
-    if row is None:
-        raise ValueError(f"ticket not found: {ticket_id}")
-    old_status = str(row["status"])
-    if old_status == "cancelled":
-        return {
-            "ticket": _ticket_row_to_dict(row),
-            "event_ids": [],
-            "already_cancelled": True,
-        }
-    result = update_ticket(ticket_id, actor=actor, status="cancelled")
-    cancelled_event_id = append_ticket_event(
-        ticket_id,
-        "cancelled",
-        actor,
-        {"from": old_status, "reason": reason},
-    )
-    event_ids = list(result.get("event_ids") or [])
-    event_ids.append(cancelled_event_id)
-    ticket = get_ticket_by_id(ticket_id)
-    assert ticket is not None
-    return {"ticket": _ticket_row_to_dict(ticket), "event_ids": event_ids}
-
-
-def claim_ticket(ticket_id: int, *, actor: str) -> dict[str, object]:
-    row = get_ticket_by_id(ticket_id)
-    if row is None:
-        raise ValueError(f"ticket not found: {ticket_id}")
-    status = str(row["status"])
-    if status in {"done", "cancelled"}:
-        raise ValueError(f"ticket {ticket_id} is closed")
-    assignee = actor.strip().lower() if actor.strip().lower() in TICKET_ASSIGNEES else str(row["assignee"])
-    new_status = "in_progress" if status in {"open", "claimed"} else status
-    result = update_ticket(
-        ticket_id,
-        actor=actor,
-        status=new_status,
-        assignee=assignee,
-    )
-    append_ticket_event(ticket_id, "claimed", actor, {"status": new_status})
-    return result
-
-
-def get_ticket_detail(ticket_id: int, *, event_limit: int = 20) -> dict[str, object] | None:
-    row = get_ticket_by_id(ticket_id)
-    if row is None:
-        return None
-    events = [
-        {
-            **row_to_dict(event),
-            "payload": json.loads(str(event["payload"] or "{}")),
-        }
-        for event in list_ticket_events(ticket_id, limit=event_limit)
-    ]
-    ticket = _ticket_row_to_dict(row)
-    linked_memory_id = ticket.get("linked_memory_id")
-    linked_handoff = _ticket_linked_handoff(
-        int(linked_memory_id) if linked_memory_id is not None else None
-    )
-    return {"ticket": ticket, "events": events, "linked_handoff": linked_handoff}
-
-
-def group_tickets_by_parent(
-    tickets: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    """Group open tickets under parent initiatives for board/sync display."""
-    if not tickets:
-        return []
-
-    open_ids = {int(ticket["id"]) for ticket in tickets}
-    children_by_parent: dict[int, list[dict[str, object]]] = {}
-    for ticket in tickets:
-        parent_id = ticket.get("parent_id")
-        if parent_id is None:
-            continue
-        children_by_parent.setdefault(int(parent_id), []).append(ticket)
-
-    sort_key = lambda ticket: (int(ticket.get("priority", 4)), int(ticket["id"]))
-    groups: list[dict[str, object]] = []
-
-    for ticket in sorted(tickets, key=sort_key):
-        parent_id = ticket.get("parent_id")
-        if parent_id is not None and int(parent_id) in open_ids:
-            continue
-        ticket_id = int(ticket["id"])
-        children = sorted(children_by_parent.get(ticket_id, []), key=sort_key)
-        groups.append(
-            {
-                "ticket": ticket,
-                "children": children,
-                "is_initiative": bool(children),
-            }
-        )
-
-    return groups
-
-
-def build_tickets_summary(
-    project_id: int | None,
-    agent: str | None = None,
-) -> dict[str, object]:
-    if project_id is None:
-        return {
-            "open": [],
-            "grouped_open": [],
-            "assigned_to_agent": [],
-            "blocked": [],
-            "recently_closed": [],
-            "counts": {
-                "open": 0,
-                "in_progress": 0,
-                "blocked": 0,
-                "done_recent": 0,
-            },
-        }
-
-    open_rows = list_tickets(project_id=project_id, open_only=True, limit=50)
-    open_payload = [_ticket_row_to_dict(row) for row in open_rows]
-    grouped_open = group_tickets_by_parent(open_payload)
-    agent_norm = agent.strip().lower() if isinstance(agent, str) else None
-    assigned = [
-        ticket
-        for ticket in open_payload
-        if agent_norm and str(ticket.get("assignee", "")).lower() == agent_norm
-    ]
-    blocked = [
-        ticket for ticket in open_payload if str(ticket.get("status")) == "blocked"
-    ]
-    closed_rows = list_tickets(
-        project_id=project_id,
-        status="done,cancelled",
-        limit=5,
-    )
-    return {
-        "open": open_payload,
-        "grouped_open": grouped_open,
-        "assigned_to_agent": assigned,
-        "blocked": blocked,
-        "recently_closed": [_ticket_row_to_dict(row) for row in closed_rows],
-        "counts": {
-            "open": count_tickets(project_id=project_id, status="open"),
-            "in_progress": count_tickets(project_id=project_id, status="in_progress"),
-            "blocked": count_tickets(project_id=project_id, status="blocked"),
-            "open_total": count_tickets(project_id=project_id, open_only=True),
-        },
-    }
-
-
-def _format_tickets_prompt_section(
-    project_id: int | None,
-    agent: str | None = None,
-) -> str:
-    summary = build_tickets_summary(project_id, agent)
-    lines = [
-        "Tickets (authoritative work board — use for assigned, blocked, or in-flight work):",
-    ]
-    assigned = summary["assigned_to_agent"]
-    if isinstance(assigned, list) and assigned:
-        lines.append("Assigned to Cursor:" if agent == "cursor" else "Assigned:")
-        for ticket in assigned[:10]:
-            if not isinstance(ticket, dict):
-                continue
-            lines.append(
-                f"- #{ticket.get('id')} [{ticket.get('status')}] P{ticket.get('priority')} "
-                f"{ticket.get('title')}"
-            )
-    else:
-        lines.append("Assigned: (none)")
-
-    open_items = summary["grouped_open"]
-    if isinstance(open_items, list) and open_items:
-        lines.append("Open board:")
-        for group in open_items[:10]:
-            if not isinstance(group, dict):
-                continue
-            ticket = group.get("ticket")
-            if not isinstance(ticket, dict):
-                continue
-            prefix = "Initiative" if group.get("is_initiative") else "Ticket"
-            lines.append(
-                f"- {prefix} #{ticket.get('id')} [{ticket.get('status')}] "
-                f"{ticket.get('assignee')} | P{ticket.get('priority')} — {ticket.get('title')}"
-            )
-            children = group.get("children")
-            if isinstance(children, list):
-                for child in children[:8]:
-                    if not isinstance(child, dict):
-                        continue
-                    lines.append(
-                        f"  - child #{child.get('id')} [{child.get('status')}] "
-                        f"P{child.get('priority')} — {child.get('title')}"
-                    )
-    else:
-        lines.append("Open board: (none)")
-
-    blocked = summary["blocked"]
-    if isinstance(blocked, list) and blocked:
-        lines.append("Blocked:")
-        for ticket in blocked[:5]:
-            if not isinstance(ticket, dict):
-                continue
-            lines.append(f"- #{ticket.get('id')} — {ticket.get('title')}")
-    else:
-        lines.append("Blocked: (none)")
-
-    return "\n".join(lines)
-
+# --- concurrent ticketing (V3.9) — see tickets.py --------------------------------
+from tickets import (  # noqa: E402
+    TICKET_ASSIGNEES,
+    TICKET_EVENT_TYPES,
+    TICKET_OPEN_STATUSES,
+    TICKET_SOURCES,
+    TICKET_STATUSES,
+    append_ticket_event,
+    build_recent_changes_feed,
+    build_tickets_summary,
+    cancel_ticket,
+    claim_ticket,
+    complete_ticket,
+    count_tickets,
+    create_ticket,
+    get_ticket_by_id,
+    get_ticket_detail,
+    group_tickets_by_parent,
+    list_ticket_events,
+    list_tickets,
+    update_ticket,
+    _format_tickets_prompt_section,
+)
 
 # --- memory backend (V3.6 Phase 1) ------------------------------------------
 
@@ -3583,7 +2669,20 @@ def _ensure_memory_backend(conn: sqlite3.Connection) -> None:
     _ensure_memory_items_columns(conn)
     _ensure_consolidation_table(conn)
     migrate_memories_to_memory_items(conn)
-    backfill_memory_item_embeddings(conn)
+
+
+def _lazy_backfill_embeddings(conn: sqlite3.Connection, *, limit: int = 50) -> None:
+    """Optional embedding backfill — never required for startup or tests."""
+    global _embed_backfill_attempted
+    if _embed_backfill_attempted or _memory_embed_provider() == "off":
+        return
+    _embed_backfill_attempted = True
+    try:
+        embedded = backfill_memory_item_embeddings(conn, limit=limit)
+        if embedded:
+            conn.commit()
+    except Exception:
+        pass
 
 
 def _ensure_consolidation_table(conn: sqlite3.Connection) -> None:
@@ -4603,6 +3702,7 @@ def retrieve_memories(
 
     conn = connect_db()
     try:
+        _lazy_backfill_embeddings(conn)
         active_project_id = project_id
         if active_project_id is None:
             project = conn.execute(
@@ -4687,6 +3787,12 @@ def retrieve_memories(
             _last_retrieval_mode = "vector+keyword"
         else:
             _last_retrieval_mode = "keyword-only fallback"
+
+        record_system_metric(
+            "retrieval",
+            label=_last_retrieval_mode,
+            payload={"count": len(results[:limit])},
+        )
 
         mode = _last_retrieval_mode
         finalized: list[dict[str, object]] = []
@@ -4867,6 +3973,7 @@ def build_world_dashboard() -> dict[str, object]:
             "memory_items": [],
             "recent_changes": [],
             "agent_activity": {"last_by_source": {}, "recent": []},
+            "operator_metrics": get_metrics_summary_24h(),
             "synced_at": _now_iso(),
         }
 
@@ -4921,6 +4028,7 @@ def build_world_dashboard() -> dict[str, object]:
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
         "agent_activity": agent_activity,
+        "operator_metrics": get_metrics_summary_24h(),
         "synced_at": _now_iso(),
     }
 
@@ -4939,6 +4047,83 @@ def update_task_status(task_id: int, status: str) -> bool:
         return cur.rowcount > 0
     finally:
         conn.close()
+
+
+def record_system_metric(
+    metric_type: str,
+    *,
+    value: float = 1.0,
+    label: str | None = None,
+    payload: dict[str, object] | None = None,
+) -> None:
+    """Append one operator metric row. Never raises."""
+    try:
+        conn = connect_db()
+        try:
+            conn.execute(
+                """
+                INSERT INTO system_metrics (
+                    recorded_at, metric_type, value, label, payload
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    _now_iso(),
+                    metric_type.strip().lower(),
+                    float(value),
+                    label,
+                    json.dumps(payload or {}),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+
+def get_metrics_summary_24h() -> dict[str, object]:
+    """Return 24h rollups for operator surfaces — no PII."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT metric_type, COUNT(*) AS n
+            FROM system_metrics
+            WHERE datetime(recorded_at) >= datetime(?)
+            GROUP BY metric_type
+            ORDER BY metric_type ASC
+            """,
+            (since,),
+        ).fetchall()
+        by_type = {str(row["metric_type"]): int(row["n"]) for row in rows}
+        retrieval_rows = conn.execute(
+            """
+            SELECT label, COUNT(*) AS n
+            FROM system_metrics
+            WHERE metric_type = 'retrieval'
+              AND datetime(recorded_at) >= datetime(?)
+            GROUP BY label
+            """,
+            (since,),
+        ).fetchall()
+        retrieval_modes = {
+            str(row["label"] or "unknown"): int(row["n"]) for row in retrieval_rows
+        }
+    finally:
+        conn.close()
+    return {
+        "window_hours": 24,
+        "since": since,
+        "counts": by_type,
+        "retrieval_modes": retrieval_modes,
+        "chat_errors": int(by_type.get("chat_error", 0)),
+        "ingest_ok": int(by_type.get("ingest_ok", 0)),
+        "ingest_error": int(by_type.get("ingest_error", 0)),
+        "ticket_events": int(by_type.get("ticket_created", 0))
+        + int(by_type.get("ticket_closed", 0))
+        + int(by_type.get("ticket_cancelled", 0)),
+    }
 
 
 def _context_system_health() -> dict[str, object]:
@@ -5278,6 +4463,7 @@ def ingest_handoff(
         pinned=False,
     )
     if memory_item_id is None:
+        record_system_metric("ingest_error", label=source)
         return {
             "status": "error",
             "error": "failed to save memory_item",
@@ -5316,6 +4502,7 @@ def ingest_handoff(
     else:
         skipped.append("insufficient signal for extraction")
 
+    record_system_metric("ingest_ok", label=source)
     return {
         "status": "ok",
         "memory_item_id": memory_item_id,

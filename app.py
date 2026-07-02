@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.6 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
+"""Crowley V3.9.7 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
 
 from __future__ import annotations
 
@@ -98,7 +98,10 @@ def on_startup() -> None:
 @app.get("/api/health")
 def api_health() -> JSONResponse:
     db_status = _database_status()
+    health = crowley._context_system_health()
     status = "ok" if db_status == "ok" else "degraded"
+    if health.get("embed_provider") == "off":
+        status = "degraded" if status == "ok" else status
     return JSONResponse(
         {
             "status": status,
@@ -107,8 +110,16 @@ def api_health() -> JSONResponse:
             "brain": crowley._brain_banner_label(),
             "provider": crowley.get_model_provider(),
             "db": db_status,
+            "embed_provider": health.get("embed_provider"),
+            "sqlite_vec": health.get("sqlite_vec"),
+            "retrieval_mode": health.get("retrieval_mode"),
         }
     )
+
+
+@app.get("/api/metrics/summary")
+def api_metrics_summary() -> JSONResponse:
+    return JSONResponse(crowley.get_metrics_summary_24h())
 
 
 @app.get("/api/messages")
@@ -480,11 +491,13 @@ def _chat_sse_stream(message: str) -> Iterator[str]:
     thread.join(timeout=600)
 
     if not result_holder:
+        crowley.record_system_metric("chat_error", label="no_result")
         yield _sse_event("error", {"message": "Chat turn failed. Try again."})
         return
 
     result = result_holder[0]
     if result.error:
+        crowley.record_system_metric("chat_error", label=str(result.error)[:80])
         yield _sse_event("error", {"message": chat_error_message(result.error)})
         return
 
