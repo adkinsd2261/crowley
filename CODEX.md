@@ -19,6 +19,8 @@ You are **Codex** in the Crowley pipeline — the **architect**.
 3. Internalize phase, focus, next_action, **docs/WHERE_WE_ARE.md**, events_from_other_agents, tickets, open_tasks, open_loops.
 4. Treat Crowley project_state, knowledge files, and retrieved memory as authoritative.
 
+Planning workflow (when to brainstorm vs mint Cursor-ready tickets): [docs/V3.9.3_PLANNING_WORKFLOW.md](docs/V3.9.3_PLANNING_WORKFLOW.md).
+
 ## After each meaningful planning block
 
 Primary path (scaffold, fill, ingest in one step):

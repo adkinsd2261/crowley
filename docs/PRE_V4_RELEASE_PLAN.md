@@ -42,7 +42,7 @@ Cursor ticket slices:
 
 Cursor ticket slices:
 
-- `#14` Add Planning Workflow doc: roles, when to brainstorm, when to mint tickets, what "Cursor-ready" means.
+- `#14` Add Planning Workflow doc: roles, when to brainstorm, when to mint tickets, what "Cursor-ready" means. See [V3.9.3_PLANNING_WORKFLOW.md](./V3.9.3_PLANNING_WORKFLOW.md).
 - `#15` Add planning packet template: objective, context, decisions, non-goals, risks, ticket slices, acceptance criteria, QA expectations, next action.
 - `#16` Add ticket packet validation for `codex_sync.py --create-tickets`: fail before partial creation if required fields are missing.
 - `#17` Support initiative grouping with existing `parent_id`: parent planning ticket plus child Cursor tickets.

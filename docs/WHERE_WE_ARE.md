@@ -66,6 +66,8 @@ Operator workflow: [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS
 
 ## 4. Agent rituals (required)
 
+Planning workflow (roles, when to mint tickets, Cursor-ready definition): [V3.9.3_PLANNING_WORKFLOW.md](./V3.9.3_PLANNING_WORKFLOW.md).
+
 ### Codex (new session)
 
 ```bash
