@@ -1,0 +1,161 @@
+{
+  "objective": "V3.9.7 — close the experience gap (backend depth outruns UI) while hardening startup and CI underneath. Pause V4 until shipped.",
+  "context": "V3.9.6 workspace polish (#31–#36) plus recent QA (Project tab, cinematic chat, inspector removal) established the direction. External review: UI polish is behind system depth — continue V3.9.6 lineage before more backend features. Baseline: V3.9.6 on main, 152 tests.",
+  "decisions": [
+    "Pause V4 connectivity until V3.9.7 ships",
+    "Experience track (#47–#49, #44) runs before monolith extraction (#42–#43)",
+    "Cursor starts with Intelligence drawer polish unless Mr. Go redirects"
+  ],
+  "non_goals": [
+    "V4 connectivity implementation",
+    "Full crowley.py split beyond diagnostics + tickets",
+    "New chat personality or backend features",
+    "Deleting tasks/open_loops tables"
+  ],
+  "risks": [
+    "UI polish tickets need Mr. Go browser QA on desktop + 390px mobile",
+    "Reliability tickets must not regress retrieval tests"
+  ],
+  "qa_expectations": "node --check static/app.js; ./venv/bin/python3 -m unittest discover -s tests -q; bus restart health matches version after lock-in",
+  "next_action": "Cursor: claim and implement first P1 experience ticket (Intelligence drawer polish)",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-02",
+    "note": "Mint after plan review; experience + reliability dual track"
+  },
+  "tickets": [
+    {
+      "title": "V3.9.7 Experience: Intelligence drawer polish",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Match the cinematic full-width chat workspace in the Intelligence drawer. Unify typography, spacing, glass/raised surfaces, tab chrome, and panel scroll regions. Improve desktop expanded height and mobile usability. Finish Project tab card layout including phase bar. Files: static/styles.css, static/index.html, static/app.js (minimal). No new API endpoints.",
+      "acceptance": [
+        "Drawer shares design tokens with chat workspace (typography, dividers, accent, glass surfaces)",
+        "Tab active state and badges readable on desktop and 390px width",
+        "Project, Tickets, Changes, and Memory panels have intentional padding and scroll regions",
+        "Desktop drawer expanded height is usable (not cramped default max-height)",
+        "Static UI tests cover new drawer token/class names",
+        "Manual QA: drawer feels cohesive with chat column on desktop + mobile"
+      ]
+    },
+    {
+      "title": "V3.9.7 Experience: chat stream readability pass",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Strengthen chat stream readability and hierarchy while keeping the document metaphor (no bubble chat). Improve user vs Crowley distinction, prose spacing, code blocks, long-response collapse affordance, diagnostics report block styling, and empty state copy. Files: static/styles.css, static/app.js. No prompt or personality changes.",
+      "acceptance": [
+        "User and Crowley messages are visually distinguishable without bubble UI",
+        "Prose headings, lists, code blocks, and links are readable at 46rem and mobile widths",
+        "Long response collapse/expand affordance is obvious",
+        "Diagnostics messages render as distinct report blocks separate from conversational Crowley",
+        "Static tests cover key CSS/JS tokens for message rendering and collapse helpers",
+        "No changes to chat prompt assembly or co-founder personality"
+      ]
+    },
+    {
+      "title": "V3.9.7 Reliability: safe startup and embedding fallback",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Make embedding and sqlite-vec optional without breaking DB setup. Remove eager backfill from setup_db; add CROWLEY_EMBED_PROVIDER env (off|auto|local|openai); extend /api/health with embed_provider and sqlite_vec flags. Lazy backfill on retrieve/ingest or explicit script only. Files: crowley.py, app.py, docs.",
+      "acceptance": [
+        "setup_db() and app startup succeed with core deps only (no torch/sentence-transformers required)",
+        "CROWLEY_EMBED_PROVIDER=off skips embedding load; health reports degraded mode clearly",
+        "Missing sqlite-vec never raises during setup",
+        "Existing tests/test_retrieval_explanation.py passes",
+        "Optional scripts/backfill_embeddings.py or documented manual backfill path"
+      ]
+    },
+    {
+      "title": "V3.9.7 Reliability: CI and test dependency slimming",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Split requirements into core vs ML stack. CI installs core only with CROWLEY_EMBED_PROVIDER=off. Force embed off in tests/db_helpers setUp. Document that tests never require Ollama, OpenAI, Torch, or sqlite-vec. Files: requirements-core.txt, requirements-ml.txt, .github/workflows/tests.yml, tests/db_helpers.py.",
+      "acceptance": [
+        "GitHub Actions passes with requirements-core.txt only",
+        "Local unittest discover passes with CROWLEY_EMBED_PROVIDER=off",
+        "tests/db_helpers.py forces embed off for isolated DB tests",
+        "requirements-ml.txt documented for operators who want local embeddings",
+        "Full test count remains green (152+)"
+      ]
+    },
+    {
+      "title": "V3.9.7 Experience: cross-surface cohesion pass",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Align header, chat, compose, and Intelligence drawer into one cohesive workspace. Shared CSS variables, consistent spacing for version/brain labels, compose objective row, and collapsed Intelligence summary. Reduce visual noise in live sync pill and context summary. Files: static/styles.css, static/index.html.",
+      "acceptance": [
+        "Header, compose, and drawer share spacing/typography tokens",
+        "Compose 'In the air' row visually matches Project focus semantics",
+        "Collapsed Intelligence row is readable without clutter",
+        "Static test asserts shared workspace CSS token names",
+        "Desktop + mobile spot-check documented in handoff"
+      ]
+    },
+    {
+      "title": "V3.9.7 Experience: work surface simplification",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Reduce cognitive load: tickets = work, canon = long-term truth, open loops = unresolved questions. Demote Tasks tab in Intelligence drawer; update MEMORY_HIERARCHY.md and WHERE_WE_ARE.md with three-surface callout. Do not delete tasks API or table.",
+      "acceptance": [
+        "Tasks tab moved after Loops or labeled legacy in Intelligence drawer",
+        "Panel role note clarifies Tickets as agent work board",
+        "MEMORY_HIERARCHY.md and WHERE_WE_ARE.md updated with three-surface summary",
+        "Static UI tests for tab order/labels",
+        "Ticket mint/claim/close flow unchanged"
+      ]
+    },
+    {
+      "title": "V3.9.7 Maintainability: extract diagnostics module",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "First monolith slice: move diagnostics domain from crowley.py to diagnostics.py (~gather, serialize, prompt, iter tokens). crowley.py thin re-exports for backward compatibility. Move test imports where sensible. No behavior change.",
+      "acceptance": [
+        "diagnostics.py contains gather_diagnostics_context, format_diagnostics_prompt, iter_diagnostics_tokens, run_diagnostics",
+        "crowley.py re-exports preserve existing import paths",
+        "tests/test_diagnostics_prompt.py and model behavior fixtures pass",
+        "crowley.py line count reduced measurably",
+        "No app.py import churn required in this slice"
+      ]
+    },
+    {
+      "title": "V3.9.7 Maintainability: extract tickets module",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Second monolith slice: move ticket CRUD, events, build_tickets_summary, and build_recent_changes_feed to tickets.py. crowley.py re-exports. tests/test_tickets.py stays green. No HTTP route moves.",
+      "acceptance": [
+        "tickets.py contains create/update/list/complete/cancel and summary/feed builders",
+        "crowley.py re-exports preserve agent sync and app.py callers",
+        "tests/test_tickets.py passes",
+        "Live UI Tickets and Changes panels unchanged in behavior",
+        "No DB migration version table added"
+      ]
+    },
+    {
+      "title": "V3.9.7 Observability: operator metrics foundation",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Append-only system_metrics table for chat errors, retrieval mode/count, sync ingest outcomes, ticket create/close. Expose 24h rollups via /api/health or /api/metrics/summary; show lean summary on Intelligence Project tab via /api/world. No external telemetry.",
+      "acceptance": [
+        "system_metrics table created idempotently in setup_db",
+        "Metric writes on chat error, retrieval, ingest, ticket events (minimal set)",
+        "Summary endpoint returns 24h counts without PII",
+        "Project tab shows last-24h operator summary from existing world poll",
+        "Deterministic unit tests for write + summary read"
+      ]
+    },
+    {
+      "title": "V3.9.7 Lock-in: preflight script and doc version lock",
+      "assignee": "cursor",
+      "priority": 3,
+      "description": "scripts/preflight.py — version vs /api/health, DB writable, embed/sqlite_vec status, optional quick test mode, doc version spot-check. Final V3.9.7 doc lock: constants, VERSIONS.md, WHERE_WE_ARE, ROADMAP, V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md, lock_in_state.py, bus restart QA.",
+      "acceptance": [
+        "scripts/preflight.py exits 0/1 with human-readable blockers",
+        "Quick mode completes locally in under 30s",
+        "CROWLEY_VERSION bumped to 3.9.7 with release label",
+        "Onboarding docs locked; lock_in_state.py updated",
+        "Full unittest suite green; /api/health reports 3.9.7 after bus restart"
+      ]
+    }
+  ]
+}
