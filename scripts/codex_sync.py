@@ -526,6 +526,25 @@ def create_ticket_cli(args: argparse.Namespace) -> int:
     return 0
 
 
+def cancel_ticket_cli(args: argparse.Namespace) -> int:
+    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
+    if script.is_file():
+        _run(["bash", str(script)], timeout=30)
+    if not args.comment or not args.comment.strip():
+        print("Ticket cancel failed: --comment is required with --cancel-ticket")
+        return 1
+    ok, error = asl.cancel_ticket_api(
+        int(args.cancel_ticket),
+        actor="codex",
+        comment=args.comment.strip(),
+    )
+    if not ok:
+        print(f"Ticket cancel failed: {error}")
+        return 1
+    print(f"Cancelled ticket #{args.cancel_ticket}: {args.comment.strip()}")
+    return 0
+
+
 def create_tickets_file(path: str) -> int:
     script = ROOT / "scripts" / "ensure_crowley_bus.sh"
     if script.is_file():
@@ -605,8 +624,18 @@ def main() -> None:
     group.add_argument("--note", help="Ingest a short codex/note memory item.")
     group.add_argument("--create-ticket", action="store_true", help="Create one ticket via API.")
     group.add_argument("--create-tickets", metavar="FILE", help="Create tickets from JSON file.")
+    group.add_argument(
+        "--cancel-ticket",
+        type=int,
+        metavar="ID",
+        help="Cancel a draft/superseded ticket via API (requires --comment).",
+    )
     parser.add_argument("--title", help="Ticket title for --create-ticket.")
     parser.add_argument("--description", default="", help="Ticket description.")
+    parser.add_argument(
+        "--comment",
+        help="Cancellation reason for --cancel-ticket.",
+    )
     parser.add_argument("--acceptance", action="append", default=[], help="Acceptance bullet; repeatable.")
     parser.add_argument(
         "--assignee",
@@ -641,6 +670,8 @@ def main() -> None:
         raise SystemExit(create_ticket_cli(args))
     if args.create_tickets:
         raise SystemExit(create_tickets_file(args.create_tickets))
+    if args.cancel_ticket is not None:
+        raise SystemExit(cancel_ticket_cli(args))
     raise SystemExit(status())
 
 

@@ -171,6 +171,21 @@ def complete_ticket_api(
     return True, None
 
 
+def cancel_ticket_api(
+    ticket_id: int,
+    *,
+    actor: str,
+    comment: str,
+) -> tuple[bool, str | None]:
+    result, error = send_json(
+        f"/api/tickets/{ticket_id}/cancel",
+        {"actor": actor, "comment": comment},
+    )
+    if error or result is None:
+        return False, error or "ticket cancel failed"
+    return True, None
+
+
 def last_handoff_memory_id(agent: str) -> int | None:
     sync, _ = fetch_json(url("/api/agent/sync", {"agent": agent, "limit": 5}))
     if not sync:

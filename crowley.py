@@ -2288,6 +2288,7 @@ TICKET_EVENT_TYPES = frozenset({
     "created",
     "claimed",
     "status_change",
+    "cancelled",
     "comment",
     "handoff_linked",
     "assignee_change",
@@ -2666,6 +2667,39 @@ def update_ticket(
 
 def complete_ticket(ticket_id: int, *, actor: str = "system") -> dict[str, object]:
     return update_ticket(ticket_id, actor=actor, status="done")
+
+
+def cancel_ticket(
+    ticket_id: int,
+    *,
+    actor: str,
+    comment: str,
+) -> dict[str, object]:
+    reason = comment.strip()
+    if not reason:
+        raise ValueError("cancellation comment is required")
+    row = get_ticket_by_id(ticket_id)
+    if row is None:
+        raise ValueError(f"ticket not found: {ticket_id}")
+    old_status = str(row["status"])
+    if old_status == "cancelled":
+        return {
+            "ticket": _ticket_row_to_dict(row),
+            "event_ids": [],
+            "already_cancelled": True,
+        }
+    result = update_ticket(ticket_id, actor=actor, status="cancelled")
+    cancelled_event_id = append_ticket_event(
+        ticket_id,
+        "cancelled",
+        actor,
+        {"from": old_status, "reason": reason},
+    )
+    event_ids = list(result.get("event_ids") or [])
+    event_ids.append(cancelled_event_id)
+    ticket = get_ticket_by_id(ticket_id)
+    assert ticket is not None
+    return {"ticket": _ticket_row_to_dict(ticket), "event_ids": event_ids}
 
 
 def claim_ticket(ticket_id: int, *, actor: str) -> dict[str, object]:

@@ -71,6 +71,11 @@ class UpdateTicketRequest(BaseModel):
     linked_memory_id: int | None = None
 
 
+class CancelTicketRequest(BaseModel):
+    actor: str = Field(min_length=1)
+    comment: str = Field(min_length=1)
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     crowley.setup_db()
@@ -279,6 +284,26 @@ def api_ticket_done(ticket_id: int, actor: str = Query("system")) -> JSONRespons
         return JSONResponse({"ok": True, "ticket_id": ticket_id, "already_done": True})
     try:
         result = crowley.complete_ticket(ticket_id, actor=actor)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse({"ok": True, **result})
+
+
+@app.post("/api/tickets/{ticket_id}/cancel")
+def api_ticket_cancel(ticket_id: int, body: CancelTicketRequest) -> JSONResponse:
+    row = crowley.get_ticket_by_id(ticket_id)
+    if row is None:
+        return JSONResponse({"error": f"ticket not found: {ticket_id}"}, status_code=404)
+    if str(row["status"]) == "cancelled":
+        return JSONResponse(
+            {"ok": True, "ticket_id": ticket_id, "already_cancelled": True}
+        )
+    try:
+        result = crowley.cancel_ticket(
+            ticket_id,
+            actor=body.actor,
+            comment=body.comment,
+        )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return JSONResponse({"ok": True, **result})

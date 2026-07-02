@@ -173,6 +173,46 @@ class TicketTests(IsolatedDbTestCase):
         self.assertGreaterEqual(len(events), 1)
         self.assertEqual(events[0]["event_type"], "created")
 
+    def test_cancel_ticket_excludes_from_open_summary(self) -> None:
+        ticket_id = self._create(title="Draft superseded probe", assignee="cursor")
+        result = crowley.cancel_ticket(
+            ticket_id,
+            actor="codex",
+            comment="Superseded by tickets #9-#23 from approved Pre-V4 plan",
+        )
+        self.assertEqual(result["ticket"]["status"], "cancelled")
+        self.assertIsNotNone(result["ticket"]["closed_at"])
+
+        row = crowley.get_ticket_by_id(ticket_id)
+        assert row is not None
+        self.assertEqual(str(row["status"]), "cancelled")
+
+        open_rows = crowley.list_tickets(project_id=self.project_id, open_only=True)
+        self.assertNotIn(ticket_id, {int(r["id"]) for r in open_rows})
+
+        summary = crowley.build_tickets_summary(self.project_id, "cursor")
+        open_ids = {int(t["id"]) for t in summary["open"]}
+        self.assertNotIn(ticket_id, open_ids)
+        assigned_ids = {int(t["id"]) for t in summary["assigned_to_agent"]}
+        self.assertNotIn(ticket_id, assigned_ids)
+
+        detail = crowley.get_ticket_detail(ticket_id)
+        assert detail is not None
+        event_types = [event["event_type"] for event in detail["events"]]
+        self.assertIn("cancelled", event_types)
+        cancelled = next(
+            event for event in detail["events"] if event["event_type"] == "cancelled"
+        )
+        self.assertEqual(str(cancelled["actor"]), "codex")
+        payload = cancelled["payload"]
+        assert isinstance(payload, dict)
+        self.assertIn("Superseded", str(payload.get("reason", "")))
+
+    def test_cancel_ticket_requires_comment(self) -> None:
+        ticket_id = self._create(title="Cancel comment probe", assignee="cursor")
+        with self.assertRaises(ValueError):
+            crowley.cancel_ticket(ticket_id, actor="codex", comment="   ")
+
 
 if __name__ == "__main__":
     unittest.main()
