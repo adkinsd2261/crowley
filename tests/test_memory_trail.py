@@ -135,7 +135,10 @@ class MemoryTrailTests(IsolatedDbTestCase):
         js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         self.assertIn('id="memory-count-summary"', html)
         self.assertIn('id="memory-search"', html)
+        self.assertIn('id="memory-layer"', html)
+        self.assertIn("memory-hierarchy-note", html)
         self.assertIn("formatMemoryCounts", js)
+        self.assertIn("memoryLayerBadge", js)
         self.assertIn("active /", js)
 
     def test_ui_renders_assistant_markdown(self) -> None:

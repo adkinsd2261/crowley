@@ -225,7 +225,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.8.1** | Agent Parity | ✅ Activity feed, stop hook, shared verify |
 | **V3.9** | Concurrent Ticketing | ✅ Unified ticket board; Codex mints, Cursor fills |
 | **V3.9.1** | Repository & CI | ✅ GitHub remote, Actions test gate, doc sweep |
-| **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy, hygiene, test isolation |
+| **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy ([MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)), hygiene, test isolation |
 | **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
 | **V3.9.4** | Agent Visibility | Agent feed, ticket detail/history, V4 readiness docs |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
@@ -253,5 +253,6 @@ When shipping a version:
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md)
+- [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)
 - [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
 - [VERSIONS.md](../VERSIONS.md)

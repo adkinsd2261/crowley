@@ -740,6 +740,40 @@ body {
   border-color: var(--accent-line);
 }
 
+.memory-hierarchy-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.memory-badge {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.memory-badge-canon {
+  color: #8fd4ff;
+  background: rgba(80, 160, 220, 0.18);
+}
+
+.memory-badge-pinned {
+  color: #d9c27a;
+  background: rgba(210, 170, 80, 0.16);
+}
+
+.memory-badge-memory {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .memory-count-summary {
   margin: 0 0 0.3rem;
   color: var(--muted);

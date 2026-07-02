@@ -22,6 +22,7 @@ const memorySearchEl = document.getElementById("memory-search");
 const memorySourceEl = document.getElementById("memory-source");
 const memoryTypeEl = document.getElementById("memory-type");
 const memoryStatusEl = document.getElementById("memory-status");
+const memoryLayerEl = document.getElementById("memory-layer");
 const memoryCountSummaryEl = document.getElementById("memory-count-summary");
 const diagnosticsBtn = document.getElementById("run-diagnostics");
 const contextToggle = document.getElementById("context-toggle");
@@ -178,11 +179,28 @@ const PANEL_META = {
     describe: (items) => `${items.length} logged decision${items.length === 1 ? "" : "s"}`,
   },
   memory: {
-    title: "Recent memory",
+    title: "Stored memory",
     empty: "No memory items yet.",
     describe: (items, data = {}) => formatMemoryCounts(data.counts || {}, items.length),
   },
 };
+
+function memoryLayerLabel(layer) {
+  switch (layer) {
+    case "canon":
+      return "Canon";
+    case "pinned":
+      return "Pinned";
+    default:
+      return "Memory";
+  }
+}
+
+function memoryLayerBadge(m) {
+  const layer = m.memory_layer || (m.is_canon ? "canon" : m.is_pinned ? "pinned" : "memory");
+  const label = memoryLayerLabel(layer);
+  return `<span class="memory-badge memory-badge-${escapeHtml(layer)}">${escapeHtml(label)}</span>`;
+}
 
 function itemsForTab(data, tab) {
   switch (tab) {
@@ -233,6 +251,7 @@ function renderMemoryItems(items = []) {
     const when = m.created_at ? formatRelativeTime(m.created_at) : "";
     const timeMeta = when ? ` · ${when}` : "";
     return (
+      `${memoryLayerBadge(m)}` +
       `<span class="meta">${escapeHtml(meta)}${escapeHtml(timeMeta)}</span> ` +
       `${escapeHtml(m.display || m.content || "")}`
     );
@@ -242,16 +261,27 @@ function renderMemoryItems(items = []) {
 function memoryFilterParams() {
   return {
     q: (memorySearchEl?.value || "").trim(),
+    layer: memoryLayerEl?.value || "",
     source: memorySourceEl?.value || "",
     memory_type: memoryTypeEl?.value || "",
     status: memoryStatusEl?.value || "active",
   };
 }
 
+function applyMemoryLayerFilter(items, layer) {
+  if (!layer) return items;
+  return items.filter((item) => {
+    const itemLayer =
+      item.memory_layer || (item.is_canon ? "canon" : item.is_pinned ? "pinned" : "memory");
+    return itemLayer === layer;
+  });
+}
+
 function hasMemoryFilters() {
   const params = memoryFilterParams();
   return Boolean(
     params.q ||
+      params.layer ||
       params.source ||
       params.memory_type ||
       (params.status && params.status !== "active")
@@ -738,14 +768,15 @@ async function loadMemoryItems() {
   params.set("limit", "10");
   params.set("offset", "0");
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) params.set(key, value);
+    if (key === "layer" || !value) return;
+    params.set(key, value);
   });
 
   try {
     const res = await fetch(`/api/memory-items?${params.toString()}`);
     if (!res.ok) return;
     const data = await res.json();
-    const items = data.items || [];
+    const items = applyMemoryLayerFilter(data.items || [], filters.layer);
     renderMemoryItems([...items].reverse());
     if (lastDashboardData) {
       lastDashboardData.memory_items = items;
@@ -1059,7 +1090,7 @@ contextTabs.forEach((tab) => {
 if (memorySearchEl) {
   memorySearchEl.addEventListener("input", scheduleMemoryLoad);
 }
-[memorySourceEl, memoryTypeEl, memoryStatusEl].forEach((el) => {
+[memorySourceEl, memoryTypeEl, memoryStatusEl, memoryLayerEl].forEach((el) => {
   if (el) el.addEventListener("change", () => loadMemoryItems());
 });
 

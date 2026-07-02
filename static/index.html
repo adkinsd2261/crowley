@@ -133,8 +133,17 @@
             <ul class="panel-list" id="panel-decisions"></ul>
           </div>
           <div class="context-panel" data-panel="memory" role="tabpanel" hidden>
+            <p class="memory-hierarchy-note" id="memory-hierarchy-note">
+              Truth order: filesystem and tickets outrank canon; hybrid retrieval is supporting context only.
+            </p>
             <div class="memory-controls" aria-label="Memory filters">
               <input id="memory-search" type="search" placeholder="Search memory" aria-label="Search memory" />
+              <select id="memory-layer" aria-label="Memory layer">
+                <option value="">All layers</option>
+                <option value="canon">Canon</option>
+                <option value="pinned">Pinned</option>
+                <option value="memory">Ordinary memory</option>
+              </select>
               <select id="memory-source" aria-label="Memory source">
                 <option value="">All sources</option>
                 <option value="crowley">Crowley</option>

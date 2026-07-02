@@ -4234,10 +4234,21 @@ def parse_phase_progress(phase: str | None) -> dict[str, object] | None:
     }
 
 
+def _memory_item_layer(row: sqlite3.Row) -> str:
+    if _is_canon_memory_row(row):
+        return "canon"
+    if int(row["pinned"]) == 1:
+        return "pinned"
+    return "memory"
+
+
 def _memory_item_api_dict(row: sqlite3.Row) -> dict[str, object]:
     item = row_to_dict(row)
     item.pop("embedding_blob", None)
     item["display"] = _memory_display_text(row)
+    item["is_canon"] = _is_canon_memory_row(row)
+    item["is_pinned"] = bool(int(row["pinned"]))
+    item["memory_layer"] = _memory_item_layer(row)
     return item
 
 
@@ -4262,9 +4273,9 @@ def _format_canon_prompt_section(canon_rows: list[sqlite3.Row]) -> str:
     lines = [
         "Canonical memory trail:",
         (
-            "Use this as always-on continuity. Conflict order: Current project state "
-            "and Source-of-truth project files outrank canon; canon outranks ordinary "
-            "hybrid retrieval and recent chat."
+            "Always-on continuity — not top authority. Filesystem truth, tickets, "
+            "agent activity, and live DB state outrank canon; canon outranks hybrid "
+            "retrieval and recent chat."
         ),
     ]
     if not canon_rows:
@@ -5050,8 +5061,8 @@ def _ground_truth_prompt() -> str:
 When asked what work is open, assigned, or blocked, answer from the Tickets block — not from hybrid memory alone.
 
 When a fact about the project matters:
-1. Filesystem truth above — then tickets (for work board) — then agent activity — then live DB state — then canon — then supporting memory.
-2. On conflict: filesystem and source-of-truth files beat DB extraction; DB beats canon; canon beats hybrid retrieval.
+1. Filesystem truth first — then tickets — then agent activity — then live DB state — then canon — then supporting memory (hybrid retrieval).
+2. On conflict: filesystem and source-of-truth files win; then tickets; then agent activity timestamps; then live DB state; then canon; then hybrid retrieval.
 3. Use what you find. If it isn't there, say you don't have it stored — then stay in the conversation.
 
 Do not invent project history, release versions, or personal details."""

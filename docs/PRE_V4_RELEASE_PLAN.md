@@ -32,7 +32,7 @@ Cursor ticket slices:
 
 - `#9` Run first canon synthesis workflow: dry-run, inspect packet, write canon only when validation passes, document exact operator steps.
 - `#10` Add memory source/explanation surface: expose why a memory appears in prompt/retrieval, including source, type, score, pinned/canon status, and provenance where available.
-- `#11` Clarify memory hierarchy in docs and UI language: filesystem/project state, tickets, agent activity, canon, retrieval, chat.
+- `#11` Clarify memory hierarchy in docs and UI language: filesystem/project state, tickets, agent activity, canon, retrieval, chat. Reference: [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md).
 - `#12` Improve memory hygiene checks: identify stale/noisy/conflicting memory rows without auto-deleting anything.
 - `#13` Fix test DB isolation/probe pollution so memory tests do not contaminate `crowley.db`.
 

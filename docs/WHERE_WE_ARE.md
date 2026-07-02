@@ -44,19 +44,21 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 
 ## 3. Memory trail (where truth lives)
 
+See [MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md) for the full reference. Summary:
+
 | Layer | Source | Use for |
 |-------|--------|---------|
 | Filesystem | `VERSIONS.md`, `PROJECT_STATE.md`, `docs/WHERE_WE_ARE.md`, phase docs | Version, architecture, what shipped |
-| Agent activity | `last_by_source` on `/api/agent/sync` | When did Codex/Cursor last post |
 | Tickets | `/api/tickets`, sync bundle `tickets` | What work is open, assigned, blocked |
+| Agent activity | `last_by_source` on `/api/agent/sync` | When Codex/Cursor last posted |
 | project_state | SQLite `project_state` | Phase, focus, risk, next_action (may lag docs slightly) |
-| Canon | Pinned `Canon:` rows in `memory_items` | Always-on continuity — **below** filesystem/project_state, **above** hybrid retrieval |
+| Canon | Pinned `Canon:` rows in `memory_items` | Always-on continuity — **does not override** filesystem, tickets, or project state |
 | Handoffs | `.crowley/processed/*`, `memory_items` events | Session-by-session builder/architect log |
 | Hybrid retrieval | `/api/retrieve` | Supporting context only — lowest authority |
 
-**Authoritative order for facts:** filesystem → tickets → agent_activity → project_state → **canon** → retrieval.
+**Authoritative order for facts:** filesystem → tickets → agent_activity → project_state → **canon** → retrieval → chat.
 
-**Prompt injection order:** filesystem/knowledge files → **canon** → hybrid retrieval → chat.
+**Prompt injection order:** filesystem → live DB state → agent activity → tickets → **canon** → hybrid retrieval → chat.
 
 Operator workflow: [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md)
 
@@ -110,7 +112,7 @@ Hooks run `--before` automatically. After shipping:
 - Legacy `tasks` + `open_loops` coexist with `tickets` (tickets = agent board)
 - Agent feed UI tab deferred (API exists)
 - Some `open_loops` may be stale until backlog hygiene runs
-- Test suite hits real `crowley.db` — probe-row pollution possible
+- Test suite uses isolated temp DB per test — see `tests/db_helpers.py`
 
 ---
 
