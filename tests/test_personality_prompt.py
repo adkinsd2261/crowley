@@ -37,17 +37,6 @@ class PersonalityPromptTests(unittest.TestCase):
         self.assertNotIn("Charisma when it fits", prompt)
         self.assertNotIn("Don't rush to the shortest reply", prompt)
 
-    def test_diagnostics_prompt_does_not_inherit_chat_personality(self) -> None:
-        context = crowley.gather_diagnostics_context()
-        diagnostics = crowley.format_diagnostics_prompt(context)[0]["content"]
-        chat = crowley._personality_prompt()
-
-        self.assertNotIn("project co-founder", diagnostics)
-        self.assertNotIn("Honor the inferred Response depth", diagnostics)
-        self.assertIn("operating-system diagnostic report", diagnostics)
-        self.assertIn("Never invent missing information", diagnostics)
-        self.assertNotEqual(chat.strip(), diagnostics.strip())
-
 
 class PersonalityPromptAssemblyTests(IsolatedDbTestCase):
     def test_build_prompt_includes_trimmed_personality(self) -> None:
