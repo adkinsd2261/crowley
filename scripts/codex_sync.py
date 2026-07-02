@@ -77,6 +77,16 @@ def validate_ticket_packet(payload: object) -> list[str]:
         if not isinstance(acceptance, list) or not any(str(entry).strip() for entry in acceptance):
             errors.append(f"{prefix}: missing acceptance criteria")
 
+        parent_id = item.get("parent_id")
+        if parent_id is not None:
+            try:
+                parent_value = int(parent_id)
+            except (TypeError, ValueError):
+                errors.append(f"{prefix}: invalid parent_id '{parent_id}'")
+            else:
+                if parent_value < 1:
+                    errors.append(f"{prefix}: invalid parent_id '{parent_id}'")
+
     return errors
 
 
@@ -505,6 +515,7 @@ def create_ticket_cli(args: argparse.Namespace) -> int:
         description=description,
         assignee=args.assignee,
         priority=args.priority,
+        parent_id=args.parent_id,
         source="codex",
         actor="codex",
     )
@@ -550,11 +561,14 @@ def create_tickets_file(path: str) -> int:
                 + "\n\nAcceptance:\n"
                 + "\n".join(f"- {str(a).strip()}" for a in acceptance if str(a).strip())
             ).strip()
+        parent_id = item.get("parent_id")
+        parent_value = int(parent_id) if parent_id is not None else None
         ticket_id, error = asl.create_ticket_api(
             title=title,
             description=description,
             assignee=str(item.get("assignee", "cursor")),
             priority=int(item.get("priority", 2)),
+            parent_id=parent_value,
             source="codex",
             actor="codex",
         )
@@ -600,6 +614,7 @@ def main() -> None:
         choices=("codex", "cursor", "crowley", "mr_go", "unassigned"),
     )
     parser.add_argument("--priority", type=int, default=2, help="Ticket priority 1-4.")
+    parser.add_argument("--parent-id", type=int, default=None, help="Parent initiative ticket id.")
     parser.add_argument(
         "--handoff-type",
         choices=("architect_handoff", "builder_handoff"),

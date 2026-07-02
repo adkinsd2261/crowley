@@ -2701,6 +2701,41 @@ def get_ticket_detail(ticket_id: int, *, event_limit: int = 20) -> dict[str, obj
     return {"ticket": _ticket_row_to_dict(row), "events": events}
 
 
+def group_tickets_by_parent(
+    tickets: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Group open tickets under parent initiatives for board/sync display."""
+    if not tickets:
+        return []
+
+    open_ids = {int(ticket["id"]) for ticket in tickets}
+    children_by_parent: dict[int, list[dict[str, object]]] = {}
+    for ticket in tickets:
+        parent_id = ticket.get("parent_id")
+        if parent_id is None:
+            continue
+        children_by_parent.setdefault(int(parent_id), []).append(ticket)
+
+    sort_key = lambda ticket: (int(ticket.get("priority", 4)), int(ticket["id"]))
+    groups: list[dict[str, object]] = []
+
+    for ticket in sorted(tickets, key=sort_key):
+        parent_id = ticket.get("parent_id")
+        if parent_id is not None and int(parent_id) in open_ids:
+            continue
+        ticket_id = int(ticket["id"])
+        children = sorted(children_by_parent.get(ticket_id, []), key=sort_key)
+        groups.append(
+            {
+                "ticket": ticket,
+                "children": children,
+                "is_initiative": bool(children),
+            }
+        )
+
+    return groups
+
+
 def build_tickets_summary(
     project_id: int | None,
     agent: str | None = None,
@@ -2708,6 +2743,7 @@ def build_tickets_summary(
     if project_id is None:
         return {
             "open": [],
+            "grouped_open": [],
             "assigned_to_agent": [],
             "blocked": [],
             "recently_closed": [],
@@ -2721,6 +2757,7 @@ def build_tickets_summary(
 
     open_rows = list_tickets(project_id=project_id, open_only=True, limit=50)
     open_payload = [_ticket_row_to_dict(row) for row in open_rows]
+    grouped_open = group_tickets_by_parent(open_payload)
     agent_norm = agent.strip().lower() if isinstance(agent, str) else None
     assigned = [
         ticket
@@ -2737,6 +2774,7 @@ def build_tickets_summary(
     )
     return {
         "open": open_payload,
+        "grouped_open": grouped_open,
         "assigned_to_agent": assigned,
         "blocked": blocked,
         "recently_closed": [_ticket_row_to_dict(row) for row in closed_rows],
@@ -2770,16 +2808,29 @@ def _format_tickets_prompt_section(
     else:
         lines.append("Assigned: (none)")
 
-    open_items = summary["open"]
+    open_items = summary["grouped_open"]
     if isinstance(open_items, list) and open_items:
         lines.append("Open board:")
-        for ticket in open_items[:10]:
+        for group in open_items[:10]:
+            if not isinstance(group, dict):
+                continue
+            ticket = group.get("ticket")
             if not isinstance(ticket, dict):
                 continue
+            prefix = "Initiative" if group.get("is_initiative") else "Ticket"
             lines.append(
-                f"- #{ticket.get('id')} [{ticket.get('status')}] "
+                f"- {prefix} #{ticket.get('id')} [{ticket.get('status')}] "
                 f"{ticket.get('assignee')} | P{ticket.get('priority')} — {ticket.get('title')}"
             )
+            children = group.get("children")
+            if isinstance(children, list):
+                for child in children[:8]:
+                    if not isinstance(child, dict):
+                        continue
+                    lines.append(
+                        f"  - child #{child.get('id')} [{child.get('status')}] "
+                        f"P{child.get('priority')} — {child.get('title')}"
+                    )
     else:
         lines.append("Open board: (none)")
 
@@ -4310,6 +4361,7 @@ def build_world_dashboard() -> dict[str, object]:
             },
             "tasks": [],
             "tickets": [],
+            "ticket_groups": [],
             "loops": [],
             "decisions": [],
             "memory_items": [],
@@ -4353,6 +4405,7 @@ def build_world_dashboard() -> dict[str, object]:
         },
         "tasks": [row_to_dict(row) for row in tasks],
         "tickets": ticket_summary.get("open", []),
+        "ticket_groups": ticket_summary.get("grouped_open", []),
         "loops": [row_to_dict(row) for row in loops_sorted],
         "decisions": [row_to_dict(row) for row in decisions],
         "memory_items": [_memory_item_api_dict(row) for row in memory_rows],

@@ -288,6 +288,49 @@ function hasMemoryFilters() {
   );
 }
 
+function ticketRowHtml(t, { child = false, initiative = false } = {}) {
+  const initiativeMeta = initiative
+    ? `<span class="meta ticket-initiative">initiative</span> `
+    : "";
+  const parentMeta =
+    t.parent_id && !child
+      ? `<span class="meta">parent #${escapeHtml(String(t.parent_id))}</span> `
+      : "";
+  return (
+    `<li class="${child ? "ticket-child" : ""}">` +
+    `<span class="task-row">` +
+    `<span class="task-text">` +
+    initiativeMeta +
+    `<span class="meta">#${t.id}</span> ` +
+    parentMeta +
+    `<span class="meta">${escapeHtml(String(t.status))}</span> ` +
+    `<span class="meta">${escapeHtml(String(t.assignee))}</span> ` +
+    `${escapeHtml(t.title)}</span>` +
+    `<button type="button" class="ticket-done-btn" data-ticket-id="${t.id}" title="Mark done" aria-label="Mark ticket ${t.id} done">✓</button>` +
+    `</span>` +
+    `</li>`
+  );
+}
+
+function renderTicketsPanel(groups = [], flat = []) {
+  if (!panelTicketsEl) return;
+  const blocks = [];
+  if (groups.length) {
+    for (const group of groups) {
+      const ticket = group.ticket || {};
+      blocks.push(ticketRowHtml(ticket, { initiative: Boolean(group.is_initiative) }));
+      for (const child of group.children || []) {
+        blocks.push(ticketRowHtml(child, { child: true }));
+      }
+    }
+  } else {
+    for (const ticket of flat) {
+      blocks.push(ticketRowHtml(ticket));
+    }
+  }
+  panelTicketsEl.innerHTML = blocks.join("");
+}
+
 function loopPriorityClass(priority) {
   const p = Number(priority);
   if (p === 1) return "priority-high";
@@ -665,16 +708,7 @@ function renderDashboard(data, { animate = false } = {}) {
     ["What changed", state.what_changed || "(unset)"],
   ]);
 
-  renderPanelList(panelTicketsEl, data.tickets || [], (t) =>
-    `<span class="task-row">` +
-    `<span class="task-text">` +
-    `<span class="meta">#${t.id}</span> ` +
-    `<span class="meta">${escapeHtml(String(t.status))}</span> ` +
-  `<span class="meta">${escapeHtml(String(t.assignee))}</span> ` +
-    `${escapeHtml(t.title)}</span>` +
-    `<button type="button" class="ticket-done-btn" data-ticket-id="${t.id}" title="Mark done" aria-label="Mark ticket ${t.id} done">✓</button>` +
-    `</span>`
-  );
+  renderTicketsPanel(data.ticket_groups || [], data.tickets || []);
 
   renderPanelList(panelTasksEl, data.tasks || [], (t) =>
     `<span class="task-row">` +

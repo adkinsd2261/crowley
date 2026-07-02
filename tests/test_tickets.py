@@ -48,6 +48,76 @@ class TicketTests(IsolatedDbTestCase):
         self.ticket_ids.append(ticket_id)
         return ticket_id
 
+    def test_parent_child_create_and_grouped_summary(self) -> None:
+        parent_id = self._create(
+            title="V3.9.3 Planning Workflow initiative",
+            assignee="codex",
+            priority=1,
+        )
+        child_id = self._create(
+            title="Child slice probe",
+            assignee="cursor",
+            priority=1,
+            parent_id=parent_id,
+        )
+        parent = crowley.get_ticket_by_id(parent_id)
+        child = crowley.get_ticket_by_id(child_id)
+        assert parent is not None and child is not None
+        self.assertIsNone(parent["parent_id"])
+        self.assertEqual(int(child["parent_id"]), parent_id)
+
+        summary = crowley.build_tickets_summary(self.project_id, "cursor")
+        grouped = summary["grouped_open"]
+        assert isinstance(grouped, list)
+        parent_group = next(
+            (group for group in grouped if int(group["ticket"]["id"]) == parent_id),
+            None,
+        )
+        self.assertIsNotNone(parent_group)
+        assert parent_group is not None
+        self.assertTrue(bool(parent_group["is_initiative"]))
+        child_ids = {int(item["id"]) for item in parent_group["children"]}
+        self.assertIn(child_id, child_ids)
+
+        sync = crowley.build_agent_sync_bundle(agent="cursor", limit=5)
+        sync_grouped = sync["tickets"]["grouped_open"]
+        assert isinstance(sync_grouped, list)
+        self.assertGreaterEqual(len(sync_grouped), 1)
+
+    def test_orphan_open_child_renders_once_when_parent_not_open(self) -> None:
+        parent_id = self._create(
+            title="Closed parent initiative probe",
+            assignee="codex",
+            priority=1,
+        )
+        child_id = self._create(
+            title="Orphan open child probe",
+            assignee="cursor",
+            priority=1,
+            parent_id=parent_id,
+        )
+        crowley.complete_ticket(parent_id, actor="codex")
+
+        open_rows = crowley.list_tickets(project_id=self.project_id, open_only=True)
+        open_payload = [crowley.row_to_dict(row) for row in open_rows]
+        grouped = crowley.group_tickets_by_parent(open_payload)
+
+        rendered_ids: list[int] = []
+        for group in grouped:
+            rendered_ids.append(int(group["ticket"]["id"]))
+            for child in group["children"]:
+                rendered_ids.append(int(child["id"]))
+
+        self.assertEqual(rendered_ids.count(child_id), 1)
+        orphan_group = next(
+            (group for group in grouped if int(group["ticket"]["id"]) == child_id),
+            None,
+        )
+        self.assertIsNotNone(orphan_group)
+        assert orphan_group is not None
+        self.assertEqual(orphan_group["children"], [])
+        self.assertFalse(bool(orphan_group["is_initiative"]))
+
     def test_create_and_list_ticket(self) -> None:
         ticket_id = self._create(title="Schema probe", assignee="cursor", priority=1)
         row = crowley.get_ticket_by_id(ticket_id)

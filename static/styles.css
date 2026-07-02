@@ -839,6 +839,16 @@ body {
   background: rgba(120, 200, 140, 0.08);
 }
 
+.panel-list li.ticket-child {
+  margin-left: 0.85rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  padding-left: 0.55rem;
+}
+
+.panel-list .meta.ticket-initiative {
+  color: #9fd0ff;
+}
+
 .panel-list li:not(:has(.task-row)) {
   overflow: hidden;
   text-overflow: ellipsis;

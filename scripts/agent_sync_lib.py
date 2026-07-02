@@ -91,19 +91,23 @@ def create_ticket_api(
     description: str = "",
     assignee: str = "unassigned",
     priority: int = 2,
+    parent_id: int | None = None,
     source: str = "manual",
     actor: str = "system",
 ) -> tuple[int | None, str | None]:
+    payload: dict[str, Any] = {
+        "title": title,
+        "description": description,
+        "assignee": assignee,
+        "priority": priority,
+        "source": source,
+        "actor": actor,
+    }
+    if parent_id is not None:
+        payload["parent_id"] = parent_id
     result, error = send_json(
         "/api/tickets",
-        {
-            "title": title,
-            "description": description,
-            "assignee": assignee,
-            "priority": priority,
-            "source": source,
-            "actor": actor,
-        },
+        payload,
     )
     if error or result is None:
         return None, error or "ticket create failed"
@@ -192,11 +196,34 @@ def print_tickets_summary(sync: dict[str, Any], *, agent: str) -> None:
     else:
         for item in assigned[:10]:
             if isinstance(item, dict):
+                parent = item.get("parent_id")
+                parent_note = f" child of #{parent}" if parent is not None else ""
                 print(
                     f"  - #{item.get('id')} [{item.get('status')}] P{item.get('priority')} "
-                    f"{clip(str(item.get('title', '')))}"
+                    f"{clip(str(item.get('title', '')))}{parent_note}"
                 )
     print("")
+    grouped = as_list(tickets.get("grouped_open"))
+    if grouped:
+        print("open initiatives:")
+        for group in grouped[:8]:
+            if not isinstance(group, dict):
+                continue
+            ticket = group.get("ticket")
+            if not isinstance(ticket, dict):
+                continue
+            label = "initiative" if group.get("is_initiative") else "ticket"
+            print(
+                f"  - {label} #{ticket.get('id')} [{ticket.get('status')}] P{ticket.get('priority')} "
+                f"{clip(str(ticket.get('title', '')))}"
+            )
+            for child in as_list(group.get("children"))[:5]:
+                if isinstance(child, dict):
+                    print(
+                        f"    - child #{child.get('id')} [{child.get('status')}] P{child.get('priority')} "
+                        f"{clip(str(child.get('title', '')))}"
+                    )
+        print("")
     blocked = as_list(tickets.get("blocked"))
     print("blocked tickets:")
     if not blocked:
