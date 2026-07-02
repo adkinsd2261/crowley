@@ -24,6 +24,60 @@ HEALTH_URL = asl.url("/api/bus/health")
 AGENT = "codex"
 PLACEHOLDER_SUMMARY = "Codex completed a repository work session"
 DEFAULT_DO_NOT_BUILD = "Do not build direct Codex-to-Cursor communication; Crowley is the only hub."
+VALID_TICKET_ASSIGNEES = frozenset({"codex", "cursor", "crowley", "mr_go", "unassigned"})
+
+
+def validate_ticket_packet(payload: object) -> list[str]:
+    """Return human-readable validation errors for a ticket mint JSON packet."""
+    if not isinstance(payload, dict):
+        return ["Ticket file must be a JSON object with a tickets array."]
+    tickets = payload.get("tickets")
+    if not isinstance(tickets, list):
+        return ["Ticket file must contain a tickets array."]
+    if not tickets:
+        return ["Ticket file tickets array is empty."]
+
+    errors: list[str] = []
+    for index, item in enumerate(tickets, start=1):
+        prefix = f"Ticket #{index}"
+        if not isinstance(item, dict):
+            errors.append(f"{prefix}: must be an object")
+            continue
+
+        title = str(item.get("title", "")).strip()
+        if not title:
+            errors.append(f"{prefix}: missing title")
+
+        description = str(item.get("description", "")).strip()
+        if not description:
+            errors.append(f"{prefix}: missing description")
+
+        if "assignee" not in item or not str(item.get("assignee", "")).strip():
+            errors.append(f"{prefix}: missing assignee")
+        else:
+            assignee = str(item.get("assignee")).strip().lower()
+            if assignee not in VALID_TICKET_ASSIGNEES:
+                errors.append(
+                    f"{prefix}: invalid assignee '{item.get('assignee')}' "
+                    f"(must be one of {', '.join(sorted(VALID_TICKET_ASSIGNEES))})"
+                )
+
+        if "priority" not in item:
+            errors.append(f"{prefix}: missing priority")
+        else:
+            try:
+                priority = int(item.get("priority"))
+            except (TypeError, ValueError):
+                errors.append(f"{prefix}: invalid priority '{item.get('priority')}'")
+            else:
+                if priority < 1 or priority > 4:
+                    errors.append(f"{prefix}: invalid priority '{priority}' (must be 1-4)")
+
+        acceptance = item.get("acceptance")
+        if not isinstance(acceptance, list) or not any(str(entry).strip() for entry in acceptance):
+            errors.append(f"{prefix}: missing acceptance criteria")
+
+    return errors
 
 
 def _python_cmd() -> str:
@@ -477,14 +531,17 @@ def create_tickets_file(path: str) -> int:
     tickets = payload.get("tickets") if isinstance(payload, dict) else None
     if not isinstance(tickets, list):
         print("Ticket file must contain a tickets array.")
-        return 0
+        return 2
+    errors = validate_ticket_packet(payload)
+    if errors:
+        print("Ticket packet validation failed:")
+        for error in errors:
+            print(f"- {error}")
+        return 2
     created: list[int] = []
     for item in tickets:
-        if not isinstance(item, dict):
-            continue
+        assert isinstance(item, dict)
         title = str(item.get("title", "")).strip()
-        if not title:
-            continue
         description = str(item.get("description", "")).strip()
         acceptance = item.get("acceptance")
         if isinstance(acceptance, list):
