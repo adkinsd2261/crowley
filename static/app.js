@@ -45,17 +45,65 @@ let selectedTicketId = null;
 let lastDashboardFingerprint = "";
 let lastDashboardData = null;
 let memorySearchTimer = null;
+let streamRenderFrame = null;
+let pendingStreamUpdate = null;
+let chatAutoscroll = true;
 const EXTRACTION_REFRESH_MS = 2000;
 const LIVE_POLL_MS = 5000;
 const OBJECTIVE_FALLBACK = "Nothing pinned — just talk.";
 const INPUT_MAX_HEIGHT = 192;
+const CHAT_SCROLL_PIN_THRESHOLD = 96;
+
+function isChatNearBottom() {
+  if (!chatEl) return true;
+  return (
+    chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight <
+    CHAT_SCROLL_PIN_THRESHOLD
+  );
+}
+
+function scrollChatToEnd() {
+  if (!chatEl || !chatAutoscroll) return;
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function flushStreamingUpdate() {
+  if (streamRenderFrame) {
+    cancelAnimationFrame(streamRenderFrame);
+    streamRenderFrame = null;
+  }
+  if (!pendingStreamUpdate) return;
+  const { bubble, raw } = pendingStreamUpdate;
+  pendingStreamUpdate = null;
+  if (!bubble) return;
+  setMessageContent(bubble, raw, { streaming: true });
+  scrollChatToEnd();
+}
+
+function scheduleStreamingUpdate(bubble, raw) {
+  pendingStreamUpdate = { bubble, raw };
+  if (streamRenderFrame) return;
+  streamRenderFrame = requestAnimationFrame(() => {
+    streamRenderFrame = null;
+    const pending = pendingStreamUpdate;
+    pendingStreamUpdate = null;
+    if (!pending?.bubble) return;
+    setMessageContent(pending.bubble, pending.raw, { streaming: true });
+    scrollChatToEnd();
+  });
+}
 
 function setBusy(busy) {
   streaming = busy;
   inputEl.disabled = busy;
   sendBtn.disabled = busy;
   if (diagnosticsBtn) diagnosticsBtn.disabled = busy;
-  if (!busy) hideThinking();
+  if (chatEl) chatEl.setAttribute("aria-busy", busy ? "true" : "false");
+  if (!busy) {
+    hideThinking();
+    flushStreamingUpdate();
+    chatAutoscroll = true;
+  }
 }
 
 function setThinking(active, label = "Thinking") {
@@ -843,6 +891,8 @@ function setMessageContent(wrap, raw, { streaming = false } = {}) {
   const isAssistant =
     wrap.classList.contains("crowley") || wrap.classList.contains("diagnostics");
 
+  wrap.classList.toggle("streaming", streaming && isAssistant);
+
   if (isAssistant) {
     wrap.innerHTML =
       labelHtml + formatAssistantMessage(raw, { streaming });
@@ -866,7 +916,7 @@ function renderMessage(role, content, extraClass = "") {
     streaming: extraClass.includes("streaming"),
   });
   chatEl.appendChild(wrap);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollChatToEnd();
   return wrap;
 }
 
@@ -876,23 +926,29 @@ function renderError(message) {
   wrap.setAttribute("role", "alert");
   wrap.textContent = message;
   chatEl.appendChild(wrap);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollChatToEnd();
+  return wrap;
 }
 
 function finalizeStreamingMessage(bubble, finalText) {
   if (!bubble) return null;
+  flushStreamingUpdate();
   bubble.classList.remove("streaming");
-  const text = String(finalText ?? bubble.dataset.raw ?? "").trim();
+  const streamed = String(bubble.dataset.raw ?? "").trim();
+  const final = String(finalText ?? "").trim();
+  const text = final || streamed;
   if (!text) {
     bubble.remove();
     return null;
   }
   setMessageContent(bubble, text, { streaming: false });
+  scrollChatToEnd();
   return bubble;
 }
 
 function abortStreamingMessage(bubble) {
   hideThinking();
+  flushStreamingUpdate();
   if (!bubble) return;
   const raw = (bubble.dataset.raw || "").trim();
   bubble.classList.remove("streaming");
@@ -911,7 +967,7 @@ function renderDiagnosticsBlock(content, extraClass = "") {
     streaming: extraClass.includes("streaming"),
   });
   chatEl.appendChild(wrap);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollChatToEnd();
   return wrap;
 }
 
@@ -1317,6 +1373,7 @@ async function sendMessage(text) {
   resetInput();
   setBusy(true);
   setThinking(true);
+  chatAutoscroll = isChatNearBottom();
 
   let crowleyBubble = null;
   let chatDone = false;
@@ -1340,9 +1397,9 @@ async function sendMessage(text) {
           if (!crowleyBubble) {
             crowleyBubble = renderMessage("assistant", "", "streaming");
           }
-          const nextRaw = (crowleyBubble.dataset.raw || "") + (data.text || "");
-          setMessageContent(crowleyBubble, nextRaw, { streaming: true });
-          chatEl.scrollTop = chatEl.scrollHeight;
+          const nextRaw =
+            (crowleyBubble.dataset.raw || "") + (data.text || "");
+          scheduleStreamingUpdate(crowleyBubble, nextRaw);
         },
         done: (data) => {
           chatDone = true;
@@ -1360,6 +1417,7 @@ async function sendMessage(text) {
           scheduleExtractionRefresh();
         },
         error: (data) => {
+          flushStreamingUpdate();
           abortStreamingMessage(crowleyBubble);
           crowleyBubble = null;
           renderError(data.message || "Something went wrong.");
@@ -1367,6 +1425,7 @@ async function sendMessage(text) {
       }
     );
   } catch {
+    flushStreamingUpdate();
     abortStreamingMessage(crowleyBubble);
     crowleyBubble = null;
     renderError("Could not reach Crowley.");
@@ -1384,6 +1443,7 @@ async function runDiagnostics() {
   clearEmptyState();
   setBusy(true);
   setThinking(true, "Preparing briefing");
+  chatAutoscroll = isChatNearBottom();
 
   let diagBlock = null;
   let diagDone = false;
@@ -1402,8 +1462,7 @@ async function runDiagnostics() {
           diagBlock = renderDiagnosticsBlock("", "streaming");
         }
         const nextRaw = (diagBlock.dataset.raw || "") + (data.text || "");
-        setMessageContent(diagBlock, nextRaw, { streaming: true });
-        chatEl.scrollTop = chatEl.scrollHeight;
+        scheduleStreamingUpdate(diagBlock, nextRaw);
       },
       done: (data) => {
         diagDone = true;
@@ -1420,12 +1479,14 @@ async function runDiagnostics() {
         refreshPanels();
       },
       error: (data) => {
+        flushStreamingUpdate();
         abortStreamingMessage(diagBlock);
         diagBlock = null;
         renderError(data.message || "Diagnostics failed.");
       },
     });
   } catch {
+    flushStreamingUpdate();
     abortStreamingMessage(diagBlock);
     diagBlock = null;
     renderError("Could not run diagnostics.");
@@ -1501,6 +1562,14 @@ if (memorySearchEl) {
 [memorySourceEl, memoryTypeEl, memoryStatusEl, memoryLayerEl].forEach((el) => {
   if (el) el.addEventListener("change", () => loadMemoryItems());
 });
+
+if (chatEl) {
+  chatEl.addEventListener("scroll", () => {
+    if (streaming) {
+      chatAutoscroll = isChatNearBottom();
+    }
+  });
+}
 
 autoGrowInput();
 loadHealth();

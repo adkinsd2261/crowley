@@ -118,6 +118,27 @@ class WorldDashboardTests(IsolatedDbTestCase):
         for token in (".panel-state-loading", ".panel-state-error", ".panel-state-empty"):
             self.assertIn(token, css)
 
+    def test_ui_contains_streaming_polish_helpers(self) -> None:
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        for token in (
+            "scheduleStreamingUpdate",
+            "flushStreamingUpdate",
+            "finalizeStreamingMessage",
+            "abortStreamingMessage",
+            'setAttribute("aria-busy"',
+            "is-streaming",
+            "chatAutoscroll",
+            "isChatNearBottom",
+        ):
+            self.assertIn(token, js)
+        for token in (
+            ".message.streaming .message-label::after",
+            ".message.streaming .message-body.prose.is-streaming::after",
+            "stream-caret",
+        ):
+            self.assertIn(token, css)
+
 
 if __name__ == "__main__":
     unittest.main()
