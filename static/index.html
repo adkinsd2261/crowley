@@ -19,7 +19,7 @@
         <p class="header-version" id="version-label" title="">—</p>
         <p class="header-sub" id="brain-label">—</p>
       </div>
-      <button type="button" id="refresh-panels" class="refresh-btn" title="Refresh context">
+      <button type="button" id="refresh-panels" class="refresh-btn" title="Refresh context panels and chat history">
         Refresh
       </button>
     </header>
@@ -147,6 +147,7 @@
             <ul class="panel-list" id="panel-changes"></ul>
           </div>
           <div class="context-panel" data-panel="agent_feed" role="tabpanel" hidden>
+            <p class="panel-role-note">Raw agent handoff timeline — see Changes for the merged board view.</p>
             <ul class="panel-list" id="panel-agent-feed"></ul>
           </div>
           <div class="context-panel" data-panel="memory" role="tabpanel" hidden>

@@ -1776,6 +1776,7 @@ inputEl.addEventListener("keydown", (e) => {
 refreshBtn.addEventListener("click", () => {
   refreshPanels();
   loadHealth();
+  loadMessages();
 });
 
 if (panelTicketsEl) {

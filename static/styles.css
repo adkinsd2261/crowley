@@ -87,6 +87,10 @@ body {
   opacity: 0.85;
 }
 
+.header-meta {
+  min-width: 0;
+}
+
 .header-sub {
   margin: 0;
   font-size: 0.75rem;
@@ -333,6 +337,10 @@ body {
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .compose-objective-text.is-placeholder {
@@ -541,6 +549,8 @@ body {
   font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .diagnostics-btn {
@@ -646,6 +656,7 @@ body {
 
 .context-summary {
   flex: 1;
+  min-width: 0;
   color: var(--muted);
   font-size: 0.6875rem;
   overflow: hidden;
@@ -665,7 +676,7 @@ body {
 
 .context-body {
   padding: 0 1.35rem 0.75rem;
-  max-height: 10rem;
+  max-height: 12rem;
 }
 
 .context-body.hidden {
@@ -676,6 +687,14 @@ body {
   display: flex;
   gap: 0.25rem;
   margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.context-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .context-tab {
@@ -687,6 +706,7 @@ body {
   padding: 0.35rem 0.5rem;
   cursor: pointer;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .context-tab:hover {
@@ -707,11 +727,12 @@ body {
   font-size: 0.625rem;
   color: var(--muted);
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .context-panel {
   overflow-y: auto;
-  max-height: 6.75rem;
+  max-height: 8.5rem;
 }
 
 .memory-controls {
@@ -752,6 +773,7 @@ body {
   font-size: 0.625rem;
   line-height: 1.35;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .memory-badge {
@@ -821,8 +843,19 @@ body {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+}
+
+.panel-list .task-row .task-text {
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.panel-list .ticket-item .task-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .task-done-btn {
@@ -887,7 +920,7 @@ body {
 }
 
 .context-panel[data-panel="tickets"].has-detail {
-  max-height: 12rem;
+  max-height: 15rem;
 }
 
 .ticket-detail {
@@ -896,6 +929,8 @@ body {
   border-top: 1px solid var(--divider);
   font-size: 0.6875rem;
   line-height: 1.35;
+  max-height: 8rem;
+  overflow-y: auto;
 }
 
 .ticket-detail.hidden {
@@ -914,6 +949,7 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .ticket-status-badge {
@@ -997,6 +1033,7 @@ body {
   margin: 0;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .ticket-detail-error {
@@ -1128,10 +1165,25 @@ body {
   color: #9fe0b8;
 }
 
-.panel-list li:not(:has(.task-row)) {
+.panel-list li:not(:has(.task-row)):not(:has(.agent-feed-row)):not(:has(.change-row)):not(
+    :has(.memory-badge)
+  ) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.panel-list li:has(.agent-feed-row),
+.panel-list li:has(.change-row),
+.panel-list li:has(.memory-badge) {
+  overflow: visible;
+  white-space: normal;
+}
+
+.panel-list .agent-feed-summary,
+.panel-list .change-summary {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .panel-list .meta {
@@ -1440,10 +1492,18 @@ body {
   }
 
   .context-body {
-    max-height: 14rem;
+    max-height: 16rem;
   }
 
   .context-panel {
+    max-height: 10.5rem;
+  }
+
+  .context-panel[data-panel="tickets"].has-detail {
+    max-height: 18rem;
+  }
+
+  .ticket-detail {
     max-height: 9rem;
   }
 
@@ -1453,6 +1513,15 @@ body {
 }
 
 @media (max-width: 520px) {
+  .header {
+    gap: 0.65rem;
+    padding: 0 1rem;
+  }
+
+  .refresh-btn {
+    flex-shrink: 0;
+  }
+
   .workspace-stream {
     padding: 1.75rem 1rem 0.25rem;
   }

@@ -175,6 +175,23 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("flex-wrap: wrap", css)
         self.assertIn(".ticket-detail-meta", css)
 
+    def test_ui_contains_livability_pass_styles(self) -> None:
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("loadMessages();", js)
+        self.assertIn("Refresh context panels and chat history", html)
+        self.assertIn("Raw agent handoff timeline", html)
+        for token in (
+            "overflow-wrap: anywhere",
+            "-webkit-line-clamp: 2",
+            ".panel-list li:has(.agent-feed-row)",
+            ".panel-list li:has(.change-row)",
+            ".panel-list li:has(.memory-badge)",
+            "max-height: 8.5rem",
+        ):
+            self.assertIn(token, css)
+
 
 if __name__ == "__main__":
     unittest.main()
