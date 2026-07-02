@@ -18,6 +18,31 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-032 — Pre-V4 release ladder is memory-led
+
+**Date:** 2026-07-01
+**Status:** Accepted
+**Evidence:** `docs/PRE_V4_RELEASE_PLAN.md`, `tickets/pre_v4_release_plan.json`
+
+### Context
+
+Crowley reached a stable V3.9.1 baseline with memory backend, canon path, agent sync, tickets, git, and CI. Before adding V4 external collectors, memory behavior and planning flow need to be trustworthy enough that additional inputs do not create confusion.
+
+### Decision
+
+- Ship three focused pre-V4 releases: V3.9.2 Memory Clarity, V3.9.3 Planning Workflow, V3.9.4 Agent Visibility
+- Keep the product principle: Crowley should feel natural in conversation, but auditable on demand
+- Treat draft tickets `#4-#8` as superseded planning artifacts and replace them with Cursor tickets `#9-#23`
+- Defer V4 connectivity until canon, retrieval inspection, planning packets, agent visibility, and test isolation are in place
+
+### Rejected
+
+- Jumping directly to V4 collectors
+- One giant Cursor prompt for all pre-V4 work
+- Making memory overly rigid or destructive
+
+---
+
 ## ADR-031 — GitHub repository baseline and Actions CI (V3.9.1)
 
 **Date:** 2026-07-01  

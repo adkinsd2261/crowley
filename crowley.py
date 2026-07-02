@@ -3576,6 +3576,205 @@ def consolidate_memories(
         conn.close()
 
 
+def _hygiene_reason_entry(
+    row: sqlite3.Row,
+    *,
+    reason: str,
+    category: str,
+) -> dict[str, object]:
+    return {
+        "id": int(row["id"]),
+        "source": str(row["source"]),
+        "memory_type": str(row["memory_type"]),
+        "status": str(row["status"]),
+        "reason": reason,
+        "category": category,
+    }
+
+
+def _hygiene_polarity(text: str) -> int:
+    lower = _normalize_text(text).lower()
+    negative = (
+        " disable ",
+        " avoid ",
+        " never ",
+        " do not ",
+        " don't ",
+        " cannot ",
+        " can't ",
+        " no ",
+        " stop ",
+    )
+    positive = (
+        " enable ",
+        " allow ",
+        " prefer ",
+        " always ",
+        " use ",
+        " must ",
+        " yes ",
+    )
+    if any(token in f" {lower} " for token in negative):
+        return -1
+    if any(token in f" {lower} " for token in positive):
+        return 1
+    return 0
+
+
+def _hygiene_subject_key(text: str) -> str:
+    words = _normalize_text(text).lower().split()
+    ignore = {
+        "enable",
+        "disable",
+        "allow",
+        "avoid",
+        "prefer",
+        "always",
+        "never",
+        "must",
+        "do",
+        "not",
+        "don't",
+        "cannot",
+        "can't",
+        "yes",
+        "no",
+        "use",
+        "stop",
+    }
+    filtered = [word for word in words if word not in ignore]
+    return " ".join(filtered[:6])
+
+
+def memory_hygiene_report() -> dict[str, object]:
+    """
+    Non-destructive memory hygiene audit.
+
+    Returns candidate rows grouped by stale, noisy, duplicates, and possible_conflicts.
+    This report never mutates rows and is safe to run repeatedly.
+    """
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, memory_type, content, importance, source, pinned, status
+            FROM memory_items
+            WHERE status = 'active'
+            ORDER BY id ASC
+            """
+        ).fetchall()
+
+        stale: list[dict[str, object]] = []
+        noisy: list[dict[str, object]] = []
+        duplicates: list[dict[str, object]] = []
+        possible_conflicts: list[dict[str, object]] = []
+
+        stale_cutoff = datetime.now(timezone.utc) - timedelta(days=MEMORY_STALE_AGE_DAYS)
+        duplicate_groups: dict[str, list[sqlite3.Row]] = {}
+        conflict_groups: dict[str, list[sqlite3.Row]] = {}
+
+        for row in rows:
+            content = _normalize_text(str(row["content"]))
+            created_at = _parse_memory_timestamp(str(row["created_at"]))
+            importance = int(row["importance"])
+            pinned = bool(int(row["pinned"]))
+            source = str(row["source"]).lower()
+            memory_type = str(row["memory_type"]).lower()
+
+            if (
+                not pinned
+                and importance <= MEMORY_STALE_MAX_IMPORTANCE
+                and created_at is not None
+                and created_at < stale_cutoff
+            ):
+                stale.append(
+                    _hygiene_reason_entry(
+                        row,
+                        reason=(
+                            f"older than {MEMORY_STALE_AGE_DAYS} days with "
+                            f"importance<={MEMORY_STALE_MAX_IMPORTANCE}"
+                        ),
+                        category="stale",
+                    )
+                )
+
+            if source in {"implicit", "extract"} and importance <= 1 and len(content) < 40:
+                noisy.append(
+                    _hygiene_reason_entry(
+                        row,
+                        reason="short low-importance implicit/extract memory",
+                        category="noisy",
+                    )
+                )
+
+            norm_key = _normalize_text(content).lower()
+            if norm_key:
+                duplicate_groups.setdefault(norm_key, []).append(row)
+
+            if memory_type in {"decision", "preference", "constraint"}:
+                subject = _hygiene_subject_key(content)
+                if subject:
+                    conflict_groups.setdefault(subject, []).append(row)
+
+        for group_rows in duplicate_groups.values():
+            if len(group_rows) < 2:
+                continue
+            newest_id = max(int(item["id"]) for item in group_rows)
+            for item in group_rows:
+                item_id = int(item["id"])
+                if item_id == newest_id:
+                    continue
+                duplicates.append(
+                    _hygiene_reason_entry(
+                        item,
+                        reason=f"duplicate content; newer row #{newest_id} exists",
+                        category="duplicates",
+                    )
+                )
+
+        for subject, group_rows in conflict_groups.items():
+            if len(group_rows) < 2:
+                continue
+            polarity_by_id = {
+                int(item["id"]): _hygiene_polarity(str(item["content"])) for item in group_rows
+            }
+            has_positive = any(value > 0 for value in polarity_by_id.values())
+            has_negative = any(value < 0 for value in polarity_by_id.values())
+            if not (has_positive and has_negative):
+                continue
+            for item in group_rows:
+                possible_conflicts.append(
+                    _hygiene_reason_entry(
+                        item,
+                        reason=f"possible polarity conflict on subject '{subject}'",
+                        category="possible_conflicts",
+                    )
+                )
+
+        return {
+            "generated_at": _now_iso(),
+            "dry_run": True,
+            "stale": stale,
+            "noisy": noisy,
+            "duplicates": duplicates,
+            "possible_conflicts": possible_conflicts,
+            "counts": {
+                "stale": len(stale),
+                "noisy": len(noisy),
+                "duplicates": len(duplicates),
+                "possible_conflicts": len(possible_conflicts),
+                "total": len(stale) + len(noisy) + len(duplicates) + len(possible_conflicts),
+            },
+        }
+    finally:
+        conn.close()
+
+
+def memory_hygiene_report_api() -> dict[str, object]:
+    """Read-only API payload for memory hygiene report."""
+    return memory_hygiene_report()
+
+
 def _parse_memory_timestamp(value: str) -> datetime | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -5562,6 +5761,18 @@ def _run_cli_consolidate() -> bool:
     return True
 
 
+def _run_cli_hygiene() -> bool:
+    """Non-interactive hygiene report: python crowley.py --hygiene."""
+    import sys
+
+    argv = sys.argv[1:]
+    if not argv or argv[0] != "--hygiene":
+        return False
+    setup_db()
+    print(json.dumps(memory_hygiene_report(), indent=2))
+    return True
+
+
 def main() -> None:
     """Set up the DB and run the interactive CLI loop."""
     setup_db()
@@ -5598,5 +5809,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     if _run_cli_consolidate():
+        raise SystemExit(0)
+    if _run_cli_hygiene():
         raise SystemExit(0)
     main()

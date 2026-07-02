@@ -3,7 +3,7 @@
 Single source of truth for release history. Update this file at the end of every version.
 
 **Current:** V3.9.1 (`Crowley V3.9.1 Repository & CI`)  
-**Next planned:** Canon synthesis, agent feed UI tab, V4 connectivity
+**Next planned:** V3.9.2 Memory Clarity, V3.9.3 Planning Workflow, V3.9.4 Agent Visibility, then V4 connectivity
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|

@@ -353,6 +353,11 @@ def api_consolidate(
     return JSONResponse(result)
 
 
+@app.get("/api/memory/hygiene")
+def api_memory_hygiene() -> JSONResponse:
+    return JSONResponse(crowley.memory_hygiene_report_api())
+
+
 @app.get("/api/diagnostics")
 def api_diagnostics() -> StreamingResponse:
     return StreamingResponse(

@@ -57,7 +57,7 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
 
 **Shipped through V3.9.1:** … concurrent ticketing, **GitHub repo + Actions CI**.
 
-**Active initiative:** None — see [TICKETS.md](./TICKETS.md). Next: canon synthesis, agent feed tab, or V4 connectivity.
+**Active initiative:** Pre-V4 release ladder — see [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) and [TICKETS.md](./TICKETS.md). Next: V3.9.2 Memory Clarity.
 
 ---
 
@@ -160,8 +160,11 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | Item | Rationale | Complexity | Status |
 |------|-----------|------------|--------|
 | Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions |
-| First canon synthesis | Populate `canon` rows for prompts/sync | Low | Script ready; manual run |
-| Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | API exists; tab deferred |
+| V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | Planned |
+| V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | Planned |
+| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | Planned |
+| First canon synthesis | Populate `canon` rows for prompts/sync | Low | Planned in V3.9.2 |
+| Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | Planned in V3.9.4 |
 | `propose_handoff_updates()` | Handoff-tuned extraction prompt | Low | Open |
 | Sparks UI → `memory_items` | Legacy panel | Low–Medium | ✅ Memory tab |
 | `/task done <id>` | Task hygiene | Low | ✅ Shipped |
@@ -222,7 +225,9 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.8.1** | Agent Parity | ✅ Activity feed, stop hook, shared verify |
 | **V3.9** | Concurrent Ticketing | ✅ Unified ticket board; Codex mints, Cursor fills |
 | **V3.9.1** | Repository & CI | ✅ GitHub remote, Actions test gate, doc sweep |
-| **V3.9.2+** | Polish | Agent feed UI tab, canon automation |
+| **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy, hygiene, test isolation |
+| **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
+| **V3.9.4** | Agent Visibility | Agent feed, ticket detail/history, V4 readiness docs |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
 
 ---
@@ -248,4 +253,5 @@ When shipping a version:
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md)
+- [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
 - [VERSIONS.md](../VERSIONS.md)

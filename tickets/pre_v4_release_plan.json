@@ -1,0 +1,191 @@
+{
+  "tickets": [
+    {
+      "title": "V3.9.2 Memory Clarity: run first canon synthesis workflow",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Execute and document the first safe canon synthesis workflow. Keep the workflow manual-first: dry-run, inspect source packet, validate generated layers, then write only when validation passes.",
+      "acceptance": [
+        "Operator steps are documented for --show-packet, dry-run synthesis, validation review, and --write",
+        "Canon write path is verified to archive old canon rows and insert the expected canon layers",
+        "Validation failure remains non-destructive and reports clear errors",
+        "Docs identify canon as below filesystem/project_state but above hybrid retrieval",
+        "Regression tests covering canon validation still pass"
+      ]
+    },
+    {
+      "title": "V3.9.2 Memory Clarity: expose retrieval explanation details",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add an inspectable explanation surface for retrieved memory so Crowley can show why a memory was selected without making normal chat rigid.",
+      "acceptance": [
+        "Retrieval API/debug output includes source, memory_type, score, status, pinned flag, canon flag, and available provenance ids",
+        "Prompt/retrieval explanation is read-only and does not alter ranking behavior unless explicitly needed",
+        "Keyword-only fallback still reports useful explanation fields",
+        "Tests cover explanation payload shape for vector+keyword and keyword fallback where practical"
+      ]
+    },
+    {
+      "title": "V3.9.2 Memory Clarity: clarify memory hierarchy language",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Make the memory truth hierarchy easy to understand in docs and UI copy: filesystem/project_state, tickets, agent activity, canon, retrieval, recent chat.",
+      "acceptance": [
+        "PRE_V4_RELEASE_PLAN, WHERE_WE_ARE, ROADMAP, and relevant memory docs describe the hierarchy consistently",
+        "Memory UI labels distinguish canon/pinned memories from ordinary retrieved memories",
+        "No copy implies canon overrides filesystem truth, project_state, or tickets",
+        "Docs preserve the rule that Crowley should be natural in conversation but auditable on demand"
+      ]
+    },
+    {
+      "title": "V3.9.2 Memory Clarity: add non-destructive memory hygiene checks",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add a dry-run hygiene path that identifies stale, noisy, duplicate, or conflicting memory rows without auto-deleting or auto-archiving anything.",
+      "acceptance": [
+        "Hygiene command/API reports candidates grouped by stale, noisy, duplicate, and possible conflict",
+        "Report includes memory id, source, type, status, and short reason",
+        "No rows are changed unless an explicit existing safe path is invoked",
+        "Tests cover dry-run behavior and confirm it is non-destructive"
+      ]
+    },
+    {
+      "title": "V3.9.2 Memory Clarity: isolate tests from working crowley.db",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Fix test database isolation so regression tests and probes do not pollute the real working Crowley database.",
+      "acceptance": [
+        "Unit tests use an isolated temporary database or explicit test database path",
+        "Running the full suite does not add probe rows to crowley.db",
+        "Existing tests pass with the isolated database setup",
+        "Docs or test helpers make the isolation convention clear for future tests"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: document planning roles and Cursor-ready tickets",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Create a concise Planning Workflow doc that explains how Mr. Go, Codex, Cursor, and Crowley collaborate through planning packets, tickets, and handoffs.",
+      "acceptance": [
+        "Doc explains roles: Mr. Go sets intent, Codex plans, Cursor builds, Crowley stores truth",
+        "Doc explains when to keep brainstorming versus when to mint tickets",
+        "Doc defines Cursor-ready tickets with scope, acceptance criteria, QA expectation, and non-goals",
+        "WHERE_WE_ARE links to the workflow doc in the agent ritual section",
+        "No wording implies direct Codex-to-Cursor messaging"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: add planning packet template",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add a reusable planning packet template for Codex-authored initiatives before ticket minting.",
+      "acceptance": [
+        "Template includes objective, context, decisions, non-goals, risks, ticket slices, acceptance criteria, QA expectations, and next action",
+        "Template can be copied into a ticket JSON packet without losing core fields",
+        "Example packet uses the Pre-V4 release plan as a realistic reference",
+        "Docs explain that planning packet approval happens before Cursor implementation"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: validate ticket packets before creation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Improve codex_sync.py --create-tickets so invalid ticket JSON fails before partial ticket creation.",
+      "acceptance": [
+        "Validation catches missing title, assignee, priority, description, and acceptance criteria",
+        "Validation reports all discovered errors in human-readable form",
+        "No tickets are created when validation fails",
+        "Existing valid ticket packet behavior remains backward compatible",
+        "Tests cover valid packet, missing fields, invalid priority, and no partial creation"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: support parent initiative tickets",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Use the existing parent_id field so release initiatives can group child Cursor tickets without schema churn.",
+      "acceptance": [
+        "Ticket creation supports optional parent_id through API and sync script paths",
+        "Ticket list/sync output can show child tickets grouped under a parent initiative",
+        "UI indicates parent/child relationship without visual clutter",
+        "Tests cover parent-child create/list behavior",
+        "No migration is required beyond the existing parent_id column"
+      ]
+    },
+    {
+      "title": "V3.9.3 Planning Workflow: add draft ticket cleanup path",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add a safe way to mark draft, accidental, or superseded tickets as cancelled/replaced so Cursor does not pick up stale planning work.",
+      "acceptance": [
+        "Sync/API path can mark tickets cancelled with a comment",
+        "Cancelled tickets remain queryable in history but are excluded from open work summaries",
+        "Ticket event records who cancelled and why",
+        "Docs explain when to cancel versus edit a ticket",
+        "Tests cover cancellation and open summary exclusion"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: add Agent Feed tab",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add a dedicated Intelligence drawer tab showing recent Codex, Cursor, and Crowley agent activity from existing agent activity APIs/snapshot.",
+      "acceptance": [
+        "Intelligence drawer includes an Agent Feed tab next to Tickets, Tasks, Loops, Decisions, and Memory",
+        "Tab renders recent agent events newest-first with source, timestamp, summary, and next action when available",
+        "Empty, loading, and error states match the existing drawer style",
+        "Uses existing read APIs or the existing dashboard snapshot",
+        "No direct agent-to-agent channel is introduced"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: add ticket detail view",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Make the Tickets tab useful as a live work board by exposing full ticket detail and recent ticket events.",
+      "acceptance": [
+        "Selecting a ticket reveals description, acceptance criteria, status, assignee, priority, and created/updated timestamps",
+        "Ticket event history is visible for create, claim, status changes, comments, done, and linked handoff activity",
+        "Open, in-progress, blocked, done, cancelled states are visually distinct",
+        "UI remains usable on mobile and desktop widths",
+        "No destructive ticket actions are added in this ticket"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: link handoffs to ticket history",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Surface handoff-linked ticket history so Cursor's shipped work is visible from the board.",
+      "acceptance": [
+        "When a ticket is closed via cursor_sync --after --ticket, the linked handoff memory id is visible in ticket detail or event history",
+        "Ticket event payload identifies the actor and linked memory where available",
+        "Agent activity and ticket history remain separate but cross-reference each other",
+        "Tests cover linked_memory_id display data in ticket event/detail API"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: clarify tickets vs tasks vs open loops",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Clarify the relationship between tickets, legacy tasks, and open loops across docs and UI language. Tickets remain the agent work board.",
+      "acceptance": [
+        "Docs define tickets as agent work, tasks as lightweight todos, and open_loops as unresolved project questions/risks",
+        "UI panel labels or helper copy avoid implying tasks/open_loops are the Cursor board",
+        "Prompt/onboarding docs preserve tickets as authoritative for assigned work",
+        "No data migration is required in this ticket"
+      ]
+    },
+    {
+      "title": "V3.9.4 Agent Visibility: lock docs for V4 readiness",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Update roadmap/onboarding/version docs after V3.9.2-V3.9.4 so V4 begins from a clean, current state.",
+      "acceptance": [
+        "ROADMAP, WHERE_WE_ARE, PROJECT_STATE, TICKETS, and VERSIONS reflect the shipped pre-V4 releases",
+        "V4 readiness gate is checked off or explicitly marked incomplete",
+        "V4 connectivity remains defined as external collectors later, not part of the pre-V4 releases",
+        "A final handoff summarizes what Cursor shipped and what remains"
+      ]
+    }
+  ]
+}

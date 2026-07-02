@@ -7,15 +7,17 @@
 
 ## Active initiative
 
-**Pick next** (planning tickets on board or mint new):
+**Pre-V4 release ladder approved.** See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md). The source of truth for current implementation work is the `tickets` table.
 
 | Ticket theme | Assignee | Priority |
 |--------------|----------|------------|
-| First canon synthesis | Codex plans | P2 |
-| Agent feed UI tab | Codex plans | P3 |
-| V4 connectivity (git collector) | Codex plans | P3 |
+| V3.9.2 Memory Clarity | Cursor builds | P1 |
+| V3.9.3 Planning Workflow | Cursor builds | P1 |
+| V3.9.4 Agent Visibility / Pre-V4 Readiness | Cursor builds | P1 |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+
+Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Active Cursor implementation tickets are `#9-#23`.
 
 ---
 
