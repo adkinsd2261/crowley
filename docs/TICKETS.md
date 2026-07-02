@@ -1,23 +1,26 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.4 · Pre-V4 ladder complete (2026-07-02)
+**As of:** V3.9.4 · V3.9.5/V3.9.6 quality plan approved (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative
 
-**Pre-V4 release ladder complete.** V4 connectivity is the next theme — Codex plans; Cursor implements when minted. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) and [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md).
+**Active:** V3.9.5 + V3.9.6 pre-V4 quality plan. V4 connectivity waits until these ship and docs are locked. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
 
 | Ticket theme | Status |
 |--------------|--------|
 | V3.9.2 Memory Clarity (#9–#13) | Shipped on `main` |
 | V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
 | V3.9.4 Agent Visibility (#19–#23) | Shipped on `main` |
+| V3.9.5 Conversation + Model Behavior (#25–#30) | Open |
+| V3.9.6 Workspace Polish (#31–#36) | Open |
+| Pre-V4 QA hygiene (#37) | Open — repair state lock-in + stale open-loop cleanup |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
-Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Active Cursor implementation tickets are `#9-#23`.
+Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`; active implementation tickets are `#25-#37`.
 
 ---
 

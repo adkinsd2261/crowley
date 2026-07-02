@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.4 · Pre-V4 ladder complete · **2026-07-02**
+**As of:** V3.9.4 · V3.9.5/V3.9.6 quality plan approved · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -37,6 +37,8 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.2** | **Shipped on `main`** — canon synthesis workflow, retrieval explanations, memory hierarchy, hygiene report, test DB isolation |
 | **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
 | **V3.9.4** | **Shipped** — Agent Feed, ticket detail, handoff links, work-board clarity, V4 doc lock (#19–#23) |
+| **V3.9.5** | **Planned** — conversation mode classifier, depth controller, co-founder voice, diagnostics separation |
+| **V3.9.6** | **Planned** — loading/error/empty states, streaming polish, navigation flow, "what changed" feed |
 
 **Current constants:** `CROWLEY_VERSION = "3.9.4"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.4 Agent Visibility"`
 
@@ -131,15 +133,18 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 ladder is complete. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md) and [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md).
+Pre-V4 ladder complete. The active pre-V4 quality plan adds two small releases before connectivity: [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
 | **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
 | **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
 | **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
+| **V3.9.5 Conversation + Model Behavior** | Open | Tickets `#25–#30` |
+| **V3.9.6 Workspace Polish** | Open | Tickets `#31–#36` |
+| **Pre-V4 QA Hygiene** | Open | Ticket `#37` — state lock-in + stale open-loop cleanup |
 
-**V4 connectivity** (git collector, multi-project commands) is the next theme — gated until Codex mints implementation tickets. Readiness gate in the Pre-V4 plan is satisfied.
+**V4 connectivity** (git collector, multi-project commands) waits until V3.9.5 and V3.9.6 ship and docs are locked.
 
 ---
 
@@ -150,6 +155,9 @@ Pre-V4 ladder is complete. See [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md
 | `crowley.py` | Engine |
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate |
+| `docs/PRE_V4_QUALITY_PLAN.md` | Active V3.9.5/V3.9.6 quality plan |
+| `docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md` | V3.9.5 release spec |
+| `docs/V3.9.6_WORKSPACE_POLISH.md` | V3.9.6 release spec |
 | `docs/V3.9.4_AGENT_VISIBILITY.md` | V3.9.4 spec + V4 readiness gate |
 | `docs/V3.9.1_REPOSITORY_AND_CI.md` | V3.9.1 spec |
 | `docs/V3.9.3_PLANNING_WORKFLOW.md` | Planning packets, mint gate, cancel vs edit |

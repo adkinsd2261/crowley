@@ -1,0 +1,160 @@
+{
+  "tickets": [
+    {
+      "title": "V3.9.5 Conversation: add inferred conversation mode classifier",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add deterministic inferred conversation modes for chat prompt assembly. Modes: status, planning, exploration, debug, diagnostics, bug, casual. No visible UI toggle. Keep the classifier simple, inspectable, and covered by unit tests.",
+      "acceptance": [
+        "Common user phrasings classify into status, planning, exploration, debug, diagnostics, bug, or casual",
+        "Prompt assembly includes the detected mode and expected answer shape",
+        "Classifier is deterministic and does not call a live model",
+        "Tests cover representative phrasings including quick status, planning, bug report, diagnostics, and casual chat",
+        "No UI toggle or new frontend control is added"
+      ]
+    },
+    {
+      "title": "V3.9.5 Conversation: add response depth controller",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add a deterministic response depth controller for brief, standard, and deep answers. Default to standard; use deep for planning/exploration; use brief for status, check, and update asks.",
+      "acceptance": [
+        "Depth values are limited to brief, standard, and deep",
+        "Status/check/update asks select brief by default",
+        "Planning and exploration asks select deep by default",
+        "Prompt assembly includes selected depth and answer-length expectations",
+        "Tests verify that 'what changed?' is brief while 'thoughts on V4?' can be deep"
+      ]
+    },
+    {
+      "title": "V3.9.5 Conversation: trim personality prompt toward co-founder voice",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Refine _personality_prompt() so Crowley is warm, opinionated, useful, and less theatrical while preserving the identity that Crowley is the running system.",
+      "acceptance": [
+        "Personality prompt keeps Crowley as the running system, not a generic assistant",
+        "Prompt favors project co-founder behavior: useful, direct, warm, and willing to have a point of view",
+        "Prompt avoids excessive flourish and long answers when the controller requests brief output",
+        "Diagnostics prompt does not inherit the co-founder chat tone",
+        "Deterministic tests or fixtures cover the relevant prompt text"
+      ]
+    },
+    {
+      "title": "V3.9.5 Conversation: keep diagnostics tone separate from chat tone",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Ensure diagnostics stays factual, structured, and SQL/fact-first instead of inheriting exploration or co-founder chat tone.",
+      "acceptance": [
+        "Diagnostics prompt remains factual and structured",
+        "Diagnostics prompt does not include chat mode/depth/personality flourish",
+        "Diagnostics still uses gathered SQL/system facts as the authority",
+        "Tests verify diagnostics prompt separation from chat prompt assembly",
+        "No diagnostics data writes are introduced"
+      ]
+    },
+    {
+      "title": "V3.9.5 Conversation: add model behavior regression fixtures",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add deterministic regression fixtures around prompt assembly, mode/depth selection, diagnostics separation, and representative user prompts. Do not test live model quality.",
+      "acceptance": [
+        "Tests cover mode selection for representative prompts",
+        "Tests cover depth selection for quick status versus deep planning",
+        "Tests cover prompt assembly includes mode, depth, and answer shape",
+        "Tests cover diagnostics separation",
+        "No test depends on a live OpenAI or Ollama response"
+      ]
+    },
+    {
+      "title": "V3.9.5 Conversation: sweep confirmed chat UX bugs",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Fix confirmed chat UX bugs only: empty/model-error states, slash-command rejection clarity, and streaming completion/error handling. Avoid new feature scope.",
+      "acceptance": [
+        "Empty chat/model-error cases present a clear user-facing state",
+        "Unsupported slash commands are rejected clearly",
+        "Streaming completion and streaming error paths leave the UI in a usable state",
+        "Tests cover each fixed bug where practical",
+        "No unrelated chat feature or provider-routing change is added"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: add loading/error/empty states",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add consistent loading, error, and empty states for chat, Intelligence panels, ticket detail, Agent Feed, Memory, and diagnostics. Prioritize no blank or dead panels.",
+      "acceptance": [
+        "Chat, ticket detail, Agent Feed, Memory, and diagnostics have visible loading/error/empty states",
+        "Panel states use existing visual language and do not create a redesign",
+        "Offline or failed fetch states are understandable",
+        "Empty tickets/activity/memory states are not blank",
+        "Focused UI/static tests cover the state helpers or rendered state text"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: smooth chat streaming states",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Improve chat streaming feel without changing model provider logic. Make streaming start, token flow, completion, and error behavior clear and stable.",
+      "acceptance": [
+        "User sees a clear in-progress state when streaming begins",
+        "Partial token flow remains stable and does not duplicate final text",
+        "Completion clears loading state reliably",
+        "Streaming errors show a recoverable error state",
+        "No model provider or backend routing behavior is changed"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: tighten navigation and panel flow",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Tighten Intelligence drawer navigation, selected ticket detail behavior, and panel switching so tabs feel predictable and detail views do not flicker unnecessarily.",
+      "acceptance": [
+        "Intelligence tab switching preserves expected selected state",
+        "Ticket detail selection is stable across refreshes where practical",
+        "Panel switching does not flash blank content unnecessarily",
+        "Mobile-ish widths remain usable",
+        "Focused tests or static checks cover changed state/render behavior"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: add clear what changed feed",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Make recent changes obvious from existing agent activity, ticket events, and handoff data so Mr. Go can see what Cursor/Codex changed recently without reading raw handoffs.",
+      "acceptance": [
+        "Workspace exposes a clear recent-changes surface using existing data",
+        "Feed includes recent Cursor/Codex work, ticket status changes, and handoff-linked activity where available",
+        "Feed avoids raw handoff dumps when a concise summary exists",
+        "Empty/error/loading states are handled",
+        "No new external collector or direct agent channel is introduced"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: frontend livability pass",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Fix obvious frontend friction: spacing, overflow, mobile-ish width issues, and dead affordances. Keep scope to livability, not redesign.",
+      "acceptance": [
+        "Obvious text overflow and cramped layout issues are fixed",
+        "Common panels remain usable at desktop and mobile-ish widths",
+        "Dead or misleading affordances are removed, disabled, or clarified",
+        "Existing visual style is preserved",
+        "Manual browser QA notes identify the checked views"
+      ]
+    },
+    {
+      "title": "V3.9.6 Workspace Polish: final docs and version lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Lock V3.9.5 and V3.9.6 as shipped once implementation tickets pass review. Add release docs and update WHERE_WE_ARE, PROJECT_STATE, ROADMAP, TICKETS, VERSIONS, and knowledge files as needed so V4 starts from current truth.",
+      "acceptance": [
+        "V3.9.5 and V3.9.6 release docs reflect what actually shipped",
+        "WHERE_WE_ARE, PROJECT_STATE, ROADMAP, TICKETS, and VERSIONS are synchronized",
+        "Version constants are bumped only at the final lock step",
+        "V4 readiness gate clearly shows remaining blockers or confirms ready",
+        "Full regression suite passes before final approval"
+      ]
+    }
+  ]
+}

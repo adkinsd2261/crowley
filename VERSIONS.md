@@ -3,7 +3,7 @@
 Single source of truth for release history. Update this file at the end of every version.
 
 **Current:** V3.9.4 (`Crowley V3.9.4 Agent Visibility`)
-**Next planned:** V4 connectivity (git collector, multi-project commands)
+**Next planned:** V3.9.5 Conversation + Model Behavior, then V3.9.6 Workspace Polish before V4 connectivity
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -26,6 +26,8 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9    | shipped  | 2026-07-01 | Concurrent ticketing — unified agent work board |
 | V3.9.1  | shipped  | 2026-07-01 | GitHub repo baseline + GitHub Actions CI |
 | V3.9.4  | shipped  | 2026-07-02 | Pre-V4 ladder complete — memory clarity, planning workflow, agent visibility, doc lock |
+| V3.9.5  | planned  | TBD        | Conversation + Model Behavior — inferred modes, depth, co-founder voice |
+| V3.9.6  | planned  | TBD        | Workspace Polish — states, streaming, navigation, recent changes, docs lock |
 
 ---
 
