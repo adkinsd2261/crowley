@@ -71,6 +71,15 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("renderAgentFeedPanel", js)
         self.assertIn("agent_feed:", js)
 
+    def test_ui_contains_ticket_detail_view(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('id="ticket-detail"', html)
+        self.assertIn("renderTicketDetail", js)
+        self.assertIn("loadTicketDetail", js)
+        self.assertIn("ticketStatusClass", js)
+        self.assertIn("has-detail", js)
+
 
 if __name__ == "__main__":
     unittest.main()

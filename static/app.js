@@ -14,6 +14,7 @@ const phaseProgressCountEl = document.getElementById("phase-progress-count");
 const phaseProgressFillEl = document.getElementById("phase-progress-fill");
 const stateSyncEl = document.getElementById("state-sync");
 const panelTicketsEl = document.getElementById("panel-tickets");
+const ticketDetailEl = document.getElementById("ticket-detail");
 const panelTasksEl = document.getElementById("panel-tasks");
 const panelLoopsEl = document.getElementById("panel-loops");
 const panelDecisionsEl = document.getElementById("panel-decisions");
@@ -40,6 +41,7 @@ const objectiveEl = document.getElementById("current-objective");
 let streaming = false;
 let pollTimer = null;
 let activeContextTab = "tickets";
+let selectedTicketId = null;
 let lastDashboardFingerprint = "";
 let lastDashboardData = null;
 let memorySearchTimer = null;
@@ -297,7 +299,178 @@ function hasMemoryFilters() {
   );
 }
 
-function ticketRowHtml(t, { child = false, initiative = false } = {}) {
+function ticketStatusClass(status) {
+  const normalized = String(status || "open").toLowerCase().replace(/\s+/g, "_");
+  if (normalized === "in_progress") return "ticket-status-in_progress";
+  if (
+    normalized === "open" ||
+    normalized === "claimed" ||
+    normalized === "blocked" ||
+    normalized === "done" ||
+    normalized === "cancelled"
+  ) {
+    return `ticket-status-${normalized}`;
+  }
+  return "ticket-status-open";
+}
+
+function parseTicketDescription(description) {
+  const text = String(description || "").trim();
+  if (!text) return { body: "", acceptance: [] };
+  const marker = /\n\s*Acceptance:\s*\n/i;
+  const match = text.match(marker);
+  if (!match || match.index === undefined) return { body: text, acceptance: [] };
+  const body = text.slice(0, match.index).trim();
+  const rest = text.slice(match.index + match[0].length);
+  const acceptance = rest
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter(Boolean);
+  return { body, acceptance };
+}
+
+function formatTicketTimestamp(iso) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return String(iso);
+  const relative = formatRelativeTime(iso);
+  return `<time datetime="${escapeHtml(iso)}" title="${escapeHtml(date.toLocaleString())}">${escapeHtml(relative || date.toLocaleString())}</time>`;
+}
+
+function formatTicketEventDetail(event) {
+  const payload = event.payload && typeof event.payload === "object" ? event.payload : {};
+  switch (event.event_type) {
+    case "status_change":
+      return `${payload.from || "?"} → ${payload.to || "?"}`;
+    case "comment":
+      return String(payload.text || "");
+    case "cancelled":
+      return String(payload.reason || "");
+    case "assignee_change":
+      return `${payload.from || "?"} → ${payload.to || "?"}`;
+    case "priority_change":
+      return `P${payload.from ?? "?"} → P${payload.to ?? "?"}`;
+    case "created":
+      return String(payload.title || "Ticket created");
+    case "claimed":
+      return String(payload.status || "claimed");
+    case "handoff_linked":
+      return payload.memory_id ? `linked memory #${payload.memory_id}` : "handoff linked";
+    default:
+      return Object.keys(payload).length ? JSON.stringify(payload) : String(event.event_type || "");
+  }
+}
+
+function renderTicketDetail(detail) {
+  if (!ticketDetailEl) return;
+  const ticket = detail.ticket || {};
+  const events = Array.isArray(detail.events) ? detail.events : [];
+  const parsed = parseTicketDescription(ticket.description);
+  const status = String(ticket.status || "open");
+  const statusClass = ticketStatusClass(status);
+  const acceptanceHtml = parsed.acceptance.length
+    ? `<section class="ticket-detail-section"><h5>Acceptance</h5><ul class="ticket-detail-list">${parsed.acceptance
+        .map((item) => `<li>${escapeHtml(item)}</li>`)
+        .join("")}</ul></section>`
+    : "";
+  const descriptionHtml = parsed.body
+    ? `<section class="ticket-detail-section"><h5>Description</h5><p class="ticket-detail-text">${escapeHtml(parsed.body)}</p></section>`
+    : "";
+  const eventsHtml = events.length
+    ? `<section class="ticket-detail-section"><h5>History</h5><ul class="ticket-detail-events">${events
+        .map((event) => {
+          const when = event.created_at ? formatRelativeTime(event.created_at) : "";
+          const detailText = formatTicketEventDetail(event);
+          return (
+            `<li>` +
+            `<span class="ticket-event-head">` +
+            `<span class="meta">${escapeHtml(String(event.event_type || "event"))}</span> ` +
+            `<span class="meta">${escapeHtml(String(event.actor || "system"))}</span>` +
+            (when ? ` <span class="meta">· ${escapeHtml(when)}</span>` : "") +
+            `</span>` +
+            (detailText ? `<span class="ticket-event-detail">${escapeHtml(detailText)}</span>` : "") +
+            `</li>`
+          );
+        })
+        .join("")}</ul></section>`
+    : `<section class="ticket-detail-section"><p class="ticket-detail-empty">No ticket events yet.</p></section>`;
+
+  ticketDetailEl.innerHTML =
+    `<header class="ticket-detail-header">` +
+    `<span class="ticket-status-badge ${statusClass}">${escapeHtml(status)}</span>` +
+    `<h4 class="ticket-detail-title">#${escapeHtml(String(ticket.id))} ${escapeHtml(String(ticket.title || ""))}</h4>` +
+    `</header>` +
+    `<dl class="ticket-detail-meta">` +
+    `<div><dt>Assignee</dt><dd>${escapeHtml(String(ticket.assignee || "unassigned"))}</dd></div>` +
+    `<div><dt>Priority</dt><dd>P${escapeHtml(String(ticket.priority ?? "?"))}</dd></div>` +
+    `<div><dt>Created</dt><dd>${formatTicketTimestamp(ticket.created_at)}</dd></div>` +
+    `<div><dt>Updated</dt><dd>${formatTicketTimestamp(ticket.updated_at)}</dd></div>` +
+    `</dl>` +
+    descriptionHtml +
+    acceptanceHtml +
+    eventsHtml;
+  ticketDetailEl.classList.remove("hidden");
+  document
+    .querySelector('.context-panel[data-panel="tickets"]')
+    ?.classList.add("has-detail");
+}
+
+function clearTicketDetail(message = "") {
+  if (!ticketDetailEl) return;
+  ticketDetailEl.innerHTML = message
+    ? `<p class="ticket-detail-empty">${escapeHtml(message)}</p>`
+    : "";
+  ticketDetailEl.classList.toggle("hidden", !message);
+  document
+    .querySelector('.context-panel[data-panel="tickets"]')
+    ?.classList.toggle("has-detail", Boolean(message));
+}
+
+function highlightSelectedTicket() {
+  if (!panelTicketsEl) return;
+  panelTicketsEl.querySelectorAll(".ticket-item").forEach((item) => {
+    const ticketId = Number(item.dataset.ticketId);
+    item.classList.toggle("is-selected", selectedTicketId === ticketId);
+  });
+}
+
+async function loadTicketDetail(ticketId) {
+  if (!ticketDetailEl || !ticketId) return;
+  ticketDetailEl.classList.remove("hidden");
+  ticketDetailEl.innerHTML = `<p class="ticket-detail-loading">Loading ticket #${escapeHtml(String(ticketId))}…</p>`;
+  document
+    .querySelector('.context-panel[data-panel="tickets"]')
+    ?.classList.add("has-detail");
+  try {
+    const res = await fetch(`/api/tickets/${ticketId}`);
+    if (!res.ok) {
+      clearTicketDetail("Ticket detail unavailable.");
+      return;
+    }
+    const detail = await res.json();
+    renderTicketDetail(detail);
+    highlightSelectedTicket();
+  } catch {
+    clearTicketDetail("Ticket detail unavailable.");
+  }
+}
+
+function selectTicket(ticketId) {
+  if (!ticketId) return;
+  if (selectedTicketId === ticketId) {
+    selectedTicketId = null;
+    clearTicketDetail();
+    highlightSelectedTicket();
+    return;
+  }
+  selectedTicketId = ticketId;
+  highlightSelectedTicket();
+  loadTicketDetail(ticketId);
+}
+
+function ticketRowHtml(t, { child = false, initiative = false, selected = false } = {}) {
   const initiativeMeta = initiative
     ? `<span class="meta ticket-initiative">initiative</span> `
     : "";
@@ -305,14 +478,15 @@ function ticketRowHtml(t, { child = false, initiative = false } = {}) {
     t.parent_id && !child
       ? `<span class="meta">parent #${escapeHtml(String(t.parent_id))}</span> `
       : "";
+  const statusClass = ticketStatusClass(t.status);
   return (
-    `<li class="${child ? "ticket-child" : ""}">` +
+    `<li class="ticket-item${child ? " ticket-child" : ""}${selected ? " is-selected" : ""}" data-ticket-id="${t.id}">` +
     `<span class="task-row">` +
     `<span class="task-text">` +
     initiativeMeta +
     `<span class="meta">#${t.id}</span> ` +
     parentMeta +
-    `<span class="meta">${escapeHtml(String(t.status))}</span> ` +
+    `<span class="meta ticket-status ${statusClass}">${escapeHtml(String(t.status))}</span> ` +
     `<span class="meta">${escapeHtml(String(t.assignee))}</span> ` +
     `${escapeHtml(t.title)}</span>` +
     `<button type="button" class="ticket-done-btn" data-ticket-id="${t.id}" title="Mark done" aria-label="Mark ticket ${t.id} done">✓</button>` +
@@ -327,14 +501,26 @@ function renderTicketsPanel(groups = [], flat = []) {
   if (groups.length) {
     for (const group of groups) {
       const ticket = group.ticket || {};
-      blocks.push(ticketRowHtml(ticket, { initiative: Boolean(group.is_initiative) }));
+      blocks.push(
+        ticketRowHtml(ticket, {
+          initiative: Boolean(group.is_initiative),
+          selected: selectedTicketId === Number(ticket.id),
+        })
+      );
       for (const child of group.children || []) {
-        blocks.push(ticketRowHtml(child, { child: true }));
+        blocks.push(
+          ticketRowHtml(child, {
+            child: true,
+            selected: selectedTicketId === Number(child.id),
+          })
+        );
       }
     }
   } else {
     for (const ticket of flat) {
-      blocks.push(ticketRowHtml(ticket));
+      blocks.push(
+        ticketRowHtml(ticket, { selected: selectedTicketId === Number(ticket.id) })
+      );
     }
   }
   panelTicketsEl.innerHTML = blocks.join("");
@@ -732,6 +918,8 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelDecisionsEl, [], () => "");
     renderPanelList(panelAgentFeedEl, [], () => "");
     renderPanelList(panelMemoryEl, [], () => "");
+    clearTicketDetail();
+    selectedTicketId = null;
     updateContextSummary(data, null);
     updatePanelMeta(data);
     return;
@@ -751,6 +939,9 @@ function renderDashboard(data, { animate = false } = {}) {
   ]);
 
   renderTicketsPanel(data.ticket_groups || [], data.tickets || []);
+  if (selectedTicketId) {
+    loadTicketDetail(selectedTicketId);
+  }
 
   renderPanelList(panelTasksEl, data.tasks || [], (t) =>
     `<span class="task-row">` +
@@ -1136,10 +1327,16 @@ refreshBtn.addEventListener("click", () => {
 if (panelTicketsEl) {
   panelTicketsEl.addEventListener("click", (e) => {
     const btn = e.target.closest(".ticket-done-btn");
-    if (!btn) return;
-    e.preventDefault();
-    const ticketId = Number(btn.dataset.ticketId);
-    if (ticketId) completeTicket(ticketId);
+    if (btn) {
+      e.preventDefault();
+      const ticketId = Number(btn.dataset.ticketId);
+      if (ticketId) completeTicket(ticketId);
+      return;
+    }
+    const row = e.target.closest("[data-ticket-id]");
+    if (!row || !panelTicketsEl.contains(row)) return;
+    const ticketId = Number(row.dataset.ticketId);
+    if (ticketId) selectTicket(ticketId);
   });
 }
 

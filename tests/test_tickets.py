@@ -173,6 +173,34 @@ class TicketTests(IsolatedDbTestCase):
         self.assertGreaterEqual(len(events), 1)
         self.assertEqual(events[0]["event_type"], "created")
 
+    def test_get_ticket_detail_includes_core_fields(self) -> None:
+        ticket_id = self._create(
+            title="Detail probe",
+            assignee="cursor",
+            description="Scope body\n\nAcceptance:\n- Field visible\n- Events visible",
+            priority=1,
+        )
+        crowley.update_ticket(
+            ticket_id,
+            actor="cursor",
+            status="in_progress",
+            comment="starting detail probe",
+        )
+        detail = crowley.get_ticket_detail(ticket_id)
+        assert detail is not None
+        ticket = detail["ticket"]
+        self.assertEqual(str(ticket["title"]), "Detail probe")
+        self.assertEqual(str(ticket["status"]), "in_progress")
+        self.assertEqual(str(ticket["assignee"]), "cursor")
+        self.assertEqual(int(ticket["priority"]), 1)
+        self.assertIn("Acceptance:", str(ticket["description"]))
+        self.assertIsNotNone(ticket.get("created_at"))
+        self.assertIsNotNone(ticket.get("updated_at"))
+        event_types = {str(event["event_type"]) for event in detail["events"]}
+        self.assertIn("created", event_types)
+        self.assertIn("status_change", event_types)
+        self.assertIn("comment", event_types)
+
     def test_cancel_ticket_excludes_from_open_summary(self) -> None:
         ticket_id = self._create(title="Draft superseded probe", assignee="cursor")
         result = crowley.cancel_ticket(
