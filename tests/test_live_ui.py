@@ -185,7 +185,7 @@ class WorldDashboardTests(IsolatedDbTestCase):
             "ticketDetailRequestId",
         ):
             self.assertIn(token, js)
-        self.assertIn("flex-wrap: wrap", css)
+        self.assertIn("flex-wrap: nowrap", css)
         self.assertIn(".ticket-detail-meta", css)
 
     def test_ui_contains_livability_pass_styles(self) -> None:
@@ -203,7 +203,7 @@ class WorldDashboardTests(IsolatedDbTestCase):
             ".panel-list li:has(.agent-feed-row)",
             ".panel-list li:has(.change-row)",
             ".panel-list li:has(.memory-badge)",
-            "max-height: 8.5rem",
+            "--drawer-panel-max-h",
         ):
             self.assertIn(token, css)
 
@@ -236,6 +236,22 @@ class WorldDashboardTests(IsolatedDbTestCase):
             "@media (max-width: 520px)",
             ".project-state-grid div",
             "display: block",
+        ):
+            self.assertIn(token, css)
+
+    def test_ui_intelligence_drawer_polish(self) -> None:
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        for token in (
+            "--workspace-glass",
+            "--drawer-body-max-h",
+            "--drawer-panel-max-h",
+            ".context-drawer:not(.is-collapsed)",
+            "scroll-snap-type: x proximity",
+            ".context-tab.is-active",
+            "box-shadow: 0 0 0 1px var(--accent-line)",
+            ".project-panel-body",
+            "backdrop-filter: blur(12px)",
+            ".context-panel .panel-list li",
         ):
             self.assertIn(token, css)
 

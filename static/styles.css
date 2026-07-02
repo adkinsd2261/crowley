@@ -29,6 +29,11 @@
 
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --entry-width: 46rem;
+
+  --workspace-glass: rgba(18, 18, 22, 0.82);
+  --workspace-glass-border: rgba(255, 255, 255, 0.09);
+  --drawer-body-max-h: min(44vh, 24rem);
+  --drawer-panel-max-h: min(38vh, 20rem);
 }
 
 * {
@@ -495,13 +500,27 @@ body {
   opacity: 0.4;
 }
 
-/* Intelligence drawer (tertiary, collapsed default) */
+/* Intelligence drawer — control panel matching cinematic workspace */
 .context-drawer {
-  border-top: 1px solid var(--divider);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: var(--bg-raised);
   min-width: 0;
   max-width: 100%;
   overflow-x: clip;
+}
+
+.context-drawer:not(.is-collapsed) {
+  background: linear-gradient(
+    to top,
+    rgba(14, 14, 17, 0.98) 0%,
+    rgba(18, 18, 22, 0.94) 55%,
+    rgba(18, 18, 22, 0.88) 100%
+  );
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.context-drawer:not(.is-collapsed) .context-toggle {
+  border-bottom: 1px solid var(--divider);
 }
 
 .context-drawer:not(.is-collapsed) .context-chevron {
@@ -516,7 +535,7 @@ body {
   min-width: 0;
   max-width: 100%;
   min-height: var(--context-collapsed-h);
-  padding: 0 1.35rem;
+  padding: 0 clamp(1rem, 4vw, 1.75rem);
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -524,6 +543,7 @@ body {
   font-size: 0.75rem;
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .context-toggle:hover {
@@ -597,11 +617,12 @@ body {
 }
 
 .context-body {
-  padding: 0 1.35rem 0.75rem;
-  max-height: 12rem;
+  padding: 0.65rem clamp(1rem, 4vw, 1.75rem) 1rem;
+  max-height: var(--drawer-body-max-h);
   min-width: 0;
   max-width: 100%;
   overflow-x: clip;
+  overflow-y: auto;
 }
 
 .context-body.hidden {
@@ -610,14 +631,23 @@ body {
 
 .context-tabs {
   display: flex;
-  gap: 0.25rem;
-  margin-bottom: 0.45rem;
-  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-bottom: 0.55rem;
+  flex-wrap: nowrap;
   max-width: 100%;
   min-width: 0;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--divider);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.context-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .context-panels {
@@ -628,13 +658,21 @@ body {
 .context-panel {
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 8.5rem;
+  max-height: var(--drawer-panel-max-h);
   min-width: 0;
   max-width: 100%;
+  padding: 0.15rem 0.05rem 0.25rem;
 }
 
-.context-tabs::-webkit-scrollbar {
-  display: none;
+.context-panel .panel-list li {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding: 0.28rem 0;
+}
+
+.context-panel[data-panel="project"] {
+  max-height: none;
+  overflow: visible;
 }
 
 .context-tab {
@@ -643,19 +681,28 @@ body {
   color: var(--muted);
   font: inherit;
   font-size: 0.6875rem;
-  padding: 0.35rem 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.4rem 0.62rem;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 7px;
   flex-shrink: 0;
+  scroll-snap-align: start;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .context-tab:hover {
   color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .context-tab.is-active {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-soft);
+  background: var(--accent-muted);
+  box-shadow: 0 0 0 1px var(--accent-line), 0 0 14px var(--accent-glow);
 }
 
 .context-tab.has-items:not(.is-active) {
@@ -663,11 +710,12 @@ body {
 }
 
 .context-panel-meta {
-  margin: 0 0 0.35rem;
-  font-size: 0.625rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.45;
   overflow-wrap: anywhere;
+  padding: 0 0.15rem;
 }
 
 .memory-controls {
@@ -717,8 +765,21 @@ body {
   max-width: 100%;
 }
 
+.project-panel-body {
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: var(--workspace-glass);
+  border: 1px solid var(--workspace-glass-border);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 8px 28px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px);
+}
+
 .project-panel-head {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--divider);
 }
 
 .project-panel-name {
@@ -978,17 +1039,24 @@ body {
   text-decoration: line-through;
 }
 
+.context-panel[data-panel="project"] .diagnostics-btn {
+  margin-top: 0.75rem;
+}
+
 .context-panel[data-panel="tickets"].has-detail {
-  max-height: 15rem;
+  max-height: min(46vh, 24rem);
 }
 
 .ticket-detail {
   margin-top: 0.45rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--divider);
+  padding: 0.65rem 0.75rem;
+  border-top: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--divider);
   font-size: 0.6875rem;
   line-height: 1.35;
-  max-height: 8rem;
+  max-height: min(28vh, 14rem);
   overflow-y: auto;
 }
 
@@ -1541,18 +1609,20 @@ body {
 @media (max-width: 840px) {
   :root {
     --entry-width: 100%;
+    --drawer-body-max-h: 16rem;
+    --drawer-panel-max-h: 12rem;
   }
 
   .context-tabs {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .context-body {
-    max-height: 16rem;
+    max-height: var(--drawer-body-max-h);
   }
 
   .context-panel {
-    max-height: 10.5rem;
+    max-height: var(--drawer-panel-max-h);
   }
 
   .context-panel[data-panel="tickets"].has-detail {
@@ -1569,6 +1639,11 @@ body {
 }
 
 @media (max-width: 520px) {
+  :root {
+    --drawer-body-max-h: 14rem;
+    --drawer-panel-max-h: 11rem;
+  }
+
   .header {
     gap: 0.65rem;
     padding: 0 1rem;
