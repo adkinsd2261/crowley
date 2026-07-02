@@ -1621,6 +1621,62 @@ def _format_conversation_mode_prompt_section(mode: str) -> str:
     return f"Conversation mode (inferred): {mode}\nExpected answer shape: {shape}"
 
 
+RESPONSE_DEPTHS = frozenset({"brief", "standard", "deep"})
+
+_RESPONSE_DEPTH_EXPECTATIONS: dict[str, str] = {
+    "brief": (
+        "Short answer — bullets or a few tight sentences. No preamble or recap."
+    ),
+    "standard": (
+        "Balanced length — enough detail to be useful without padding."
+    ),
+    "deep": (
+        "Thorough when warranted — structured sections, reasoning, and options "
+        "as needed."
+    ),
+}
+
+
+def classify_response_depth(message: str, *, mode: str | None = None) -> str:
+    """Infer response depth from user phrasing and conversation mode."""
+    trimmed = _normalize_text(message)
+    if mode is None:
+        mode = classify_conversation_mode(trimmed)
+
+    if mode in ("planning", "exploration"):
+        return "deep"
+    if mode in ("status", "diagnostics"):
+        return "brief"
+
+    lower = trimmed.lower()
+    if any(
+        re.search(pattern, lower)
+        for pattern in (
+            r"\bcheck\b",
+            r"any update",
+            r"what changed",
+            r"quick status",
+            r"catch me up",
+            r"what shipped",
+        )
+    ):
+        return "brief"
+
+    return "standard"
+
+
+def response_depth_expectation(depth: str) -> str:
+    """Expected answer length for a response depth."""
+    return _RESPONSE_DEPTH_EXPECTATIONS.get(
+        depth, _RESPONSE_DEPTH_EXPECTATIONS["standard"]
+    )
+
+
+def _format_response_depth_prompt_section(depth: str) -> str:
+    expectation = response_depth_expectation(depth)
+    return f"Response depth (inferred): {depth}\nAnswer length: {expectation}"
+
+
 # --- autonomous world model (V3 Phase 3) ------------------------------------
 
 
@@ -5461,6 +5517,9 @@ def build_prompt(
 
     mode = classify_conversation_mode(user_message)
     system_parts.append(_format_conversation_mode_prompt_section(mode))
+
+    depth = classify_response_depth(user_message, mode=mode)
+    system_parts.append(_format_response_depth_prompt_section(depth))
 
     knowledge_entries = load_knowledge_files_context(user_message)
     system_parts.append(_format_knowledge_files_prompt_section(knowledge_entries))
