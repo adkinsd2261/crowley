@@ -193,9 +193,42 @@ const PANEL_META = {
   memory: {
     title: "Stored memory",
     empty: "No memory items yet.",
+    loading: "Loading memory…",
+    error: "Memory unavailable. Try Refresh or adjust filters.",
     describe: (items, data = {}) => formatMemoryCounts(data.counts || {}, items.length),
   },
 };
+
+const PANEL_LISTS = {
+  tickets: panelTicketsEl,
+  tasks: panelTasksEl,
+  loops: panelLoopsEl,
+  decisions: panelDecisionsEl,
+  agent_feed: panelAgentFeedEl,
+  memory: panelMemoryEl,
+};
+
+function renderPanelState(el, kind, message) {
+  if (!el) return;
+  el.innerHTML =
+    `<li class="panel-state panel-state-${kind}" role="status">` +
+    `${escapeHtml(message)}</li>`;
+}
+
+function setAllPanelsLoading() {
+  for (const [key, el] of Object.entries(PANEL_LISTS)) {
+    if (!el) continue;
+    const meta = PANEL_META[key];
+    const label = meta?.title ? meta.title.toLowerCase() : key.replace("_", " ");
+    renderPanelState(el, "loading", meta?.loading || `Loading ${label}…`);
+  }
+}
+
+function setAllPanelsError(message) {
+  for (const el of Object.values(PANEL_LISTS)) {
+    if (el) renderPanelState(el, "error", message);
+  }
+}
 
 function memoryLayerLabel(layer) {
   switch (layer) {
@@ -270,7 +303,7 @@ function renderMemoryItems(items = []) {
       `<span class="meta">${escapeHtml(meta)}${escapeHtml(timeMeta)}</span> ` +
       `${escapeHtml(m.display || m.content || "")}`
     );
-  });
+  }, PANEL_META.memory.empty);
 }
 
 function memoryFilterParams() {
@@ -436,11 +469,15 @@ function renderTicketDetail(detail) {
     ?.classList.add("has-detail");
 }
 
-function clearTicketDetail(message = "") {
+function clearTicketDetail(message = "", { kind = "empty" } = {}) {
   if (!ticketDetailEl) return;
-  ticketDetailEl.innerHTML = message
-    ? `<p class="ticket-detail-empty">${escapeHtml(message)}</p>`
-    : "";
+  if (message) {
+    const stateClass = kind === "error" ? "ticket-detail-error" : "ticket-detail-empty";
+    ticketDetailEl.innerHTML =
+      `<p class="${stateClass} panel-state panel-state-${kind}">${escapeHtml(message)}</p>`;
+  } else {
+    ticketDetailEl.innerHTML = "";
+  }
   ticketDetailEl.classList.toggle("hidden", !message);
   document
     .querySelector('.context-panel[data-panel="tickets"]')
@@ -465,14 +502,16 @@ async function loadTicketDetail(ticketId) {
   try {
     const res = await fetch(`/api/tickets/${ticketId}`);
     if (!res.ok) {
-      clearTicketDetail("Ticket detail unavailable.");
+      clearTicketDetail("Ticket detail unavailable. Try Refresh.", { kind: "error" });
       return;
     }
     const detail = await res.json();
     renderTicketDetail(detail);
     highlightSelectedTicket();
   } catch {
-    clearTicketDetail("Ticket detail unavailable.");
+    clearTicketDetail("Could not load ticket detail. Check the bus and try again.", {
+      kind: "error",
+    });
   }
 }
 
@@ -542,6 +581,10 @@ function renderTicketsPanel(groups = [], flat = []) {
       );
     }
   }
+  if (!blocks.length) {
+    renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
+    return;
+  }
   panelTicketsEl.innerHTML = blocks.join("");
 }
 
@@ -555,7 +598,10 @@ function agentSourceClass(source) {
 
 function renderAgentFeedPanel(events = []) {
   if (!panelAgentFeedEl) return;
-  renderPanelList(panelAgentFeedEl, events, (event) => {
+  renderPanelList(
+    panelAgentFeedEl,
+    events,
+    (event) => {
     const source = String(event.source || "unknown");
     const when = event.created_at ? formatRelativeTime(event.created_at) : "";
     const typeMeta = event.memory_type ? escapeHtml(String(event.memory_type)) : "";
@@ -579,7 +625,7 @@ function renderAgentFeedPanel(events = []) {
       nextAction +
       `</span>`
     );
-  });
+  }, PANEL_META.agent_feed.empty);
 }
 
 function loopPriorityClass(priority) {
@@ -883,12 +929,11 @@ function showEmptyState() {
   chatEl.appendChild(empty);
 }
 
-function renderPanelList(el, items, renderItem) {
+function renderPanelList(el, items, renderItem, emptyMessage = "Nothing here yet.") {
+  if (!el) return;
   el.innerHTML = "";
   if (!items.length) {
-    const li = document.createElement("li");
-    li.textContent = "(none)";
-    el.appendChild(li);
+    renderPanelState(el, "empty", emptyMessage);
     return;
   }
   for (const item of items) {
@@ -962,11 +1007,12 @@ function renderDashboard(data, { animate = false } = {}) {
     renderWorldState([]);
     renderPhaseProgress(null);
     renderStateSync(null, data.version, data.release_label);
-    renderPanelList(panelTasksEl, [], () => "");
-    renderPanelList(panelLoopsEl, [], () => "");
-    renderPanelList(panelDecisionsEl, [], () => "");
-    renderPanelList(panelAgentFeedEl, [], () => "");
-    renderPanelList(panelMemoryEl, [], () => "");
+    renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
+    renderPanelList(panelTasksEl, [], () => "", PANEL_META.tasks.empty);
+    renderPanelList(panelLoopsEl, [], () => "", PANEL_META.loops.empty);
+    renderPanelList(panelDecisionsEl, [], () => "", PANEL_META.decisions.empty);
+    renderPanelList(panelAgentFeedEl, [], () => "", PANEL_META.agent_feed.empty);
+    renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
     selectedTicketId = null;
     updateContextSummary(data, null);
@@ -996,7 +1042,8 @@ function renderDashboard(data, { animate = false } = {}) {
     `<span class="task-row">` +
     `<span class="task-text"><span class="meta">#${t.id}</span> ${escapeHtml(t.title)}</span>` +
     `<button type="button" class="task-done-btn" data-task-id="${t.id}" title="Mark done" aria-label="Mark task ${t.id} done">✓</button>` +
-    `</span>`
+    `</span>`,
+    PANEL_META.tasks.empty
   );
 
   renderPanelList(panelLoopsEl, data.loops || [], (l) => {
@@ -1005,11 +1052,12 @@ function renderDashboard(data, { animate = false } = {}) {
       `<span class="meta ${pClass}">P${l.priority}</span>` +
       `<span class="meta">#${l.id}</span> ${escapeHtml(l.description)}`
     );
-  });
+  }, PANEL_META.loops.empty);
 
   const decisions = [...(data.decisions || [])].reverse();
   renderPanelList(panelDecisionsEl, decisions, (d) =>
-    `<span class="meta">[${d.id}]</span> ${escapeHtml(d.summary)}`
+    `<span class="meta">[${d.id}]</span> ${escapeHtml(d.summary)}`,
+    PANEL_META.decisions.empty
   );
 
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
@@ -1068,23 +1116,32 @@ async function completeTask(taskId) {
 }
 
 async function refreshPanels({ animate = false } = {}) {
+  const isInitialLoad = !lastDashboardData;
+  if (isInitialLoad) setAllPanelsLoading();
   try {
     const res = await fetch("/api/world");
+    if (!res.ok) throw new Error("world fetch failed");
     const data = await res.json();
     renderDashboard(data, { animate });
     if (hasMemoryFilters()) {
       loadMemoryItems();
     }
   } catch {
+    if (isInitialLoad) {
+      setAllPanelsError("Could not reach Crowley. Check the bus and try Refresh.");
+    }
     if (liveSyncLabel) liveSyncLabel.textContent = "Offline";
-    if (activeContextTab === "agent_feed" && contextPanelMeta) {
-      contextPanelMeta.textContent = "Agent feed unavailable.";
+    if (contextPanelMeta) {
+      contextPanelMeta.textContent = lastDashboardData
+        ? "Live sync paused — showing last loaded data."
+        : "Could not reach Crowley. Check the bus and try Refresh.";
     }
   }
 }
 
 async function loadMemoryItems() {
   if (!panelMemoryEl) return;
+  renderPanelState(panelMemoryEl, "loading", PANEL_META.memory.loading);
   const params = new URLSearchParams();
   const filters = memoryFilterParams();
   params.set("limit", "10");
@@ -1096,7 +1153,7 @@ async function loadMemoryItems() {
 
   try {
     const res = await fetch(`/api/memory-items?${params.toString()}`);
-    if (!res.ok) return;
+    if (!res.ok) throw new Error("memory fetch failed");
     const data = await res.json();
     const items = applyMemoryLayerFilter(data.items || [], filters.layer);
     renderMemoryItems([...items].reverse());
@@ -1112,6 +1169,7 @@ async function loadMemoryItems() {
       updatePanelMeta(lastDashboardData, "memory");
     }
   } catch {
+    renderPanelState(panelMemoryEl, "error", PANEL_META.memory.error);
     setMemoryCountSummary("Memory unavailable");
   }
 }
@@ -1186,13 +1244,21 @@ function startLiveSync() {
 }
 
 async function loadMessages() {
-  const res = await fetch("/api/messages?limit=50");
-  const data = await res.json();
-  chatEl.innerHTML = "";
-  for (const msg of data.messages || []) {
-    renderMessage(msg.role, msg.content);
+  chatEl.innerHTML =
+    '<p class="panel-state panel-state-loading" role="status">Loading chat…</p>';
+  try {
+    const res = await fetch("/api/messages?limit=50");
+    if (!res.ok) throw new Error("messages fetch failed");
+    const data = await res.json();
+    chatEl.innerHTML = "";
+    for (const msg of data.messages || []) {
+      renderMessage(msg.role, msg.content);
+    }
+    showEmptyState();
+  } catch {
+    chatEl.innerHTML =
+      '<p class="panel-state panel-state-error" role="alert">Chat history unavailable. Try Refresh.</p>';
   }
-  showEmptyState();
 }
 
 function parseSseChunk(buffer) {

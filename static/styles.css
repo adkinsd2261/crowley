@@ -992,10 +992,52 @@ body {
 
 .ticket-detail-text,
 .ticket-detail-empty,
-.ticket-detail-loading {
+.ticket-detail-loading,
+.ticket-detail-error {
   margin: 0;
   color: var(--text-secondary);
   white-space: pre-wrap;
+}
+
+.ticket-detail-error {
+  color: var(--error);
+}
+
+.panel-list .panel-state {
+  list-style: none;
+  margin: 0;
+  padding: 0.65rem 0.15rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.panel-list .panel-state-loading {
+  color: var(--text-secondary);
+}
+
+.panel-list .panel-state-empty {
+  color: var(--muted);
+}
+
+.panel-list .panel-state-error,
+.workspace-stream .panel-state-error {
+  color: var(--error);
+  background: var(--error-bg);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+}
+
+.workspace-stream .panel-state {
+  max-width: var(--entry-width);
+  margin: 1.5rem auto;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.workspace-stream .panel-state-loading {
+  color: var(--muted);
 }
 
 .ticket-detail-list,

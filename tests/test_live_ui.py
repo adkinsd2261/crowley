@@ -101,6 +101,23 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertTrue((ROOT / "docs" / "V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md").is_file())
         self.assertIn("Shipped", (ROOT / "docs" / "V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md").read_text(encoding="utf-8"))
 
+    def test_ui_contains_panel_state_helpers(self) -> None:
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        for token in (
+            "renderPanelState",
+            "panel-state-loading",
+            "panel-state-error",
+            'renderPanelState(el, "empty"',
+            "Loading chat…",
+            "Could not reach Crowley",
+            "No agent handoffs yet.",
+            "Memory unavailable",
+        ):
+            self.assertIn(token, js)
+        for token in (".panel-state-loading", ".panel-state-error", ".panel-state-empty"):
+            self.assertIn(token, css)
+
 
 if __name__ == "__main__":
     unittest.main()
