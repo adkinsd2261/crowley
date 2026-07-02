@@ -113,6 +113,7 @@ def api_health() -> JSONResponse:
             "embed_provider": health.get("embed_provider"),
             "sqlite_vec": health.get("sqlite_vec"),
             "retrieval_mode": health.get("retrieval_mode"),
+            "runtime": health.get("runtime"),
         }
     )
 
@@ -404,6 +405,7 @@ def api_consolidate(
 
 
 @app.get("/api/memory/hygiene")
+@app.get("/api/hygiene")
 def api_memory_hygiene() -> JSONResponse:
     return JSONResponse(crowley.memory_hygiene_report_api())
 

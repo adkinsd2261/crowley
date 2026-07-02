@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.7 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.8 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import os
 import re
 import sqlite3
 import struct
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -39,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.7"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.7 Workspace Experience & Reliability"
+CROWLEY_VERSION = "3.9.8"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.8 Runtime Hardening"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -143,6 +144,15 @@ def _resolve_embed_provider_setting() -> str:
     return "auto"
 
 
+def is_test_mode() -> bool:
+    """True when CROWLEY_TEST_MODE is enabled (unified CI/local test profile)."""
+    raw = os.environ.get("CROWLEY_TEST_MODE", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+TEST_MODE_STUB_REPLY = "[Crowley test mode]"
+
+
 MEMORY_EMBED_PROVIDER = _resolve_embed_provider_setting()
 EMBED_MODEL_LOCAL = "all-MiniLM-L6-v2"
 EMBED_DIM = 384
@@ -162,6 +172,7 @@ W_SCORE_IMPORTANCE = 0.10
 W_SCORE_TYPE = 0.05
 W_SCORE_PROJECT = 0.05
 W_SCORE_PINNED_BONUS = 0.10
+W_SCORE_OPEN_TICKET_BOOST = 0.12
 
 MEMORY_ITEM_DEDUPE_HOURS = 24
 MEMORY_CONSOLIDATE_DUPLICATE_SIM = 0.92
@@ -180,6 +191,22 @@ ALLOWED_MEMORY_ITEM_TYPES = frozenset({
     "project_update",
     "summary",
 })
+MEMORY_GATE_PROMOTED_TYPES = frozenset({
+    "decision",
+    "constraint",
+    "preference",
+    "lesson",
+    "qa_result",
+    "project_update",
+})
+MEMORY_GATE_BYPASS_TYPES = frozenset({"summary"})
+MEMORY_GATE_BYPASS_SOURCES = frozenset({
+    "daily_summary",
+    "consolidation",
+    "canon",
+})
+MEMORY_GATE_CONFIDENCE_MIN = 0.5
+MEMORY_GATE_WHY_MIN_LEN = 8
 
 STATE_FIELDS = frozenset({"phase", "focus", "current_risk", "next_action", "what_changed"})
 STATE_FIELD_ALIASES = {"risk": "current_risk"}
@@ -203,6 +230,8 @@ _extract_spawn_lock = threading.Lock()
 _extract_running = False
 
 _sqlite_vec_ready: bool | None = None
+_sqlite_vec_failure_reason: str | None = None
+_sqlite_vec_failure_logged = False
 _embed_model = None
 _embed_model_lock = threading.Lock()
 _last_retrieval_mode = "keyword-only fallback"
@@ -344,6 +373,104 @@ def get_model_provider() -> str:
     return "ollama"
 
 
+def _probe_ollama_reachable(timeout: float = 2.0) -> bool:
+    """Lightweight Ollama reachability check (no model load)."""
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:11434/api/tags", timeout=timeout
+        ) as resp:
+            return resp.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        return False
+
+
+def probe_model_availability() -> dict[str, object]:
+    """
+    Structured model availability for health/runtime diagnostics.
+    Separate from get_model_provider() routing — reports reachability truth.
+    """
+    if is_test_mode():
+        return {
+            "status": "available",
+            "provider": "test",
+            "detail": "CROWLEY_TEST_MODE stub",
+        }
+
+    openai_ok = _has_openai_key()
+    ollama_ok = _probe_ollama_reachable()
+
+    if MODEL_PROVIDER == "openai":
+        return {
+            "status": "available" if openai_ok else "unavailable",
+            "provider": "openai",
+            "detail": "OPENAI_API_KEY set"
+            if openai_ok
+            else "OPENAI_API_KEY not set",
+        }
+    if MODEL_PROVIDER == "ollama":
+        return {
+            "status": "available" if ollama_ok else "unavailable",
+            "provider": "ollama",
+            "detail": "Ollama reachable"
+            if ollama_ok
+            else "Ollama not reachable at 127.0.0.1:11434",
+        }
+
+    if openai_ok:
+        return {
+            "status": "available",
+            "provider": "openai",
+            "detail": "OPENAI_API_KEY set",
+        }
+    if ollama_ok:
+        return {
+            "status": "available",
+            "provider": "ollama",
+            "detail": "Ollama reachable (OpenAI unavailable)",
+        }
+    return {
+        "status": "unavailable",
+        "provider": get_model_provider(),
+        "detail": "No model provider reachable",
+    }
+
+
+def _runtime_retrieval_label(mode: str) -> str:
+    lower = mode.lower()
+    if "vector" in lower and "keyword" in lower:
+        return "vector"
+    if "keyword" in lower:
+        return "keyword"
+    return mode
+
+
+def build_runtime_diagnostics() -> dict[str, object]:
+    """Operator-facing runtime block for /api/health."""
+    embed = _memory_embed_provider()
+    conn = connect_db()
+    try:
+        vec_ready = _try_load_sqlite_vec(conn)
+    finally:
+        conn.close()
+    model_probe = probe_model_availability()
+    vec_detail = get_sqlite_vec_failure_reason()
+    runtime: dict[str, object] = {
+        "embeddings": embed,
+        "vector_store": "available" if vec_ready else "unavailable",
+        "retrieval": _runtime_retrieval_label(get_last_retrieval_mode()),
+        "model": str(model_probe.get("status", "unknown")),
+        "test_mode": is_test_mode(),
+    }
+    if vec_detail and not vec_ready:
+        runtime["vector_store_detail"] = vec_detail
+    if model_probe.get("detail"):
+        runtime["model_detail"] = model_probe["detail"]
+    return runtime
+
+
 def _brain_banner_label() -> str:
     if MODEL_PROVIDER == "auto":
         resolved = get_model_provider()
@@ -409,6 +536,10 @@ def iter_model_tokens(
     Yield completion tokens from the resolved provider.
     In auto mode, tries Ollama once if OpenAI is unavailable or fails.
     """
+    if is_test_mode():
+        yield TEST_MODE_STUB_REPLY
+        return
+
     provider = get_model_provider()
     allow_fallback = MODEL_PROVIDER == "auto"
 
@@ -456,6 +587,16 @@ def call_model(
     When stream=True, tokens go to on_token if set, else to the terminal.
     Returns the full reply, or None after an error (unless quiet=True).
     """
+    if is_test_mode():
+        reply = TEST_MODE_STUB_REPLY
+        if stream:
+            if on_token is not None:
+                on_token(reply)
+            elif not quiet:
+                print(f"\r{reply}", flush=True)
+            return reply
+        return reply
+
     if not stream:
         provider = get_model_provider()
         allow_fallback = MODEL_PROVIDER == "auto"
@@ -1089,6 +1230,23 @@ AGENT_EVENT_TYPES = frozenset({
     "event",
 })
 AGENT_SYNC_QUERY = "recent work by other agents current project changes blockers next action"
+AGENT_SYNC_DECISIONS_CAP = 5
+AGENT_SYNC_CONSTRAINTS_CAP = 5
+AGENT_SYNC_OTHER_EVENTS_CAP = 5
+AGENT_SYNC_OWN_EVENTS_CAP = 3
+AGENT_SYNC_MEMORIES_MIN = 5
+AGENT_SYNC_MEMORIES_MAX = 8
+AGENT_SYNC_BUNDLE_SHAPE = "slim_v399"
+WORLD_RELEVANT_MEMORIES_CAP = 6
+HYGIENE_SHIPPED_LOOP_MARKERS = (
+    "shipped",
+    "done",
+    "closed",
+    "complete",
+    "approved",
+    "merged",
+    "resolved",
+)
 
 
 def _handoff_summary_line(content: str) -> str:
@@ -1192,6 +1350,8 @@ def _agent_activity_summary(
 ) -> dict[str, object]:
     """Last contact per agent source from ingested handoffs."""
     rows = list_recent_agent_events(limit=limit, project_id=project_id)
+    memory_ids = [int(row["id"]) for row in rows]
+    linked_tickets = _tickets_by_linked_memory_ids(memory_ids)
     last_by_source: dict[str, dict[str, object]] = {}
     for row in rows:
         source = str(row["source"]).lower()
@@ -1203,9 +1363,8 @@ def _agent_activity_summary(
             "memory_type": row["memory_type"],
             "summary": _handoff_summary_line(str(row["content"])),
             "next_action": _handoff_next_action_line(str(row["content"])),
+            "linked_ticket_ids": linked_tickets.get(int(row["id"]), []),
         }
-    memory_ids = [int(row["id"]) for row in rows]
-    linked_tickets = _tickets_by_linked_memory_ids(memory_ids)
     return {
         "last_by_source": last_by_source,
         "recent": [
@@ -1239,16 +1398,24 @@ def _format_agent_activity_prompt_section(project_id: int | None) -> str:
         entry = last_by_source.get(source)
         if not entry:
             continue
+        ticket_note = ""
+        linked = entry.get("linked_ticket_ids")
+        if isinstance(linked, list) and linked:
+            ticket_note = " [tickets: " + ", ".join(f"#{tid}" for tid in linked) + "]"
         lines.append(
             f"- Last {source}: {entry['last_at']} (memory #{entry['memory_id']}) — "
-            f"{entry['summary']}"
+            f"{entry['summary']}{ticket_note}"
         )
 
     lines.append("Recent agent events (newest first):")
     for event in activity["recent"]:
+        ticket_note = ""
+        linked = event.get("linked_ticket_ids")
+        if isinstance(linked, list) and linked:
+            ticket_note = " [tickets: " + ", ".join(f"#{tid}" for tid in linked) + "]"
         lines.append(
             f"- [{event['created_at']}] {event['source']} | {event['memory_type']} — "
-            f"{event['summary']}"
+            f"{event['summary']}{ticket_note}"
         )
     return "\n".join(lines)
 
@@ -1932,10 +2099,9 @@ def _maybe_save_version_conflict_note(
         return
     snippet = _truncate(grounding_message.strip(), 240)
     save_memory_item(
-        "event",
-        (
-            f"Version claim conflict (known {CROWLEY_VERSION}): {snippet}"
-        ),
+        "constraint",
+        f"Version claim conflict (known {CROWLEY_VERSION}): {snippet}",
+        summary=f"User claim conflicts with authoritative release {CROWLEY_VERSION}",
         source="extract_guard",
         project_id=project_id,
         importance=3,
@@ -2431,10 +2597,165 @@ from tickets import (  # noqa: E402
     _format_tickets_prompt_section,
 )
 
+
+def _retrieval_ticket_seeds(
+    summary: dict[str, object],
+    agent: str | None = None,
+    *,
+    limit: int = 6,
+) -> list[dict[str, object]]:
+    """Open/in-flight tickets to scope hybrid retrieval (V3.9.9)."""
+    seeds: list[dict[str, object]] = []
+    seen: set[int] = set()
+
+    def add(ticket: object) -> None:
+        if not isinstance(ticket, dict):
+            return
+        raw_id = ticket.get("id")
+        if raw_id is None:
+            return
+        ticket_id = int(raw_id)
+        if ticket_id in seen:
+            return
+        seen.add(ticket_id)
+        seeds.append(ticket)
+
+    if agent:
+        for ticket in summary.get("assigned_to_agent") or []:
+            add(ticket)
+    for ticket in summary.get("blocked") or []:
+        add(ticket)
+    open_rows = summary.get("open")
+    if isinstance(open_rows, list):
+        in_progress = [
+            row
+            for row in open_rows
+            if isinstance(row, dict) and str(row.get("status")) == "in_progress"
+        ]
+        for ticket in sorted(
+            in_progress,
+            key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
+        ):
+            add(ticket)
+        if len(seeds) < limit:
+            for ticket in sorted(
+                [row for row in open_rows if isinstance(row, dict)],
+                key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
+            ):
+                add(ticket)
+                if len(seeds) >= limit:
+                    break
+    return seeds[:limit]
+
+
+def build_ticket_aware_retrieval_query(
+    project_id: int | None,
+    agent: str | None = None,
+) -> tuple[str, list[dict[str, object]]]:
+    """Blend agent sync query with open ticket titles for work-scoped retrieval."""
+    if project_id is None:
+        return AGENT_SYNC_QUERY, []
+    summary = build_tickets_summary(project_id, agent)
+    seeds = _retrieval_ticket_seeds(summary, agent)
+    if not seeds:
+        return AGENT_SYNC_QUERY, []
+    ticket_bits: list[str] = []
+    for ticket in seeds:
+        ticket_id = int(ticket["id"])
+        title = str(ticket.get("title") or "").strip()
+        status = str(ticket.get("status") or "open")
+        ticket_bits.append(f"ticket #{ticket_id} [{status}] {title}")
+    query = f"{AGENT_SYNC_QUERY} open work board {' '.join(ticket_bits)}"
+    return query, seeds
+
+
+def retrieve_work_context_memories(
+    project_id: int | None,
+    agent: str | None = None,
+    *,
+    limit: int = WORLD_RELEVANT_MEMORIES_CAP,
+) -> dict[str, object]:
+    """Ticket-scoped retrieval payload for dashboard and agent sync."""
+    query, tickets = build_ticket_aware_retrieval_query(project_id, agent)
+    memories = retrieve_memories(query, limit=limit, project_id=project_id)
+    anchors = _ticket_anchor_memories(project_id, tickets)
+    if anchors:
+        merged: list[dict[str, object]] = []
+        seen: set[int] = set()
+        for item in anchors + memories:
+            memory_id = int(item["id"])
+            if memory_id in seen:
+                continue
+            seen.add(memory_id)
+            merged.append(item)
+            if len(merged) >= limit:
+                break
+        memories = merged
+    return {
+        "query": query,
+        "tickets": [
+            {
+                "id": int(ticket["id"]),
+                "title": str(ticket.get("title") or ""),
+                "status": str(ticket.get("status") or "open"),
+                "assignee": str(ticket.get("assignee") or ""),
+            }
+            for ticket in tickets
+        ],
+        "memories": memories,
+    }
+
+
+def _ticket_anchor_memories(
+    project_id: int | None,
+    tickets: list[dict[str, object]],
+    *,
+    per_ticket: int = 1,
+) -> list[dict[str, object]]:
+    """Pull at least one memory per in-flight ticket when content references it."""
+    if project_id is None or not tickets:
+        return []
+    anchors: list[dict[str, object]] = []
+    seen: set[int] = set()
+    for ticket in tickets:
+        status = str(ticket.get("status") or "")
+        if status not in {"in_progress", "blocked"}:
+            continue
+        ticket_id = int(ticket["id"])
+        title = str(ticket.get("title") or "").strip()
+        ticket_row = get_ticket_by_id(ticket_id)
+        if ticket_row is None:
+            continue
+        hits = retrieve_memories(
+            f"ticket #{ticket_id} {title}",
+            limit=12,
+            project_id=project_id,
+        )
+        added = 0
+        for hit in hits:
+            memory_id = int(hit["id"])
+            if memory_id in seen:
+                continue
+            conn = connect_db()
+            try:
+                row = _load_active_memory_item(conn, memory_id)
+            finally:
+                conn.close()
+            if row is None or not _memory_relates_to_ticket(row, ticket_row):
+                continue
+            seen.add(memory_id)
+            anchors.append(hit)
+            added += 1
+            if added >= per_ticket:
+                break
+    return anchors
+
 # --- memory backend (V3.6 Phase 1) ------------------------------------------
 
 
 def _memory_embed_provider() -> str:
+    if is_test_mode():
+        return "off"
     if MEMORY_EMBED_PROVIDER == "off":
         return "off"
     if MEMORY_EMBED_PROVIDER == "local":
@@ -2447,11 +2768,18 @@ def _memory_embed_provider() -> str:
 
 
 def _try_load_sqlite_vec(conn: sqlite3.Connection) -> bool:
-    global _sqlite_vec_ready
+    global _sqlite_vec_ready, _sqlite_vec_failure_reason, _sqlite_vec_failure_logged
     if _sqlite_vec_ready is not None:
         return _sqlite_vec_ready
     if not hasattr(conn, "enable_load_extension"):
         _sqlite_vec_ready = False
+        _sqlite_vec_failure_reason = "SQLite connection cannot load extensions"
+        if not _sqlite_vec_failure_logged:
+            _sqlite_vec_failure_logged = True
+            print(
+                f"Crowley: sqlite-vec unavailable — {_sqlite_vec_failure_reason}",
+                file=sys.stderr,
+            )
         return False
     try:
         import sqlite_vec
@@ -2460,9 +2788,21 @@ def _try_load_sqlite_vec(conn: sqlite3.Connection) -> bool:
         sqlite_vec.load(conn)
         conn.enable_load_extension(False)
         _sqlite_vec_ready = True
-    except Exception:
+    except Exception as exc:
         _sqlite_vec_ready = False
+        _sqlite_vec_failure_reason = f"{type(exc).__name__}: {exc}"
+        if not _sqlite_vec_failure_logged:
+            _sqlite_vec_failure_logged = True
+            print(
+                f"Crowley: sqlite-vec unavailable — {_sqlite_vec_failure_reason}",
+                file=sys.stderr,
+            )
     return _sqlite_vec_ready
+
+
+def get_sqlite_vec_failure_reason() -> str | None:
+    """Return the last sqlite-vec load failure reason, if any."""
+    return _sqlite_vec_failure_reason
 
 
 def _pack_embedding(vector: list[float]) -> bytes:
@@ -2793,6 +3133,244 @@ def _find_recent_duplicate_memory_item(
     return None
 
 
+@dataclass(frozen=True)
+class MemoryGateOutcome:
+    allowed: bool
+    memory_type: str
+    content: str
+    summary: str | None
+    importance: int
+    confidence: float
+    reason: str
+
+
+def _clamp_memory_importance(importance: int) -> int:
+    try:
+        value = int(importance)
+    except (TypeError, ValueError):
+        return 3
+    return max(1, min(5, value))
+
+
+def _clamp_memory_confidence(confidence: float) -> float:
+    try:
+        value = float(confidence)
+    except (TypeError, ValueError):
+        return 1.0
+    return max(0.0, min(1.0, value))
+
+
+def _memory_gate_section_text(content: str, heading: str) -> str | None:
+    bullets = _parse_handoff_section_bullets(content, heading)
+    if not bullets:
+        return None
+    return _truncate(" | ".join(bullets[:3]), 240)
+
+
+def _parse_handoff_section_bullets(content: str, heading: str) -> list[str]:
+    pattern = re.compile(
+        rf"^##\s*{re.escape(heading)}\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    match = pattern.search(content)
+    if match is None:
+        return []
+    section = content[match.end() :]
+    next_hdr = re.search(r"\n##\s+", section)
+    if next_hdr:
+        section = section[: next_hdr.start()]
+    bullets: list[str] = []
+    for line in section.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            text = stripped[2:].strip()
+            if text:
+                bullets.append(text)
+        elif stripped and not stripped.startswith("#"):
+            bullets.append(stripped)
+    return bullets
+
+
+def _extract_why_it_matters(content: str, summary: str | None = None) -> str | None:
+    if summary and len(_normalize_text(summary)) >= MEMORY_GATE_WHY_MIN_LEN:
+        return _truncate(summary.strip(), 240)
+    for heading in ("Summary", "QA Result", "QA", "Decisions", "Constraints", "Lessons"):
+        section = _memory_gate_section_text(content, heading)
+        if section and len(_normalize_text(section)) >= MEMORY_GATE_WHY_MIN_LEN:
+            return section
+    trimmed = _normalize_text(content)
+    if MEMORY_GATE_WHY_MIN_LEN <= len(trimmed) <= 280:
+        return _truncate(trimmed, 240)
+    return None
+
+
+def _is_noisy_memory_content(content: str, *, memory_type: str) -> bool:
+    trimmed = _normalize_text(content)
+    if not trimmed:
+        return True
+    if memory_type != "event":
+        return False
+    if len(trimmed) < MEMORY_GATE_WHY_MIN_LEN:
+        return True
+    if _normalize_dedupe_key(trimmed) in _GENERIC_EXTRACT_VALUES:
+        return True
+    lower = trimmed.lower()
+    if len(trimmed) < 120 and not any(kw in lower for kw in _SIGNAL_KEYWORDS):
+        return True
+    return False
+
+
+def evaluate_memory_quality_gate(
+    memory_type: str,
+    content: str,
+    *,
+    summary: str | None = None,
+    source: str = "implicit",
+    importance: int = 3,
+    confidence: float = 1.0,
+    project_id: int | None = None,
+) -> MemoryGateOutcome:
+    """Return gate decision for a memory_items save (V3.9.9 quality gate)."""
+    resolved_type = (
+        memory_type if memory_type in ALLOWED_MEMORY_ITEM_TYPES else "event"
+    )
+    resolved_content = content.strip()
+    resolved_importance = _clamp_memory_importance(importance)
+    resolved_confidence = _clamp_memory_confidence(confidence)
+
+    if source in MEMORY_GATE_BYPASS_SOURCES or resolved_type in MEMORY_GATE_BYPASS_TYPES:
+        return MemoryGateOutcome(
+            allowed=True,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=summary,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="gate bypass",
+        )
+
+    if resolved_type == "event" and source == "implicit":
+        return MemoryGateOutcome(
+            allowed=False,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=summary,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="implicit event noise rejected",
+        )
+
+    if resolved_type == "event" and source in INGEST_SOURCES:
+        why = _extract_why_it_matters(resolved_content, summary)
+        if not why or _is_generic_extract_value(why):
+            return MemoryGateOutcome(
+                allowed=False,
+                memory_type=resolved_type,
+                content=resolved_content,
+                summary=summary,
+                importance=resolved_importance,
+                confidence=resolved_confidence,
+                reason="handoff event rejected: missing why_it_matters",
+            )
+        promoted_type = "lesson"
+        return MemoryGateOutcome(
+            allowed=True,
+            memory_type=promoted_type,
+            content=why,
+            summary=why,
+            importance=max(2, resolved_importance),
+            confidence=resolved_confidence,
+            reason="handoff event promoted to lesson",
+        )
+
+    if resolved_type == "event":
+        if _is_noisy_memory_content(resolved_content, memory_type=resolved_type):
+            return MemoryGateOutcome(
+                allowed=False,
+                memory_type=resolved_type,
+                content=resolved_content,
+                summary=summary,
+                importance=resolved_importance,
+                confidence=resolved_confidence,
+                reason="noisy event rejected",
+            )
+        why = _extract_why_it_matters(resolved_content, summary)
+        if not why:
+            return MemoryGateOutcome(
+                allowed=False,
+                memory_type=resolved_type,
+                content=resolved_content,
+                summary=summary,
+                importance=resolved_importance,
+                confidence=resolved_confidence,
+                reason="event missing why_it_matters",
+            )
+        return MemoryGateOutcome(
+            allowed=True,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=why,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="event allowed with why_it_matters",
+        )
+
+    if resolved_type not in MEMORY_GATE_PROMOTED_TYPES:
+        return MemoryGateOutcome(
+            allowed=False,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=summary,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason=f"type not promoted: {resolved_type}",
+        )
+
+    why = _extract_why_it_matters(resolved_content, summary)
+    if not why or _is_generic_extract_value(why):
+        return MemoryGateOutcome(
+            allowed=False,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=summary,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="promoted type missing why_it_matters",
+        )
+
+    if resolved_confidence < MEMORY_GATE_CONFIDENCE_MIN:
+        return MemoryGateOutcome(
+            allowed=False,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=why,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="confidence below gate minimum",
+        )
+
+    if project_id is None:
+        return MemoryGateOutcome(
+            allowed=False,
+            memory_type=resolved_type,
+            content=resolved_content,
+            summary=why,
+            importance=resolved_importance,
+            confidence=resolved_confidence,
+            reason="promoted memory missing project scope",
+        )
+
+    return MemoryGateOutcome(
+        allowed=True,
+        memory_type=resolved_type,
+        content=resolved_content,
+        summary=why,
+        importance=resolved_importance,
+        confidence=resolved_confidence,
+        reason="promoted memory accepted",
+    )
+
+
 def save_memory_item(
     memory_type: str,
     content: str,
@@ -2811,17 +3389,32 @@ def save_memory_item(
 ) -> int | None:
     """
     Insert into memory_items and attempt embedding/indexing.
-    Returns memory_items.id, an existing deduped id, or None on failure.
+    Returns memory_items.id, an existing deduped id, or None on failure/rejection.
     """
-    if memory_type not in ALLOWED_MEMORY_ITEM_TYPES:
-        memory_type = "event"
-
     own_conn = conn is None
     if own_conn:
         conn = connect_db()
     try:
         if project_id is None:
             project_id = _active_project_id(conn)
+
+        gate = evaluate_memory_quality_gate(
+            memory_type,
+            content,
+            summary=summary,
+            source=source,
+            importance=importance,
+            confidence=confidence,
+            project_id=project_id,
+        )
+        if not gate.allowed:
+            return None
+
+        memory_type = gate.memory_type
+        content = gate.content
+        summary = gate.summary
+        importance = gate.importance
+        confidence = gate.confidence
 
         existing_id = _find_recent_duplicate_memory_item(
             conn, memory_type, content, project_id
@@ -3324,6 +3917,56 @@ def _hygiene_subject_key(text: str) -> str:
     return " ".join(filtered[:6])
 
 
+def _hygiene_loop_entry(
+    row: sqlite3.Row,
+    *,
+    reason: str,
+    category: str,
+) -> dict[str, object]:
+    return {
+        "id": int(row["id"]),
+        "description": str(row["description"]),
+        "priority": int(row["priority"]),
+        "status": str(row["status"]),
+        "reason": reason,
+        "category": category,
+    }
+
+
+def _hygiene_stale_open_loops(project_id: int) -> list[dict[str, object]]:
+    """Open loops that likely match already-shipped work (read-only audit)."""
+    done_ticket_ids = {
+        int(row["id"])
+        for row in list_tickets(
+            project_id=project_id,
+            status="done,cancelled",
+            limit=200,
+        )
+    }
+    candidates: list[dict[str, object]] = []
+    for loop in list_open_loops(project_id, status="open", limit=100):
+        description = str(loop["description"])
+        lower = description.lower()
+        reason: str | None = None
+        if any(marker in lower for marker in HYGIENE_SHIPPED_LOOP_MARKERS):
+            reason = "open loop mentions shipped or completed work"
+        if reason is None:
+            for match in re.finditer(r"#(\d+)", description):
+                ticket_id = int(match.group(1))
+                if ticket_id in done_ticket_ids:
+                    reason = f"references closed ticket #{ticket_id}"
+                    break
+        if reason is not None:
+            candidates.append(
+                _hygiene_loop_entry(
+                    loop,
+                    reason=reason,
+                    category="stale_loops",
+                )
+            )
+    return candidates
+
+
 def memory_hygiene_report() -> dict[str, object]:
     """
     Non-destructive memory hygiene audit.
@@ -3346,6 +3989,8 @@ def memory_hygiene_report() -> dict[str, object]:
         noisy: list[dict[str, object]] = []
         duplicates: list[dict[str, object]] = []
         possible_conflicts: list[dict[str, object]] = []
+        version_conflicts: list[dict[str, object]] = []
+        stale_loops: list[dict[str, object]] = []
 
         stale_cutoff = datetime.now(timezone.utc) - timedelta(days=MEMORY_STALE_AGE_DAYS)
         duplicate_groups: dict[str, list[sqlite3.Row]] = {}
@@ -3382,6 +4027,15 @@ def memory_hygiene_report() -> dict[str, object]:
                         row,
                         reason="short low-importance implicit/extract memory",
                         category="noisy",
+                    )
+                )
+
+            if grounding_has_version_truth_conflict(str(row["content"])):
+                version_conflicts.append(
+                    _hygiene_reason_entry(
+                        row,
+                        reason="version claim conflicts with authoritative release",
+                        category="version_conflicts",
                     )
                 )
 
@@ -3429,6 +4083,10 @@ def memory_hygiene_report() -> dict[str, object]:
                     )
                 )
 
+        project = get_active_project()
+        if project is not None:
+            stale_loops = _hygiene_stale_open_loops(int(project["id"]))
+
         return {
             "generated_at": _now_iso(),
             "dry_run": True,
@@ -3436,12 +4094,23 @@ def memory_hygiene_report() -> dict[str, object]:
             "noisy": noisy,
             "duplicates": duplicates,
             "possible_conflicts": possible_conflicts,
+            "version_conflicts": version_conflicts,
+            "stale_loops": stale_loops,
             "counts": {
                 "stale": len(stale),
                 "noisy": len(noisy),
                 "duplicates": len(duplicates),
                 "possible_conflicts": len(possible_conflicts),
-                "total": len(stale) + len(noisy) + len(duplicates) + len(possible_conflicts),
+                "version_conflicts": len(version_conflicts),
+                "stale_loops": len(stale_loops),
+                "total": (
+                    len(stale)
+                    + len(noisy)
+                    + len(duplicates)
+                    + len(possible_conflicts)
+                    + len(version_conflicts)
+                    + len(stale_loops)
+                ),
             },
         }
     finally:
@@ -3627,14 +4296,168 @@ def _available_provenance_ids(provenance: dict[str, int | None]) -> dict[str, in
     return {key: value for key, value in provenance.items() if value is not None}
 
 
+_MEMORY_TYPE_INCLUSION_LABELS = {
+    "constraint": "constraint memory",
+    "decision": "decision memory",
+    "preference": "preference memory",
+    "lesson": "lesson memory",
+    "qa_result": "QA memory",
+    "project_update": "project update memory",
+    "summary": "summary memory",
+    "event": "event memory",
+    "bug": "bug memory",
+}
+
+
+def _extract_ticket_refs_from_query(query: str) -> set[int]:
+    refs: set[int] = set()
+    for match in re.finditer(r"#(\d+)", query):
+        refs.add(int(match.group(1)))
+    for match in re.finditer(r"\bticket\s+(\d+)\b", query, re.IGNORECASE):
+        refs.add(int(match.group(1)))
+    return refs
+
+
+def _query_relates_to_ticket(query: str, ticket_row: sqlite3.Row) -> bool:
+    ticket_id = int(ticket_row["id"])
+    if ticket_id in _extract_ticket_refs_from_query(query):
+        return True
+    title = str(ticket_row["title"])
+    query_tokens = set(_tokenize(query))
+    title_tokens = set(_tokenize(title))
+    if not query_tokens:
+        return False
+    overlap = query_tokens & title_tokens
+    if len(overlap) >= 2:
+        return True
+    return bool(overlap) and len(overlap) / len(query_tokens) >= 0.34
+
+
+def _memory_relates_to_ticket(row: sqlite3.Row, ticket_row: sqlite3.Row) -> bool:
+    """True when memory content references a ticket (not just the retrieval query)."""
+    ticket_id = int(ticket_row["id"])
+    summary = row["summary"] if "summary" in row.keys() else None
+    content = f"{row['content']} {summary or ''}"
+    lower = content.lower()
+    if re.search(rf"#\s*{ticket_id}\b", content):
+        return True
+    if f"ticket #{ticket_id}" in lower:
+        return True
+    title = str(ticket_row["title"])
+    stop = {
+        "and",
+        "or",
+        "the",
+        "for",
+        "to",
+        "a",
+        "v3",
+        "9",
+        "context",
+        "cursor",
+        "codex",
+    }
+    content_tokens = set(_tokenize(content)) - stop
+    title_tokens = set(_tokenize(title)) - stop
+    overlap = content_tokens & title_tokens
+    if len(overlap) >= 3:
+        return True
+    return len(overlap) >= 2 and len(title_tokens) >= 4
+
+
+def _build_inclusion_reason(
+    row: sqlite3.Row,
+    *,
+    query: str,
+    score_breakdown: dict[str, float],
+    linked_ticket_ids: list[int],
+    open_tickets_by_id: dict[int, sqlite3.Row],
+) -> str:
+    """Human-readable reason this memory was included in retrieval (V3.9.9)."""
+    factors: list[str] = []
+    memory_type = str(row["memory_type"])
+    source = str(row["source"])
+
+    for ticket_id in linked_ticket_ids:
+        ticket = open_tickets_by_id.get(ticket_id)
+        if ticket is None:
+            factors.append(f"linked to ticket #{ticket_id}")
+            continue
+        if ticket_id in open_tickets_by_id:
+            factors.append(f"linked to open ticket #{ticket_id}")
+        else:
+            factors.append(f"linked to ticket #{ticket_id}")
+
+    if not any("ticket #" in factor for factor in factors):
+        for ticket_id, ticket in open_tickets_by_id.items():
+            if _memory_relates_to_ticket(row, ticket):
+                factors.append(f"matches open ticket #{ticket_id}")
+                break
+
+    if source in INGEST_SOURCES:
+        if linked_ticket_ids:
+            factors.append("handoff link")
+        else:
+            factors.append("agent handoff")
+
+    type_score = float(score_breakdown.get("type_match", 0.0))
+    type_label = _MEMORY_TYPE_INCLUSION_LABELS.get(memory_type, f"{memory_type} memory")
+    if type_score >= 1.0 or memory_type in {
+        "constraint",
+        "decision",
+        "lesson",
+        "qa_result",
+        "preference",
+    }:
+        factors.append(type_label)
+
+    if float(score_breakdown.get("recency", 0.0)) >= 0.85:
+        factors.append("recent")
+
+    keyword = float(score_breakdown.get("keyword", 0.0))
+    semantic = float(score_breakdown.get("semantic", 0.0))
+    if keyword >= 0.25:
+        factors.append("keyword match")
+    elif semantic >= 0.25:
+        factors.append("semantic match")
+
+    if int(row["pinned"]):
+        factors.append("pinned")
+
+    if _is_canon_memory_row(row):
+        factors.append("canon memory")
+
+    deduped: list[str] = []
+    for factor in factors:
+        if factor not in deduped:
+            deduped.append(factor)
+
+    if not deduped:
+        deduped.append("hybrid score rank")
+
+    return "Pulled because: " + " + ".join(deduped[:4])
+
+
 def _build_retrieval_explanation(
     row: sqlite3.Row,
     *,
     score: float,
     score_breakdown: dict[str, float],
     retrieval_mode: str,
+    query: str = "",
+    linked_ticket_ids: list[int] | None = None,
+    open_tickets_by_id: dict[int, sqlite3.Row] | None = None,
 ) -> dict[str, object]:
     provenance = _memory_provenance_ids(row)
+    linked = list(linked_ticket_ids or [])
+    open_map = open_tickets_by_id or {}
+    inclusion_reason = _build_inclusion_reason(
+        row,
+        query=query,
+        score_breakdown=score_breakdown,
+        linked_ticket_ids=linked,
+        open_tickets_by_id=open_map,
+    )
     return {
         "source": str(row["source"]),
         "memory_type": str(row["memory_type"]),
@@ -3646,6 +4469,7 @@ def _build_retrieval_explanation(
         "retrieval_mode": retrieval_mode,
         "provenance": provenance,
         "provenance_available": _available_provenance_ids(provenance),
+        "inclusion_reason": inclusion_reason,
     }
 
 
@@ -3695,7 +4519,7 @@ def retrieve_memories(
     """
     Hybrid retrieval over memory_items.
     Returns scored dicts with id, type, content, score, score_breakdown,
-    status, is_canon, provenance, and read-only explanation metadata.
+    inclusion_reason, status, is_canon, provenance, and read-only explanation metadata.
     Ranking behavior is unchanged; explanation fields are diagnostic only.
     """
     global _last_retrieval_mode
@@ -3739,6 +4563,18 @@ def retrieve_memories(
             candidate_ids.add(int(row["id"]))
 
         inferred_types = _infer_query_memory_types(query)
+        open_tickets_by_id: dict[int, sqlite3.Row] = {}
+        if active_project_id is not None:
+            for ticket_row in list_tickets(
+                project_id=active_project_id, open_only=True, limit=50
+            ):
+                open_tickets_by_id[int(ticket_row["id"])] = ticket_row
+        open_ticket_ids = set(open_tickets_by_id.keys())
+        linked_by_mem = (
+            _tickets_by_linked_memory_ids(list(candidate_ids))
+            if open_ticket_ids
+            else {}
+        )
         results: list[dict[str, object]] = []
         semantic_used = bool(query_embedding and semantic_scores)
 
@@ -3753,6 +4589,22 @@ def retrieve_memories(
                 active_project_id=active_project_id,
                 inferred_types=inferred_types,
             )
+            linked_ticket_ids = linked_by_mem.get(memory_id, [])
+            ticket_boost = 0.0
+            if open_ticket_ids and any(
+                ticket_id in open_ticket_ids for ticket_id in linked_ticket_ids
+            ):
+                ticket_boost = W_SCORE_OPEN_TICKET_BOOST
+            elif open_ticket_ids:
+                for ticket_id in open_ticket_ids:
+                    ticket_row = open_tickets_by_id[ticket_id]
+                    if _memory_relates_to_ticket(row, ticket_row):
+                        ticket_boost = W_SCORE_OPEN_TICKET_BOOST * 0.75
+                        break
+            if ticket_boost:
+                score = round(float(score) + ticket_boost, 4)
+                breakdown = dict(breakdown)
+                breakdown["open_ticket_boost"] = round(ticket_boost, 4)
             display = _memory_display_text(row)
             row_confidence = row["confidence"] if "confidence" in row.keys() else 1.0
             results.append(
@@ -3795,20 +4647,33 @@ def retrieve_memories(
         )
 
         mode = _last_retrieval_mode
+        memory_ids = [int(item["id"]) for item in results]
+        linked_map = _tickets_by_linked_memory_ids(memory_ids)
+        if not open_tickets_by_id and active_project_id is not None:
+            for ticket_row in list_tickets(
+                project_id=active_project_id, open_only=True, limit=50
+            ):
+                open_tickets_by_id[int(ticket_row["id"])] = ticket_row
+
         finalized: list[dict[str, object]] = []
         for item in results:
             row = item.pop("_row")  # type: ignore[misc]
             assert isinstance(row, sqlite3.Row)
+            memory_id = int(item["id"])
             explanation = _build_retrieval_explanation(
                 row,
                 score=float(item["score"]),
                 score_breakdown=dict(item["score_breakdown"]),  # type: ignore[arg-type]
                 retrieval_mode=mode,
+                query=query,
+                linked_ticket_ids=linked_map.get(memory_id, []),
+                open_tickets_by_id=open_tickets_by_id,
             )
             item["status"] = explanation["status"]
             item["is_canon"] = explanation["is_canon"]
             item["provenance"] = explanation["provenance"]
             item["provenance_available"] = explanation["provenance_available"]
+            item["inclusion_reason"] = explanation["inclusion_reason"]
             item["explanation"] = explanation
             finalized.append(item)
         results = finalized
@@ -3924,6 +4789,42 @@ def _canon_api_items(project_id: int | None = None) -> list[dict[str, object]]:
     return [_memory_item_api_dict(row) for row in list_canon_memory_items(project_id)]
 
 
+def _agent_sync_memory_limit(limit: int) -> int:
+    return max(AGENT_SYNC_MEMORIES_MIN, min(AGENT_SYNC_MEMORIES_MAX, int(limit)))
+
+
+def _list_constraint_memories(
+    project_id: int | None,
+    *,
+    limit: int = AGENT_SYNC_CONSTRAINTS_CAP,
+) -> list[dict[str, object]]:
+    if project_id is None:
+        return []
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM memory_items
+            WHERE status = 'active' AND memory_type = 'constraint'
+              AND project_id = ?
+            ORDER BY importance DESC, created_at DESC
+            LIMIT ?
+            """,
+            (project_id, limit),
+        ).fetchall()
+        return [_memory_item_api_dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def _agent_sync_event_dict(event: dict[str, object]) -> dict[str, object]:
+    content = event.get("content") or event.get("display") or ""
+    return {
+        **event,
+        "summary": _handoff_summary_line(str(content)),
+    }
+
+
 def _format_canon_prompt_section(canon_rows: list[sqlite3.Row]) -> str:
     lines = [
         "Canonical memory trail:",
@@ -3995,6 +4896,7 @@ def build_world_dashboard() -> dict[str, object]:
     recent_activity = agent_activity.get("recent") or []
     recent_changes = build_recent_changes_feed(project_id)
     recent_change_items = recent_changes.get("items") or []
+    retrieval_context = retrieve_work_context_memories(project_id, agent=None)
 
     return {
         "project": row_to_dict(project),
@@ -4028,6 +4930,9 @@ def build_world_dashboard() -> dict[str, object]:
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
         "agent_activity": agent_activity,
+        "relevant_memories": retrieval_context["memories"],
+        "relevant_memories_query": retrieval_context["query"],
+        "relevant_memories_tickets": retrieval_context["tickets"],
         "operator_metrics": get_metrics_summary_24h(),
         "synced_at": _now_iso(),
     }
@@ -4141,6 +5046,7 @@ def _context_system_health() -> dict[str, object]:
         "retrieval_mode": get_last_retrieval_mode(),
         "embed_provider": _memory_embed_provider(),
         "sqlite_vec": sqlite_vec,
+        "runtime": build_runtime_diagnostics(),
     }
 
 
@@ -4254,44 +5160,50 @@ def get_agent_role(agent: str) -> str:
 
 
 def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
-    """Read-only sync snapshot for agents communicating through Crowley."""
+    """Read-only slim sync snapshot for agents communicating through Crowley (V3.9.9)."""
     normalized_agent = agent.strip().lower()
     if normalized_agent not in {"cursor", "codex", "chatgpt"}:
         raise ValueError(f"unsupported agent: {agent}")
 
-    limit = max(1, min(int(limit), 50))
+    memory_limit = _agent_sync_memory_limit(limit)
     project = get_active_project()
     project_id = int(project["id"]) if project is not None else None
     state = get_project_state(project_id) if project_id is not None else None
     state_payload = _state_payload_for_api(state)
 
-    events = [
+    raw_events = [
         _memory_item_api_dict(row)
-        for row in list_recent_agent_events(limit=limit, project_id=project_id)
+        for row in list_recent_agent_events(limit=50, project_id=project_id)
     ]
     events_from_this_agent = [
-        event for event in events if str(event.get("source", "")).lower() == normalized_agent
-    ]
+        _agent_sync_event_dict(event)
+        for event in raw_events
+        if str(event.get("source", "")).lower() == normalized_agent
+    ][:AGENT_SYNC_OWN_EVENTS_CAP]
     events_from_other_agents = [
-        event for event in events if str(event.get("source", "")).lower() != normalized_agent
-    ]
-    canon = _canon_api_items(project_id)
+        _agent_sync_event_dict(event)
+        for event in raw_events
+        if str(event.get("source", "")).lower() != normalized_agent
+    ][:AGENT_SYNC_OTHER_EVENTS_CAP]
 
     recent_decisions: list[dict[str, object]] = []
-    open_loops: list[dict[str, object]] = []
     if project_id is not None:
         recent_decisions = [
             row_to_dict(row)
-            for row in list_decisions(project_id, limit=min(limit, 50))
-        ]
-        open_loops = [
-            row_to_dict(row)
-            for row in list_open_loops(project_id, status="open", limit=min(limit, 50))
+            for row in list_decisions(project_id, limit=AGENT_SYNC_DECISIONS_CAP)
         ]
 
-    open_tasks = [row_to_dict(row) for row in list_tasks(status="open")[:limit]]
-    relevant_memories = retrieve_memories(AGENT_SYNC_QUERY, limit=limit, project_id=project_id)
+    constraint_memories = _list_constraint_memories(
+        project_id, limit=AGENT_SYNC_CONSTRAINTS_CAP
+    )
+    retrieval_context = retrieve_work_context_memories(
+        project_id,
+        normalized_agent,
+        limit=memory_limit,
+    )
+    relevant_memories = retrieval_context["memories"]
     recommended = _state_display(state["next_action"]) if state is not None else "(unset)"
+    tickets = build_tickets_summary(project_id, normalized_agent)
 
     return {
         "agent": normalized_agent,
@@ -4306,18 +5218,24 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         "bus_health": bus_health(),
         "project": row_to_dict(project) if project is not None else None,
         "state": state_payload,
-        "recent_events": events,
+        "recommended_next_action": recommended,
+        "agent_activity": _agent_activity_summary(project_id),
+        "tickets": tickets,
+        "recent_decisions": recent_decisions,
+        "constraint_memories": constraint_memories,
         "events_from_this_agent": events_from_this_agent,
         "events_from_other_agents": events_from_other_agents,
-        "canon": canon,
-        "recent_decisions": recent_decisions,
-        "open_loops": open_loops,
-        "open_tasks": open_tasks,
-        "recommended_next_action": recommended,
-        "relevant_memories_query": AGENT_SYNC_QUERY,
+        "relevant_memories_query": retrieval_context["query"],
         "relevant_memories": relevant_memories,
-        "agent_activity": _agent_activity_summary(project_id),
-        "tickets": build_tickets_summary(project_id, normalized_agent),
+        "relevant_memories_tickets": retrieval_context["tickets"],
+        "bundle_shape": AGENT_SYNC_BUNDLE_SHAPE,
+        "bundle_caps": {
+            "recent_decisions": AGENT_SYNC_DECISIONS_CAP,
+            "constraint_memories": AGENT_SYNC_CONSTRAINTS_CAP,
+            "events_from_other_agents": AGENT_SYNC_OTHER_EVENTS_CAP,
+            "events_from_this_agent": AGENT_SYNC_OWN_EVENTS_CAP,
+            "relevant_memories": memory_limit,
+        },
     }
 
 
@@ -4363,12 +5281,24 @@ _HANDOFF_EXTRACT_MARKERS = (
     "## summary",
     "## what changed",
     "## decisions",
+    "## constraints",
+    "## lessons",
     "## next action",
     "## open loops",
     "## qa",
     "next action:",
     "what changed:",
     "open loops:",
+)
+HANDOFF_TYPED_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("Decisions", "decision"),
+    ("Decision", "decision"),
+    ("Constraints", "constraint"),
+    ("Constraint", "constraint"),
+    ("Lessons", "lesson"),
+    ("Lesson", "lesson"),
+    ("State Changed", "project_update"),
+    ("Do Not Build", "constraint"),
 )
 
 
@@ -4422,6 +5352,30 @@ def _world_context_for_project(project: sqlite3.Row) -> dict[str, object]:
     }
 
 
+def _extract_handoff_typed_memories(content: str) -> list[tuple[str, str, str]]:
+    """Parse handoff ## sections into (memory_type, content, why_it_matters) tuples."""
+    seen_keys: set[str] = set()
+    results: list[tuple[str, str, str]] = []
+    for heading, memory_type in HANDOFF_TYPED_SECTIONS:
+        for bullet in _parse_handoff_section_bullets(content, heading):
+            norm = _normalize_dedupe_key(bullet)
+            if norm in seen_keys:
+                continue
+            if len(_normalize_text(bullet)) < MEMORY_GATE_WHY_MIN_LEN:
+                continue
+            seen_keys.add(norm)
+            why = _truncate(bullet, 240)
+            results.append((memory_type, bullet, why))
+    return results
+
+
+def _handoff_anchor_memory_type(handoff_type: str) -> str:
+    mapped = HANDOFF_TYPE_TO_MEMORY.get(handoff_type, "project_update")
+    if mapped == "event":
+        return "lesson"
+    return mapped
+
+
 def ingest_handoff(
     source: str,
     handoff_type: str,
@@ -4453,29 +5407,81 @@ def ingest_handoff(
     memory_type = HANDOFF_TYPE_TO_MEMORY[handoff_type]
     importance = 4 if handoff_type in HANDOFF_HIGH_IMPORTANCE_TYPES else 3
 
-    memory_item_id = save_memory_item(
-        memory_type,
-        trimmed_content,
-        source=source,
-        project_id=project_id,
-        importance=importance,
-        confidence=0.9,
-        pinned=False,
-    )
+    typed_memories = _extract_handoff_typed_memories(trimmed_content)
+    memory_items_promoted: dict[str, int] = {
+        "decision": 0,
+        "constraint": 0,
+        "lesson": 0,
+    }
+    memory_items_rejected: list[str] = []
+    promoted_ids: list[int] = []
+
+    for promoted_type, bullet_content, why in typed_memories:
+        item_id = save_memory_item(
+            promoted_type,
+            bullet_content,
+            summary=why,
+            source=source,
+            project_id=project_id,
+            importance=4 if promoted_type == "decision" else 3,
+            confidence=0.9,
+            pinned=False,
+        )
+        if item_id is not None:
+            promoted_ids.append(int(item_id))
+            memory_items_promoted[promoted_type] = (
+                int(memory_items_promoted.get(promoted_type, 0)) + 1
+            )
+        else:
+            memory_items_rejected.append(
+                f"{promoted_type}: {_truncate(bullet_content, 48)}"
+            )
+
+    if typed_memories:
+        summary_line = _memory_gate_section_text(trimmed_content, "Summary")
+        anchor_content = summary_line or typed_memories[0][1]
+        anchor_summary = summary_line or typed_memories[0][2]
+        memory_item_id = save_memory_item(
+            _handoff_anchor_memory_type(handoff_type),
+            anchor_content,
+            summary=anchor_summary,
+            source=source,
+            project_id=project_id,
+            importance=importance,
+            confidence=0.9,
+            pinned=False,
+        )
+        if memory_item_id is None and promoted_ids:
+            memory_item_id = promoted_ids[0]
+    else:
+        memory_item_id = save_memory_item(
+            memory_type,
+            trimmed_content,
+            source=source,
+            project_id=project_id,
+            importance=importance,
+            confidence=0.9,
+            pinned=False,
+        )
+
     if memory_item_id is None:
         record_system_metric("ingest_error", label=source)
         return {
             "status": "error",
             "error": "failed to save memory_item",
             "memory_item_id": None,
-            "applied": {},
-            "skipped": [],
+            "applied": {
+                "memory_items_promoted": memory_items_promoted,
+            },
+            "skipped": memory_items_rejected,
         }
 
     applied: dict[str, object] = {
         "decisions_added": 0,
         "loops_added": 0,
         "state_fields_updated": [],
+        "memory_items_promoted": memory_items_promoted,
+        "memory_item_ids": promoted_ids,
     }
     skipped: list[str] = []
 
@@ -4489,18 +5495,19 @@ def ingest_handoff(
                 world_context=world,
                 grounding_message=trimmed_content,
             )
-            applied = {
-                "decisions_added": extract_result.get("decisions_added", 0),
-                "loops_added": extract_result.get("loops_added", 0),
-                "state_fields_updated": list(
-                    extract_result.get("state_fields_updated") or []
-                ),
-            }
-            skipped = list(extract_result.get("skipped") or [])
+            applied["decisions_added"] = extract_result.get("decisions_added", 0)
+            applied["loops_added"] = extract_result.get("loops_added", 0)
+            applied["state_fields_updated"] = list(
+                extract_result.get("state_fields_updated") or []
+            )
+            skipped.extend(list(extract_result.get("skipped") or []))
         else:
             skipped.append("extraction returned no proposals")
     else:
         skipped.append("insufficient signal for extraction")
+
+    if memory_items_rejected:
+        skipped.extend(memory_items_rejected)
 
     record_system_metric("ingest_ok", label=source)
     return {
@@ -4842,9 +5849,11 @@ def build_prompt(
 
     memory_lines = []
     for m in memories:
+        reason = m.get("inclusion_reason")
+        reason_suffix = f" — {reason}" if reason else ""
         line = (
             f"[{m['memory_type']} | score {m['score']:.2f} | importance {m['importance']}] "
-            f"{m['content']}"
+            f"{m['content']}{reason_suffix}"
         )
         if len(line) > MEMORY_LINE_MAX:
             line = line[: MEMORY_LINE_MAX - 3] + "..."

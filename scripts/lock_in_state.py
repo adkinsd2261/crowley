@@ -75,19 +75,19 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.7 ship."""
+    """Current world-model fields after V3.9.8 ship."""
     return {
-        "phase": "V3.9.7 shipped — Workspace Experience & Reliability",
-        "focus": "V4 connectivity planning after Mr. Go browser QA on polished workspace",
+        "phase": "V3.9.8 shipped — Runtime Hardening",
+        "focus": "V3.9.9 Memory Judgment + Work Intelligence planning; V4 after .9 gate",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Mr. Go browser QA — desktop + 390px; Codex mints V4 connectivity when approved."
+            "Mr. Go review V3.9.9 draft packet; Codex mint when approved."
         ),
         "what_changed": (
-            "V3.9.7 Experience & Reliability: drawer/chat polish, embed fallback, CI slim deps, "
-            "diagnostics/tickets modules, operator metrics, preflight. Constants bumped to 3.9.7."
+            "V3.9.8 Runtime Hardening: CROWLEY_TEST_MODE, model probe, runtime health, "
+            "sqlite-vec fallback, fragile-startup suite. Constants bumped to 3.9.8."
         ),
     }
 

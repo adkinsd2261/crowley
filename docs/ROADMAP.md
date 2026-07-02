@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.7 shipped · V4 connectivity next · **2026-07-02**
+**As of:** V3.9.8 shipped · V3.9.9 planning · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -70,12 +70,18 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V4 connectivity  ◄── YOU ARE HERE
                                       │
                                       ▼
-                    Future pre-V4 gates (V3.9.8–V3.9.9)
+                    V3.9.8 Runtime Hardening ✅
+                              │
+                              ▼
+                    V3.9.9 Memory Judgment + Work Intelligence (planning)
+                              │
+                              ▼
+                    V4 connectivity
 ```
 
-**Shipped through V3.9.7:** … workspace polish (#31–#36); experience & reliability — drawer/chat polish, embed/CI hardening, module extraction, metrics, preflight (#40–#49).
+**Shipped through V3.9.8:** … experience & reliability (#40–#49); runtime hardening — test mode, model probe, runtime health, sqlite-vec fallback (#50–#55).
 
-**Active initiative:** V4 connectivity — Codex plans architecture and mints tickets; Cursor implements when assigned. Pre-V4 quality plan and V3.9.7 experience batch complete — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md), [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md), and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V3.9.9 Memory Judgment + Work Intelligence — draft packet at `tickets/v3.9.9_memory_judgment_work_intelligence.json`. V4 connectivity after .9 gate — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -185,9 +191,11 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | ✅ Shipped on `main` (#31–#36) |
 | Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
 | V3.9.7 Workspace Experience & Reliability | UI catches up to backend depth; boring boot | Medium | ✅ Shipped on `main` (#40–#49) |
-| V4 connectivity | External collectors and integrations | High | **Next** — Codex plans, Cursor implements |
-| V3.9.8 Work Intelligence | Make Crowley reason over the work board and shipped timeline | Medium | Future planning reserve |
-| V3.9.9 Operator Confidence / Preflight extensions | Extended readiness checks beyond V3.9.7 preflight | Medium | Future planning reserve |
+| V3.9.8 Runtime Hardening | No fragile startup — test mode, runtime health | Medium | Local (#50–#55) — not on `origin/main` |
+| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Active** (#62 QA → #63 lock) |
+| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | Minted #64–#69 |
+| V3.9.11 Live Wire | Compose activity wire + agent pulses | Medium | Minted #70–#75 |
+| V4 connectivity | External collectors and integrations | High | After V3.9.11 gate |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
 | Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
@@ -258,8 +266,8 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.5** | Conversation + Model Behavior | ✅ Mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | **V3.9.7** | Experience & Reliability | ✅ UI polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics, preflight |
-| **V3.9.8** | Work Intelligence | Planning reserve; no tickets yet |
-| **V3.9.9** | Operator Confidence extensions | Planning reserve; no tickets yet |
+| **V3.9.8** | Runtime Hardening | ✅ test mode, model probe, runtime health, sqlite-vec fallback |
+| V3.9.9 | Memory Judgment + Work Intelligence | Draft packet — planning reserve |
 | **V4.0** | Connectivity | Git collector, multi-project commands |
 
 ---

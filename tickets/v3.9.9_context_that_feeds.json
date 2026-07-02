@@ -1,0 +1,130 @@
+{
+  "objective": "V3.9.9 — Context That Feeds (Memory + Handoff Intelligence): better memory entering better handoffs — right context to the right agent at the right time.",
+  "context": "V3.9.8 Runtime Hardening shipped (#50–#55). Crowley already has memory_items types, hybrid retrieval with score_breakdown, and build_agent_sync_bundle — but sync dumps too much, saves noisy memories, and does not explain why each memory was included. V3.9.9 filters on the way in, explains on the way out, slims agent sync.",
+  "decisions": [
+    "Theme: Context That Feeds — not more memory, better memory entering better handoffs",
+    "One ticket at a time — claim, implement, self-QA, approval, close, next",
+    "Post-work feedback loop on both Cursor (--after) and Codex sync paths",
+    "Use existing schema where possible: summary for why_it_matters, project slug for scope; migrate only if gate requires it",
+    "No version bump / doc lock until ticket #63",
+    "Cursor mints only — do not claim until Mr. Go assigns first ticket"
+  ],
+  "non_goals": [
+    "V4 connectivity / external collectors",
+    "Destructive auto-delete of memories or loops",
+    "Direct Codex-to-Cursor communication",
+    "Full workspace UI redesign",
+    "Live model quality tests"
+  ],
+  "risks": [
+    "Quality gate must not reject legitimate handoffs or block ingest",
+    "Slim sync must not hide filesystem/ticket authority per MEMORY_HIERARCHY",
+    "Inclusion reasons must stay deterministic in tests (no live model)"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; agent sync bundle shape tests; memory gate unit tests; node --check static/app.js for UI ticket",
+  "next_action": "Mr. Go assigns first ticket; Cursor claims #56 only when directed",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-02",
+    "note": "Mint approved; feedback loop on both Cursor and Codex; do not claim on mint"
+  },
+  "tickets": [
+    {
+      "title": "V3.9.9 Context: memory quality gate",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Gate save paths (sparks, extraction, handoff-derived memories) to promote only high-value types: decision, constraint, preference, lesson, qa_result, active project facts. Reject or demote vague event noise and low-confidence extraction. Every promoted memory requires why_it_matters (use summary column initially), scope (active project slug), importance 1-5, confidence 0-1. Files: crowley.py save_memory_item and extraction/spark callers.",
+      "acceptance": [
+        "Noisy/low-signal saves rejected or demoted in unit tests",
+        "Promoted memories include why_it_matters, scope, importance, confidence",
+        "ALLOWED types enforced at gate; handoff prose not duplicated as raw event rows",
+        "No schema migration required unless tests prove summary insufficient"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: retrieval inclusion reasons",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Upgrade _build_retrieval_explanation to human-readable inclusion_reason (e.g. Pulled because: matches open ticket #57 + constraint memory). Expose on /api/retrieve results and relevant_memories in sync bundle. Optional one-line form in build_prompt supporting-memory section.",
+      "acceptance": [
+        "Every retrieve_memories result includes inclusion_reason string",
+        "Reason cites match factors: ticket, type, constraint, recency, or handoff link",
+        "Deterministic fixture tests; no live model calls",
+        "Backward compat: score_breakdown retained alongside inclusion_reason"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: slim agent sync bundle",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Refactor build_agent_sync_bundle to agent-scoped capped bundle: current ticket(s) for assignee, active blockers, recent decisions (5), constraints memories (5), last 5 cross-agent events, relevant memories (5-8) with inclusion reasons. Demote open_tasks, full loops dump, canon wall from default sync. Update agent_sync_lib print_agent_sync_bundle for readable output. Files: crowley.py, scripts/agent_sync_lib.py.",
+      "acceptance": [
+        "/api/agent/sync returns slim shape with documented caps",
+        "Cursor sync shows assigned ticket + blockers before memories",
+        "Codex sync shows planning context without giant dump",
+        "Tests assert bundle size caps and required keys per agent role"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: handoff to memory upgrade",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Upgrade ingest_handoff extraction to promote decisions, constraints, lessons through memory quality gate instead of bulk project_update rows. Parse handoff sections (Decisions, Constraints, Lessons) into typed memory_items with why_it_matters.",
+      "acceptance": [
+        "Handoff with ## Decisions creates gated decision memories",
+        "Handoff with constraint/lesson sections create typed rows with why_it_matters",
+        "Bulk handoff body not saved as duplicate low-value event when sections extracted",
+        "ingest tests cover accept and reject paths"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: post-work feedback loop (Cursor + Codex)",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "After agent work, capture structured outcomes: state change, new decision, or lesson learned. Wire Cursor scripts/cursor_sync.py --after and Codex scripts/codex_sync.py handoff paths to optional structured sections or flags that feed save_memory_item through quality gate. Prompt template in handoff scaffold for Lesson / Decision / State changed blocks.",
+      "acceptance": [
+        "cursor_sync --after can emit lesson/decision blocks into handoff ingest",
+        "codex_sync architect_handoff path supports same structured blocks",
+        "Structured blocks create gated memory_items; empty blocks skipped",
+        "Tests for both agents; no chat UI popup required"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: handoff-ticket wiring",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Surface linked_ticket_ids in agent activity and sync bundle. Ticket lines show linked handoff summary. Audit --after --ticket close path for handoff_linked events and linked_memory_id population.",
+      "acceptance": [
+        "Sync bundle agent_activity shows handoff to ticket links",
+        "Ticket close via cursor_sync links handoff memory_id",
+        "Prompt or sync output shows handoff #N closed ticket #M",
+        "Tests for link path; no agent-to-agent channel"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: light UI and hygiene report",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Light UI: Agent Feed shows inclusion_reason badges on memories; optional hygiene callout for stale/noisy candidates. Read-only GET /api/hygiene or diagnostics extension: stale loops matching shipped work, canon/version conflicts, duplicate candidates — suggest only, never auto-delete. Files: static/app.js, crowley.py or diagnostics.py.",
+      "acceptance": [
+        "Agent Feed renders inclusion_reason when present",
+        "Hygiene endpoint/report makes zero writes",
+        "node --check static/app.js passes",
+        "Manual spot-check desktop + 390px"
+      ]
+    },
+    {
+      "title": "V3.9.9 Context: doc lock and version bump",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump CROWLEY_VERSION to 3.9.9, CROWLEY_RELEASE_LABEL Context That Feeds, docs/V3.9.9_CONTEXT_THAT_FEEDS.md, ADR-038, VERSIONS/PROJECT_STATE/TICKETS/WHERE_WE_ARE/PRE_V4 ladder, lock_in_state.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.9",
+        "Release doc describes quality gate, slim sync, inclusion reasons, feedback loop",
+        "preflight and full test suite green",
+        "Bus restart QA for /api/health version match"
+      ]
+    }
+  ]
+}

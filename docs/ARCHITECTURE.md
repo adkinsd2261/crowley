@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.7"` (`Crowley V3.9.7 Workspace Experience & Reliability`)
+**Code version:** `CROWLEY_VERSION = "3.9.8"` (`Crowley V3.9.8 Runtime Hardening`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -26,6 +26,7 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 13. **Concurrent ticketing (V3.9)** — `tickets` board, sync mint/claim/close/cancel.
 14. **Pre-V4 quality (2026-07)** — V3.9.5 conversation/model behavior **shipped** (#25–#30); V3.9.6 workspace polish **shipped** (#31–#36).
 15. **V3.9.7 Experience & Reliability (2026-07)** — UI polish catch-up, embed/CI hardening, `diagnostics.py` + `tickets.py` extraction, operator metrics, preflight (#40–#49).
+16. **V3.9.8 Runtime Hardening (2026-07)** — `CROWLEY_TEST_MODE`, model probe, `/api/health` runtime block, sqlite-vec safe fallback, fragile-startup suite (#50–#55).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
 
@@ -243,8 +244,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.7"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.7 Workspace Experience & Reliability"` |
+| `CROWLEY_VERSION` | `"3.9.8"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.8 Runtime Hardening"` |
 
 ---
 

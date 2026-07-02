@@ -65,6 +65,25 @@ def main() -> int:
     if not _doc_version_ok():
         blockers.append(f"VERSIONS.md missing {crowley.CROWLEY_VERSION}")
 
+    runtime = crowley.build_runtime_diagnostics()
+    required_runtime_keys = (
+        "embeddings",
+        "vector_store",
+        "retrieval",
+        "model",
+        "test_mode",
+    )
+    missing = [key for key in required_runtime_keys if key not in runtime]
+    if missing:
+        blockers.append(f"runtime diagnostics missing keys: {', '.join(missing)}")
+    else:
+        notes.append(
+            "runtime: "
+            f"embeddings={runtime['embeddings']} "
+            f"vector_store={runtime['vector_store']} "
+            f"model={runtime['model']}"
+        )
+
     health = _fetch_health(args.health_url)
     if health is None:
         blockers.append(f"Bus health unreachable at {args.health_url}")
@@ -76,9 +95,21 @@ def main() -> int:
             )
         else:
             notes.append(f"/api/health: {live_version}")
+        live_runtime = health.get("runtime")
+        if not isinstance(live_runtime, dict):
+            blockers.append("/api/health missing runtime block")
+        else:
+            live_missing = [
+                key for key in required_runtime_keys if key not in live_runtime
+            ]
+            if live_missing:
+                blockers.append(
+                    f"/api/health runtime missing keys: {', '.join(live_missing)}"
+                )
 
     if args.quick:
         env = os.environ.copy()
+        env["CROWLEY_TEST_MODE"] = "1"
         env["CROWLEY_EMBED_PROVIDER"] = "off"
         proc = subprocess.run(
             [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],

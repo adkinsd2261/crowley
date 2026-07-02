@@ -58,7 +58,6 @@ def _ensure_bus() -> None:
 
 def _print_agent_sync(sync: dict[str, Any]) -> None:
     asl.print_agent_sync_bundle(sync, agent=AGENT)
-    asl.print_sync_extras(sync, agent=AGENT)
 
 
 def session_start() -> int:
@@ -116,6 +115,8 @@ def _section_content(
     changed: str,
     summary: str,
     decisions: list[str],
+    lessons: list[str],
+    state_changed: list[str],
     next_action: str,
     do_not_build: list[str],
     open_loops: list[str],
@@ -167,6 +168,8 @@ def _section_content(
         f"{files_section}"
         "## Decisions\n\n"
         f"{decisions_text}\n\n"
+        f"{asl.feedback_section_markdown('Lessons', lessons)}"
+        f"{asl.feedback_section_markdown('State Changed', state_changed)}"
         "## QA Results\n\n"
         f"{qa_text}\n\n"
         "## Known Issues\n\n"
@@ -186,6 +189,8 @@ def _autofill_handoff(
     handoff_type: str,
     summary: str,
     decisions: list[str],
+    lessons: list[str],
+    state_changed: list[str],
     next_action: str,
     do_not_build: list[str],
     open_loops: list[str],
@@ -203,6 +208,8 @@ def _autofill_handoff(
             changed=changed,
             summary=summary,
             decisions=decisions,
+            lessons=lessons,
+            state_changed=state_changed,
             next_action=next_action,
             do_not_build=do_not_build,
             open_loops=open_loops,
@@ -343,6 +350,8 @@ def after(args: argparse.Namespace) -> int:
             handoff_type=args.handoff_type,
             summary=args.summary,
             decisions=args.decision,
+            lessons=args.lesson,
+            state_changed=args.state_changed,
             next_action=args.next_action,
             do_not_build=args.do_not_build,
             open_loops=args.open_loop,
@@ -371,6 +380,8 @@ def after(args: argparse.Namespace) -> int:
                 linked_memory_id=mem_id,
             )
             if ok:
+                if mem_id is not None:
+                    print(asl.format_handoff_closed_ticket(mem_id, int(args.ticket)))
                 print(f"Ticket #{args.ticket} marked done.")
             else:
                 print(f"WARNING: handoff ok but ticket close failed: {err}")
@@ -474,6 +485,16 @@ def main() -> None:
     parser.add_argument("--ticket", type=int, help="Ticket ID to close on successful --after.")
     parser.add_argument("--next-action", help="Real Next Action content for --after.")
     parser.add_argument("--decision", action="append", default=[], help="Decision bullet; repeatable.")
+    parser.add_argument(
+        "--lesson", action="append", default=[], help="Lesson learned bullet for memory ingest; repeatable."
+    )
+    parser.add_argument(
+        "--state-changed",
+        action="append",
+        default=[],
+        dest="state_changed",
+        help="State changed bullet for memory ingest; repeatable.",
+    )
     parser.add_argument(
         "--do-not-build", action="append", default=[], help="Do Not Build bullet; repeatable."
     )

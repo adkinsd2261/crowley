@@ -1,7 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.7 · Workspace Experience & Reliability shipped · **2026-07-02**
+**As of:** V3.9.8 local · V3.9.9 in progress (#62 QA → #63 lock) · **2026-07-02 ~2pm resume**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
+
+**Git note:** `origin/main` is still at **V3.9.7** (`c5aa4de`). V3.9.8–V3.9.9 work lives in the **local working tree** (uncommitted). Bus may report `3.9.8` from local code.
 
 ---
 
@@ -40,8 +42,12 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.5** | **Shipped** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30) |
 | **V3.9.6** | **Shipped** — panel states, streaming polish, navigation flow, what-changed feed, livability pass (#31–#36) |
 | **V3.9.7** | **Shipped** — drawer/chat polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics (#40–#49) |
+| **V3.9.8** | **Local** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55) |
+| **V3.9.9** | **In progress** — Context That Feeds (#56–#61 done; #62 QA; #63 doc lock) |
+| **V3.9.10** | **Minted** — Task-Frame Context (#64–#69); start after V3.9.9 |
+| **V3.9.11** | **Minted** — Live Wire (#70–#75); start after V3.9.10 |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.7"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.7 Workspace Experience & Reliability"`
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.8"` until ticket **#63** closes V3.9.9
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -120,7 +126,7 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **157 unit tests** — isolated temp DB per test (`tests/db_helpers.py`); CI uses `requirements-core.txt` with embed off
+- **219 unit tests** locally (`CROWLEY_TEST_MODE=1`); 4 doc-lock failures expected until #63; CI on `main` still V3.9.7 baseline
 - Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -134,19 +140,17 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 quality plan complete (V3.9.5 + V3.9.6). **V3.9.7 Experience & Reliability shipped** (#40–#49). See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md).
+Pre-V4 quality arc complete through V3.9.7 on `main`. **Local tree** carries V3.9.8 + partial V3.9.9. See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
-| **V3.9.2 Memory Clarity** | Shipped on `main` | Tickets `#9–#13` |
-| **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
-| **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
-| **V3.9.5 Conversation + Model Behavior** | Shipped on `main` | Tickets `#25–#30` |
-| **V3.9.6 Workspace Polish** | Shipped on `main` | Tickets `#31–#36` |
-| **V3.9.7 Experience & Reliability** | Shipped on `main` | Tickets `#40–#49` |
-| **Pre-V4 QA Hygiene** | Shipped on `main` | Ticket `#37` |
+| **V3.9.8 Runtime Hardening** | Cursor | Local · #50–#55 · push with V3.9.9 lock |
+| **V3.9.9 Context That Feeds** | Cursor | **Active** · #56–#61 done · **#62 QA** · #63 lock |
+| **V3.9.10 Task-Frame Context** | Cursor | Minted #64–#69 · task frame before retrieval |
+| **V3.9.11 Live Wire** | Cursor | Minted #70–#75 · compose "In the air" activity wire |
+| **V4 connectivity** | Codex plans | After .9/.10/.11 gate |
 
-**V4 connectivity** is the next initiative — Codex plans; Cursor implements when tickets are minted.
+**Resume workflow:** Mr. Go returns ~2pm → QA **#62** → close → **#63** doc lock → V3.9.10 one ticket at a time.
 
 ---
 

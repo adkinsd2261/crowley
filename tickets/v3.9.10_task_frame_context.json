@@ -1,0 +1,111 @@
+{
+  "objective": "V3.9.10 — Task-Frame Context: give agents the best context for the job they are doing right now — task frame first, supporting retrieval second.",
+  "context": "V3.9.9 Context That Feeds (#56–#63) shipped retrieval transparency (inclusion_reason, slim sync, hygiene). Live QA showed hybrid retrieval alone does not answer what an agent needs in the moment — it surfaces handoff-shaped keyword matches, not a work brief. Mr. Go: context should follow the ticket and current work, not generic search.",
+  "decisions": [
+    "Task frame is authoritative over retrieval: ticket detail + last handoff + constraints + decisions before supporting memories",
+    "Retrieval query derived from current ticket narrative (title, description, acceptance) — not generic AGENT_SYNC_QUERY alone",
+    "Supporting memories cap 3–4; prefer lesson, constraint, qa_result; exclude rows already in handoff timeline",
+    "Cursor and Codex get role-shaped frames (builder vs architect) from same engine",
+    "MEMORY_HIERARCHY authority order unchanged — filesystem and tickets outrank retrieval",
+    "One ticket at a time — claim, implement, QA, approve, close",
+    "Finish V3.9.9 (#62 UI/hygiene, #63 doc lock) before claiming V3.9.10 tickets"
+  ],
+  "non_goals": [
+    "V4 connectivity / external collectors",
+    "Destructive auto-delete of memories",
+    "Direct Codex-to-Cursor communication",
+    "Replacing tickets tab or handoff timeline with retrieval",
+    "Live model quality tuning in tests"
+  ],
+  "risks": [
+    "Task frame must not duplicate entire handoff prose into prompts",
+    "Ticket-derived queries must not pull stale unrelated handoffs via loose token overlap",
+    "UI reframe must not imply retrieval rows are priority truth"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; task-frame fixture tests with assigned ticket #62/#63 scenarios; browser spot-check Agent Feed brief section; bus restart after API changes",
+  "next_action": "Mr. Go approves packet; Codex mints with scripts/codex_sync.py --create-tickets tickets/v3.9.10_task_frame_context.json; Cursor claims first ticket only when directed",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-02",
+    "note": "Approved 2026-07-02 — task-frame context follow-on after V3.9.9 #62/#63."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.10 Context: task frame builder API",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Build build_task_frame_context(project_id, agent) returning structured brief: assigned/in_progress tickets with description and acceptance, last handoff summary + next_action for agent, recent_decisions (cap 5), constraint_memories (cap 5), open blockers. Expose on /api/world and /api/agent/sync as task_frame key. Files: crowley.py, app.py.",
+      "acceptance": [
+        "task_frame includes assigned tickets with acceptance criteria parsed from description",
+        "task_frame includes last_by_source handoff summary and next_action for requesting agent",
+        "task_frame includes capped decisions and constraints lists",
+        "Tests cover cursor and codex agent shapes with fixture tickets",
+        "No schema migration required"
+      ]
+    },
+    {
+      "title": "V3.9.10 Context: ticket-narrative retrieval",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Replace generic-only retrieval with ticket-narrative query built from current work (title + description + acceptance + initiative keywords). Cap supporting memories at 4; filter types (lesson, constraint, qa_result, decision preferred over raw project_update); dedupe memory ids present in agent_activity.recent handoff timeline. Files: crowley.py retrieve_work_context_memories refactor.",
+      "acceptance": [
+        "Query string cites active ticket titles and acceptance keywords",
+        "Supporting memories exclude ids already in recent handoff feed",
+        "Type preference boosts lesson/constraint/qa_result in ranking or post-filter",
+        "Fixture: ticket #62 frame pulls UI/hygiene memories before unrelated QA handoffs",
+        "inclusion_reason remains on every result"
+      ]
+    },
+    {
+      "title": "V3.9.10 Context: sync bundle task brief",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Integrate task_frame into build_agent_sync_bundle and cursor_sync/codex_sync print order: task brief before supporting memories. CLI shows Working on, Last handoff, Guardrails, then Supporting (N). Demote generic relevant_memories dump label. Files: crowley.py, scripts/agent_sync_lib.py, cursor_sync.py, codex_sync.py.",
+      "acceptance": [
+        "cursor_sync --before prints task frame section before top retrieved memories",
+        "codex_sync --before shows architect-scoped task frame",
+        "Sync bundle includes task_frame and supporting_memories keys with documented caps",
+        "Tests assert bundle shape and print helpers",
+        "Backward compat: relevant_memories retained as supporting_memories or alias"
+      ]
+    },
+    {
+      "title": "V3.9.10 Context: UI brief for current work",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Reframe Agent Feed context panel: Working on (ticket cards), Last handoff, Guardrails (constraints/decisions chips), Supporting memories (3–4 with inclusion_reason). Remove misleading retrieval-preview framing. Files: static/app.js, static/index.html, static/styles.css, build_world_dashboard task_frame payload.",
+      "acceptance": [
+        "Agent Feed shows structured task brief before supporting memory list",
+        "Header scoped to assigned/in_progress tickets not generic search label",
+        "node --check static/app.js passes",
+        "Manual spot-check desktop + 390px",
+        "Hygiene callout unchanged on Memory tab"
+      ]
+    },
+    {
+      "title": "V3.9.10 Context: chat prompt task frame injection",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Inject compact task_frame section into build_prompt for Crowley chat when active tickets exist — after tickets prompt section, before hybrid retrieval. Operator chat answers where-are-we using same brief agents see.",
+      "acceptance": [
+        "build_prompt includes task frame when assignee cursor has in_progress ticket",
+        "Prompt section cites ticket id, acceptance, last handoff next_action",
+        "Does not duplicate full handoff bodies",
+        "Deterministic fixture test on prompt assembly order per MEMORY_HIERARCHY"
+      ]
+    },
+    {
+      "title": "V3.9.10 Context: doc lock and version bump",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump CROWLEY_VERSION to 3.9.10, release label Task-Frame Context, docs/V3.9.10_TASK_FRAME_CONTEXT.md, ADR, VERSIONS/PROJECT_STATE/TICKETS/WHERE_WE_ARE/PRE_V4 ladder, lock_in_state. Last ticket in batch.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.10",
+        "Release doc describes task frame, ticket-narrative retrieval, sync/UI brief",
+        "preflight and full test suite green",
+        "Bus restart QA for /api/health version match"
+      ]
+    }
+  ]
+}

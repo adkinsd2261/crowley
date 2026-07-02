@@ -18,6 +18,32 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-037 — V3.9.8 Runtime Hardening shipped
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.8`, `is_test_mode()`, `probe_model_availability()`, `build_runtime_diagnostics()`, `docs/V3.9.8_RUNTIME_HARDENING.md`, tickets `#50–#55`, **171 tests**, `/api/health` runtime block
+
+### Context
+
+V3.9.7 hardened embed/CI but startup still assumed optional external deps (Ollama, OpenAI, sqlite-vec, Torch). Operators and CI needed a boringly reliable floor before brain upgrades or V4.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.8"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.8 Runtime Hardening"`
+- Unified `CROWLEY_TEST_MODE=1` — embed off + deterministic model stub for CI/local tests
+- Separate model reachability probe from routing (`probe_model_availability()`)
+- Operator `runtime` block on `/api/health` and preflight validation
+- sqlite-vec failures log once and never raise through setup/retrieve
+- Dedicated fragile-startup regression suite
+
+### Alternatives rejected
+
+- Re-shipping V3.9.7 embed-off work as new tickets — already done
+- Batch-shipping all .8 tickets without QA gates — rejected after V3.9.7 lesson; .8 used one-at-a-time then full plan execution
+
+---
+
 ## ADR-036 — V3.9.7 Workspace Experience & Reliability shipped
 
 **Date:** 2026-07-02

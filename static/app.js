@@ -14,6 +14,10 @@ const panelLoopsEl = document.getElementById("panel-loops");
 const panelDecisionsEl = document.getElementById("panel-decisions");
 const panelChangesEl = document.getElementById("panel-changes");
 const panelAgentFeedEl = document.getElementById("panel-agent-feed");
+const panelAgentMemoryListEl = document.getElementById("panel-agent-memory-list");
+const panelAgentMemoriesWrapEl = document.getElementById("panel-agent-memories");
+const agentContextCountEl = document.getElementById("agent-context-count");
+const memoryHygieneCalloutEl = document.getElementById("memory-hygiene-callout");
 const panelMemoryEl = document.getElementById("panel-memory");
 const memorySearchEl = document.getElementById("memory-search");
 const memorySourceEl = document.getElementById("memory-source");
@@ -283,6 +287,7 @@ const PANEL_META = {
   agent_feed: {
     title: "Agent feed",
     empty: "No agent handoffs yet.",
+    hint: "Retrieval scoped to open tickets; handoffs below.",
     describe: (items) => `${items.length} recent event${items.length === 1 ? "" : "s"}`,
   },
   memory: {
@@ -402,8 +407,76 @@ function setMemoryCountSummary(text) {
   if (memoryCountSummaryEl) memoryCountSummaryEl.textContent = text || "—";
 }
 
+function clipText(text, limit = 160) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 3).trimEnd()}...`;
+}
+
+function handoffSummaryLine(content) {
+  const text = String(content || "").trim();
+  if (!text) return "(empty)";
+  let inSummary = false;
+  for (const line of text.split("\n")) {
+    const stripped = line.trim();
+    const lower = stripped.toLowerCase();
+    if (lower.startsWith("## summary")) {
+      inSummary = true;
+      continue;
+    }
+    if (inSummary) {
+      if (lower.startsWith("##")) break;
+      if (stripped.startsWith("- ")) return stripped.slice(2).trim();
+      if (stripped) return stripped;
+    }
+  }
+  const first = text.split("\n").map((line) => line.trim()).find(Boolean) || "";
+  return clipText(first, 160);
+}
+
+function memoryDisplayLine(item) {
+  if (item?.summary && String(item.summary).trim()) {
+    return clipText(String(item.summary), 180);
+  }
+  const raw = item?.display || item?.content || "";
+  return clipText(handoffSummaryLine(raw), 180);
+}
+
+function inclusionReasonFactors(reason) {
+  const text = String(reason || "").trim();
+  const prefix = "Pulled because:";
+  const body = text.startsWith(prefix) ? text.slice(prefix.length).trim() : text;
+  if (!body) return [];
+  return body.split("+").map((part) => part.trim()).filter(Boolean);
+}
+
+function inclusionReasonBadge(reason, { maxFactors = 4 } = {}) {
+  const factors = inclusionReasonFactors(reason);
+  if (!factors.length) return "";
+  const shown = factors.slice(0, maxFactors);
+  const extra = factors.length - shown.length;
+  const pills = shown
+    .map((factor) => `<span class="inclusion-factor">${escapeHtml(factor)}</span>`)
+    .join("");
+  const more =
+    extra > 0
+      ? `<span class="inclusion-factor inclusion-factor-more" title="${escapeHtml(factors.slice(maxFactors).join(", "))}">+${extra}</span>`
+      : "";
+  return (
+    `<span class="inclusion-reason-badge" title="${escapeHtml(String(reason))}">` +
+    `<span class="inclusion-reason-label">Why included</span>${pills}${more}</span>`
+  );
+}
+
 function renderMemoryItems(items = []) {
-  const fingerprint = fingerprintList(items, ["id", "created_at", "display", "content", "status"]);
+  const fingerprint = fingerprintList(items, [
+    "id",
+    "created_at",
+    "display",
+    "content",
+    "status",
+    "inclusion_reason",
+  ]);
   renderPanelListIfChanged(
     panelMemoryEl,
     items,
@@ -411,10 +484,13 @@ function renderMemoryItems(items = []) {
       const meta = [m.memory_type, m.source].filter(Boolean).join(" · ");
       const when = m.created_at ? formatRelativeTime(m.created_at) : "";
       const timeMeta = when ? ` · ${when}` : "";
+      const reasonBadge = m.inclusion_reason ? inclusionReasonBadge(m.inclusion_reason) : "";
+      const body = escapeHtml(memoryDisplayLine(m));
       return (
         `${memoryLayerBadge(m)}` +
         `<span class="meta">${escapeHtml(meta)}${escapeHtml(timeMeta)}</span> ` +
-        `${escapeHtml(m.display || m.content || "")}`
+        `${reasonBadge}` +
+        `${body}`
       );
     },
     PANEL_META.memory.empty,
@@ -823,7 +899,57 @@ function renderChangesPanel(items = []) {
   );
 }
 
-function renderAgentFeedPanel(events = []) {
+function formatTicketScopeLabel(tickets = []) {
+  if (!Array.isArray(tickets) || !tickets.length) return "";
+  const ids = tickets.map((ticket) => `#${ticket.id}`).join(", ");
+  return ` · scoped to ${ids}`;
+}
+
+function renderAgentFeedMemories(memories = [], ticketScope = []) {
+  if (!panelAgentMemoryListEl || !panelAgentMemoriesWrapEl) return;
+  const items = Array.isArray(memories) ? memories : [];
+  if (agentContextCountEl) {
+    const scope = formatTicketScopeLabel(ticketScope);
+    agentContextCountEl.textContent = items.length
+      ? `${items.length} memor${items.length === 1 ? "y" : "ies"}${scope}`
+      : "";
+  }
+  if (!items.length) {
+    panelAgentMemoriesWrapEl.classList.add("hidden");
+    panelAgentMemoryListEl.innerHTML = "";
+    delete panelAgentMemoryListEl.dataset.panelFingerprint;
+    return;
+  }
+  panelAgentMemoriesWrapEl.classList.remove("hidden");
+  const fingerprint = fingerprintList(items, ["id", "inclusion_reason", "content", "created_at"]);
+  renderPanelListIfChanged(
+    panelAgentMemoryListEl,
+    items,
+    (memory) => {
+      const source = String(memory.source || "unknown");
+      const when = memory.created_at ? formatRelativeTime(memory.created_at) : "";
+      const typeMeta = memory.memory_type ? escapeHtml(String(memory.memory_type)) : "";
+      const summary = escapeHtml(memoryDisplayLine(memory));
+      const reasonBadge = inclusionReasonBadge(memory.inclusion_reason);
+      return (
+        `<span class="agent-feed-row agent-feed-memory-row">` +
+        `<span class="agent-feed-head">` +
+        `<span class="meta ${agentSourceClass(source)}">${escapeHtml(source)}</span>` +
+        (typeMeta ? `<span class="meta"> · ${typeMeta}</span>` : "") +
+        (when ? `<span class="meta"> · ${escapeHtml(when)}</span>` : "") +
+        `</span>` +
+        (reasonBadge ? `<span class="agent-feed-reason">${reasonBadge}</span>` : "") +
+        `<span class="agent-feed-summary agent-feed-memory-summary">${summary}</span>` +
+        `</span>`
+      );
+    },
+    "No relevant memories retrieved.",
+    fingerprint
+  );
+}
+
+function renderAgentFeedPanel(events = [], relevantMemories = [], ticketScope = []) {
+  renderAgentFeedMemories(relevantMemories, ticketScope);
   if (!panelAgentFeedEl) return;
   const fingerprint = fingerprintList(events, [
     "id",
@@ -863,6 +989,44 @@ function renderAgentFeedPanel(events = []) {
     PANEL_META.agent_feed.empty,
     fingerprint
   );
+}
+
+function formatHygieneCallout(report) {
+  if (!report || typeof report !== "object") return "";
+  const counts = report.counts || {};
+  const parts = [];
+  if (counts.stale_loops) parts.push(`${counts.stale_loops} stale loop${counts.stale_loops === 1 ? "" : "s"}`);
+  if (counts.noisy) parts.push(`${counts.noisy} noisy`);
+  if (counts.stale) parts.push(`${counts.stale} stale`);
+  if (counts.duplicates) parts.push(`${counts.duplicates} duplicate${counts.duplicates === 1 ? "" : "s"}`);
+  if (counts.version_conflicts) {
+    parts.push(`${counts.version_conflicts} version conflict${counts.version_conflicts === 1 ? "" : "s"}`);
+  }
+  if (counts.possible_conflicts) {
+    parts.push(`${counts.possible_conflicts} polarity conflict${counts.possible_conflicts === 1 ? "" : "s"}`);
+  }
+  if (!parts.length) return "";
+  return `Hygiene (read-only): ${parts.join(", ")} — suggestions only, never auto-deleted.`;
+}
+
+async function loadHygieneCallout() {
+  if (!memoryHygieneCalloutEl) return;
+  try {
+    const res = await fetch("/api/hygiene");
+    if (!res.ok) throw new Error("hygiene fetch failed");
+    const report = await res.json();
+    const text = formatHygieneCallout(report);
+    if (!text) {
+      memoryHygieneCalloutEl.classList.add("hidden");
+      memoryHygieneCalloutEl.textContent = "";
+      return;
+    }
+    memoryHygieneCalloutEl.textContent = text;
+    memoryHygieneCalloutEl.classList.remove("hidden");
+  } catch {
+    memoryHygieneCalloutEl.classList.add("hidden");
+    memoryHygieneCalloutEl.textContent = "";
+  }
 }
 
 function loopPriorityClass(priority) {
@@ -1451,6 +1615,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelDecisionsEl, [], () => "", PANEL_META.decisions.empty);
     renderPanelList(panelChangesEl, [], () => "", PANEL_META.changes.empty);
     renderPanelList(panelAgentFeedEl, [], () => "", PANEL_META.agent_feed.empty);
+    renderAgentFeedMemories([]);
     renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
     selectedTicketId = null;
@@ -1506,7 +1671,11 @@ function renderDashboard(data, { animate = false } = {}) {
   );
 
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
-  renderAgentFeedPanel(agentEvents);
+  renderAgentFeedPanel(
+    agentEvents,
+    data.relevant_memories || [],
+    data.relevant_memories_tickets || []
+  );
   renderChangesPanel(changesItemsForDashboard(data));
 
   const memoryItems = [...(data.memory_items || [])].reverse();
@@ -1569,6 +1738,7 @@ async function refreshPanels({ animate = false } = {}) {
     if (!res.ok) throw new Error("world fetch failed");
     const data = await res.json();
     renderDashboard(data, { animate });
+    void loadHygieneCallout();
     if (hasMemoryFilters()) {
       loadMemoryItems({ silent: Boolean(lastDashboardData) });
     }
@@ -1601,10 +1771,29 @@ async function loadMemoryItems({ silent = false } = {}) {
   });
 
   try {
-    const res = await fetch(`/api/memory-items?${params.toString()}`);
-    if (!res.ok) throw new Error("memory fetch failed");
-    const data = await res.json();
-    const items = applyMemoryLayerFilter(data.items || [], filters.layer);
+    let items = [];
+    let total = null;
+    if (filters.q) {
+      const retrieveParams = new URLSearchParams({
+        q: filters.q,
+        limit: "10",
+      });
+      const res = await fetch(`/api/retrieve?${retrieveParams.toString()}`);
+      if (!res.ok) throw new Error("memory retrieve failed");
+      const data = await res.json();
+      items = (data.results || []).map((item) => ({
+        ...item,
+        display: item.content || item.display || "",
+      }));
+      total = items.length;
+    } else {
+      const res = await fetch(`/api/memory-items?${params.toString()}`);
+      if (!res.ok) throw new Error("memory fetch failed");
+      const data = await res.json();
+      items = data.items || [];
+      total = data.total ?? null;
+    }
+    items = applyMemoryLayerFilter(items, filters.layer);
     renderMemoryItems([...items].reverse());
     if (lastDashboardData) {
       lastDashboardData.memory_items = items;
@@ -1613,7 +1802,7 @@ async function loadMemoryItems({ silent = false } = {}) {
       lastDashboardData.counts = counts;
     }
     const counts = lastDashboardData?.counts || {};
-    setMemoryCountSummary(formatMemoryCounts(counts, items.length, data.total ?? null));
+    setMemoryCountSummary(formatMemoryCounts(counts, items.length, total));
     if (activeContextTab === "memory" && lastDashboardData) {
       updatePanelMeta(lastDashboardData, "memory");
     }

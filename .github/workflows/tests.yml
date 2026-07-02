@@ -25,5 +25,6 @@ jobs:
 
       - name: Run unit tests
         env:
+          CROWLEY_TEST_MODE: "1"
           CROWLEY_EMBED_PROVIDER: off
         run: python -m unittest discover -s tests -q

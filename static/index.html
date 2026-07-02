@@ -135,13 +135,22 @@
             <ul class="panel-list" id="panel-changes"></ul>
           </div>
           <div class="context-panel" data-panel="agent_feed" role="tabpanel" hidden>
-            <p class="panel-role-note">Raw agent handoff timeline — see Changes for the merged board view.</p>
+            <p class="panel-role-note">Retrieval scoped to open tickets, then handoff timeline below.</p>
+            <div class="agent-feed-context hidden" id="panel-agent-memories">
+              <h4 class="agent-feed-subhead agent-feed-subhead-context">
+                <span class="agent-feed-subhead-label">Context pulled for agents</span>
+                <span class="agent-feed-subhead-count" id="agent-context-count"></span>
+              </h4>
+              <ul class="panel-list" id="panel-agent-memory-list"></ul>
+            </div>
+            <h4 class="agent-feed-subhead agent-feed-subhead-timeline">Handoff timeline</h4>
             <ul class="panel-list" id="panel-agent-feed"></ul>
           </div>
           <div class="context-panel" data-panel="memory" role="tabpanel" hidden>
             <p class="memory-hierarchy-note" id="memory-hierarchy-note">
               Truth order: filesystem and tickets outrank canon; hybrid retrieval is supporting context only.
             </p>
+            <p class="hygiene-callout hidden" id="memory-hygiene-callout" role="status"></p>
             <div class="memory-controls" aria-label="Memory filters">
               <input id="memory-search" type="search" placeholder="Search memory" aria-label="Search memory" />
               <select id="memory-layer" aria-label="Memory layer">
@@ -183,6 +192,6 @@
       </div>
     </section>
   </div>
-  <script src="/app.js"></script>
+  <script src="/app.js?v=39965"></script>
 </body>
 </html>

@@ -37,6 +37,7 @@ EXPLANATION_KEYS = {
     "retrieval_mode",
     "provenance",
     "provenance_available",
+    "inclusion_reason",
 }
 
 
@@ -98,6 +99,7 @@ class RetrievalExplanationTests(IsolatedDbTestCase):
             "is_canon",
             "provenance",
             "provenance_available",
+            "inclusion_reason",
             "explanation",
         ):
             self.assertIn(key, item, msg=f"missing top-level {key}")
@@ -107,6 +109,10 @@ class RetrievalExplanationTests(IsolatedDbTestCase):
         self.assertEqual(set(explanation.keys()), EXPLANATION_KEYS)
         self.assertEqual(explanation["retrieval_mode"], mode)
         self.assertIsInstance(explanation["score_breakdown"], dict)
+        inclusion_reason = item["inclusion_reason"]
+        assert isinstance(inclusion_reason, str)
+        self.assertTrue(inclusion_reason.startswith("Pulled because:"))
+        self.assertEqual(explanation["inclusion_reason"], inclusion_reason)
 
         provenance = explanation["provenance"]
         assert isinstance(provenance, dict)
@@ -180,6 +186,78 @@ class RetrievalExplanationTests(IsolatedDbTestCase):
         explanation = hit["explanation"]
         assert isinstance(explanation, dict)
         self.assertTrue(bool(explanation["is_canon"]))
+
+    def test_inclusion_reason_cites_constraint_type(self) -> None:
+        memory_id = self._insert_probe(
+            content=f"{self.probe} No direct Codex-to-Cursor communication channel",
+            memory_type="constraint",
+            summary="Pipeline stays Crowley-only between agents",
+        )
+        results = crowley.retrieve_memories(
+            f"{self.probe} constraint must required",
+            limit=50,
+            project_id=self.project_id,
+        )
+        hit = next((item for item in results if int(item["id"]) == memory_id), None)
+        self.assertIsNotNone(hit)
+        assert hit is not None
+        reason = str(hit["inclusion_reason"])
+        self.assertIn("constraint memory", reason)
+
+    def test_inclusion_reason_cites_open_ticket_link(self) -> None:
+        ticket = crowley.create_ticket(
+            "Retrieval inclusion ticket probe",
+            assignee="cursor",
+            project_id=self.project_id,
+        )
+        ticket_id = int(ticket["ticket"]["id"])
+        memory_id = self._insert_probe(
+            content=f"{self.probe} linked handoff for ticket #{ticket_id}",
+            memory_type="project_update",
+            source="cursor",
+        )
+        crowley.update_ticket(
+            ticket_id,
+            actor="cursor",
+            status="in_progress",
+            linked_memory_id=memory_id,
+        )
+        results = crowley.retrieve_memories(
+            f"ticket #{ticket_id} retrieval inclusion probe",
+            limit=50,
+            project_id=self.project_id,
+        )
+        hit = next((item for item in results if int(item["id"]) == memory_id), None)
+        self.assertIsNotNone(hit)
+        assert hit is not None
+        reason = str(hit["inclusion_reason"])
+        self.assertIn(f"ticket #{ticket_id}", reason)
+        self.assertIn("handoff link", reason)
+
+    def test_agent_sync_bundle_includes_inclusion_reason(self) -> None:
+        self._insert_probe(
+            content=f"{self.probe} agent sync inclusion reason payload",
+            memory_type="lesson",
+            summary="Lesson learned from retrieval inclusion work",
+        )
+        bundle = crowley.build_agent_sync_bundle("cursor", limit=5)
+        memories = bundle.get("relevant_memories")
+        assert isinstance(memories, list)
+        self.assertGreaterEqual(len(memories), 1)
+        first = memories[0]
+        self.assertIn("inclusion_reason", first)
+        self.assertTrue(str(first["inclusion_reason"]).startswith("Pulled because:"))
+
+    def test_build_prompt_supporting_memory_includes_inclusion_reason(self) -> None:
+        self._insert_probe(
+            content=f"{self.probe} prompt inclusion reason one-line form",
+            memory_type="qa_result",
+            summary="QA verified retrieval inclusion reasons render in prompt",
+        )
+        messages = crowley.build_prompt(f"{self.probe} qa test regression")
+        system = messages[0]["content"]
+        self.assertIn("Pulled because:", system)
+        self.assertIn("Supporting memory", system)
 
 
 if __name__ == "__main__":

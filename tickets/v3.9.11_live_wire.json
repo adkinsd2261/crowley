@@ -1,0 +1,110 @@
+{
+  "objective": "V3.9.11 — Live Wire: turn compose 'In the air' into a living activity wire — agent pulses, ticket moves, handoffs, ambient fallbacks — useful to browser and agent sync alike.",
+  "context": "Mr. Go wants the compose footer to feel alive: who's on a ticket, who minted, who handed off — not a diagnostics dump. Small utility (activity_pulses + build_activity_wire), no file watcher or WebSocket. Agents leverage it too: Codex --before sees Cursor motion. Finish V3.9.9 (#62/#63) and V3.9.10 (#64–#69) before claiming V3.9.11.",
+  "decisions": [
+    "Task frame (V3.9.10) answers what to work on; live wire answers what's moving right now",
+    "Pulses are short-lived signal (~45 min window); handoffs and ticket_events remain authoritative",
+    "Ambient fallbacks when quiet — never an empty wire",
+    "5s poll sufficient — no WebSocket in v1",
+    "No chat turns in wire v1; no git/file watcher on bus",
+    "One ticket at a time — claim, implement, QA, approve, close"
+  ],
+  "non_goals": [
+    "File system / git watcher daemon",
+    "WebSocket push",
+    "Mr. Go chat turns in wire",
+    "Replacing Changes or Agent Feed tabs",
+    "AI narration of events — copy templates only"
+  ],
+  "risks": [
+    "Pulse spam from hooks — dedupe same agent/verb/ticket within 2 min",
+    "Ambient rows must not look like fake events — is_ambient styling",
+    "Sync bundle wire cap must not crowd out task_frame (V3.9.10)"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; test_activity_wire.py; browser spot-check wire rotates on claim/handoff; bus restart after API changes; codex_sync --before shows Cursor pulse when Cursor claims",
+  "next_action": "Mr. Go approved plan 2026-07-02; mint only — Cursor claims #70 after V3.9.10 #69 doc lock",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-02",
+    "note": "Approved 2026-07-02 — live wire in compose In the air; mint only, do not implement until V3.9.10 ladder complete."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.11 Live Wire: activity pulse table and POST API",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add activity_pulses table in setup_db (id, project_id, agent, verb, ticket_id, summary, created_at). Implement record_activity_pulse() and POST /api/activity/pulse body { agent, verb, summary?, ticket_id? }. Verbs v1: session_start, claimed, working, note, handoff, minted, closed. Files: crowley.py, app.py.",
+      "acceptance": [
+        "activity_pulses table created idempotently",
+        "POST /api/activity/pulse accepts valid verbs and persists row",
+        "record_activity_pulse never raises",
+        "Tests cover insert and retrieval window"
+      ]
+    },
+    {
+      "title": "V3.9.11 Live Wire: sync script pulse hooks",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add post_activity_pulse() to agent_sync_lib. Emit pulses from cursor_sync --before (session_start), --claim-ticket (claimed), --note (note), --after (handoff); codex_sync --before (session_start), --create-tickets (minted). Files: scripts/agent_sync_lib.py, cursor_sync.py, codex_sync.py.",
+      "acceptance": [
+        "cursor_sync --before posts session_start pulse",
+        "cursor_sync --claim-ticket posts claimed with ticket id",
+        "codex_sync --create-tickets posts minted with count/theme",
+        "Pulse failures do not block sync flow",
+        "Tests or integration fixture for pulse POST"
+      ]
+    },
+    {
+      "title": "V3.9.11 Live Wire: build_activity_wire builder",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Implement build_activity_wire(project_id): merge recent pulses (45 min), build_recent_changes_feed items, narrative copy layer, dedupe same agent/verb/ticket within 2 min. Ambient fallbacks when real items sparse: in_progress tickets by assignee, last_by_source staleness, project focus. Return items with id, kind, agent, verb, ticket_id, line, created_at, is_ambient. Files: tickets.py or crowley.py.",
+      "acceptance": [
+        "Wire merges pulses + ticket events + handoffs sorted by time",
+        "Narrative lines for claim/close/mint/handoff verbs",
+        "Ambient fallback when feed empty or stale",
+        "Dedupe within 2 min window",
+        "test_activity_wire.py covers merge, ambient, dedupe"
+      ]
+    },
+    {
+      "title": "V3.9.11 Live Wire: world and sync exposure",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add activity_wire to build_world_dashboard (cap 15, pinned_focus, active_agents) and build_agent_sync_bundle (cap 5, prioritize other-agent pulses). Print In the air block in print_agent_sync_bundle. Files: crowley.py, scripts/agent_sync_lib.py.",
+      "acceptance": [
+        "/api/world includes activity_wire key",
+        "/api/agent/sync includes slim activity_wire",
+        "Sync bundle prioritizes other-agent items",
+        "CLI --before prints In the air section",
+        "Tests assert payload shape and caps"
+      ]
+    },
+    {
+      "title": "V3.9.11 Live Wire: compose live wire UI",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Expand compose In the air: pinned focus line + activity-wire div with 1-2 rotating wire lines (8s rotate, pause when hidden). Agent-colored dots, ambient softer styling. renderActivityWire wired from 5s poll. Files: static/index.html, static/app.js, static/styles.css.",
+      "acceptance": [
+        "Compose shows pinned focus + wire lines below input",
+        "Wire rotates when more than 2 items",
+        "Ambient items styled softer than real events",
+        "node --check static/app.js passes",
+        "Manual spot-check desktop + 390px"
+      ]
+    },
+    {
+      "title": "V3.9.11 Live Wire: doc lock and version bump",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump CROWLEY_VERSION to 3.9.11, release label Live Wire, docs/V3.9.11_LIVE_WIRE.md, ADR, VERSIONS/PROJECT_STATE/TICKETS/WHERE_WE_ARE/PRE_V4 ladder, lock_in_state. Last ticket in batch.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.11",
+        "Release doc describes pulses, wire builder, compose UI, sync exposure",
+        "preflight and full test suite green",
+        "Bus restart QA for /api/health version match"
+      ]
+    }
+  ]
+}

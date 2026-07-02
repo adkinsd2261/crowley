@@ -137,7 +137,15 @@ class MemoryHygieneTests(IsolatedDbTestCase):
 
     def test_hygiene_api_wrapper_returns_grouped_payload(self) -> None:
         payload = crowley.memory_hygiene_report_api()
-        for key in ("stale", "noisy", "duplicates", "possible_conflicts", "counts"):
+        for key in (
+            "stale",
+            "noisy",
+            "duplicates",
+            "possible_conflicts",
+            "version_conflicts",
+            "stale_loops",
+            "counts",
+        ):
             self.assertIn(key, payload)
 
 

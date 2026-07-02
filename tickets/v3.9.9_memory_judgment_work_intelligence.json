@@ -1,0 +1,118 @@
+{
+  "objective": "V3.9.9 — Memory Judgment + Work Intelligence: Crowley knows what is fresh, useful, and what work is next — before V4 connectivity.",
+  "context": "V3.9.8 Runtime Hardening shipped (#50–#55): test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite. V3.9.9 is the next quality gate — brain upgrades on top of a boringly reliable floor.",
+  "decisions": [
+    "Two tracks in one release: Memory Judgment (Track A) + Work Intelligence (Track B)",
+    "One ticket at a time with QA gate — same process as V3.9.8",
+    "Do not mint/build until Mr. Go approves this packet",
+    "V4 connectivity starts after V3.9.9 gate passes"
+  ],
+  "non_goals": [
+    "V4 external collectors",
+    "Full UI overhaul",
+    "Destructive memory deletion without operator approval",
+    "Direct Codex-to-Cursor communication"
+  ],
+  "risks": [
+    "Memory scoring must not override filesystem/ticket authority order",
+    "Work intelligence summaries must cite sources (tickets, handoffs, docs)"
+  ],
+  "qa_expectations": "Regression suite with CROWLEY_TEST_MODE=1; browser QA on Project/Intelligence tabs for new summaries",
+  "next_action": "Mr. Go review packet; Codex mint when approved; Cursor claims first Track A ticket only",
+  "approval": {
+    "status": "draft",
+    "approved_by": null,
+    "approved_at": null,
+    "note": "Planning reserve — do not build until V3.9.8 gate passes and packet is approved"
+  },
+  "tickets": [
+    {
+      "title": "V3.9.9 Memory: freshness signals for state and loops",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Compare project_state, open_loops, and decisions against filesystem docs and recent ticket events. Surface stale/conflict hints in diagnostics and context bundle metadata — read-only, no auto-writes.",
+      "acceptance": [
+        "Freshness metadata on state fields and open loops in /api/context",
+        "Diagnostics mentions stale fields when doc mtime or ticket activity is newer",
+        "Tests cover fresh vs stale detection without mutating DB"
+      ]
+    },
+    {
+      "title": "V3.9.9 Memory: recency rules for where-are-we answers",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Tune recency weighting and prompt injection for 'what changed?' and 'where are we?' — prefer recent handoffs, ticket closes, and doc updates over old canon.",
+      "acceptance": [
+        "Recency boost for ticket_events and agent_activity in retrieval scoring",
+        "Regression fixtures for where-are-we queries prefer latest handoff",
+        "No change to authority order in MEMORY_HIERARCHY"
+      ]
+    },
+    {
+      "title": "V3.9.9 Memory: usefulness scoring metadata",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add lean usefulness signals on memory_items (access count, last retrieved, source tier) as metadata — not full UI overhaul.",
+      "acceptance": [
+        "Schema or JSON metadata fields for usefulness without migration breakage",
+        "retrieve_memories populates explanation with usefulness tier",
+        "Tests for scoring metadata presence"
+      ]
+    },
+    {
+      "title": "V3.9.9 Memory: non-destructive hygiene workflow",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Operator-facing hygiene report: duplicate candidates, stale summaries, canon/doc conflicts — suggest actions, never auto-delete.",
+      "acceptance": [
+        "/api/diagnostics or hygiene endpoint lists candidates with reasons",
+        "CLI or script entry point for hygiene report",
+        "Tests assert no destructive writes in report path"
+      ]
+    },
+    {
+      "title": "V3.9.9 Work: ticket release grouping and timelines",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Group tickets by release/theme from events + handoffs. Shipped-work timelines on Project tab or context bundle.",
+      "acceptance": [
+        "Release grouping helper from ticket_events and version docs",
+        "Context/tickets API exposes grouped shipped work",
+        "Static or API tests for grouping logic"
+      ]
+    },
+    {
+      "title": "V3.9.9 Work: blocked-risk and dependency summaries",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Summarize blocked tickets, assignee gaps, and parent/child dependencies for prompts and Intelligence drawer.",
+      "acceptance": [
+        "Blocked-risk block in build_prompt tickets section",
+        "Project/Intelligence UI shows blocked summary when blockers exist",
+        "Tests for blocked detection from ticket status"
+      ]
+    },
+    {
+      "title": "V3.9.9 Work: what-is-next reasoning layer",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Read-only 'what is next and why?' from open tickets, project_state.next_action, recent decisions, and handoffs — structured for chat and /api/context.",
+      "acceptance": [
+        "recommended_next_action enriched with ticket IDs and rationale",
+        "Diagnostics includes next-work summary with sources cited",
+        "Regression test for next-action assembly"
+      ]
+    },
+    {
+      "title": "V3.9.9 doc lock and version bump",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump to 3.9.9, ADR-038, release doc, PRE_V4 ladder update, lock_in_state.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.9",
+        "docs/V3.9.9_MEMORY_JUDGMENT_WORK_INTELLIGENCE.md",
+        "Full test suite and preflight green"
+      ]
+    }
+  ]
+}

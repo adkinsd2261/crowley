@@ -723,6 +723,23 @@ def group_tickets_by_parent(
     return groups
 
 
+def _enrich_tickets_with_handoff_links(
+    tickets: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Attach linked_handoff summary metadata for sync/UI (V3.9.9 #61)."""
+    enriched: list[dict[str, object]] = []
+    for ticket in tickets:
+        item = dict(ticket)
+        mem_id = item.get("linked_memory_id")
+        if mem_id is not None:
+            linked = _ticket_linked_handoff(int(mem_id))
+            if linked is not None:
+                item["linked_handoff"] = linked
+                item["linked_handoff_summary"] = linked.get("summary")
+        enriched.append(item)
+    return enriched
+
+
 def build_tickets_summary(
     project_id: int | None,
     agent: str | None = None,
@@ -743,7 +760,9 @@ def build_tickets_summary(
         }
 
     open_rows = list_tickets(project_id=project_id, open_only=True, limit=50)
-    open_payload = [_ticket_row_to_dict(row) for row in open_rows]
+    open_payload = _enrich_tickets_with_handoff_links(
+        [_ticket_row_to_dict(row) for row in open_rows]
+    )
     grouped_open = group_tickets_by_parent(open_payload)
     agent_norm = agent.strip().lower() if isinstance(agent, str) else None
     assigned = [
@@ -764,7 +783,9 @@ def build_tickets_summary(
         "grouped_open": grouped_open,
         "assigned_to_agent": assigned,
         "blocked": blocked,
-        "recently_closed": [_ticket_row_to_dict(row) for row in closed_rows],
+        "recently_closed": _enrich_tickets_with_handoff_links(
+            [_ticket_row_to_dict(row) for row in closed_rows]
+        ),
         "counts": {
             "open": count_tickets(project_id=project_id, status="open"),
             "in_progress": count_tickets(project_id=project_id, status="in_progress"),
@@ -772,6 +793,20 @@ def build_tickets_summary(
             "open_total": count_tickets(project_id=project_id, open_only=True),
         },
     }
+
+
+def _ticket_handoff_prompt_suffix(ticket: dict[str, object]) -> str:
+    """Prompt suffix for ticket ↔ handoff link (V3.9.9 #61)."""
+    linked = ticket.get("linked_handoff")
+    if isinstance(linked, dict):
+        mem_id = linked.get("memory_id")
+        summary = linked.get("summary")
+        if mem_id is not None:
+            return f" · handoff #{mem_id}: {summary}"
+    mem_id = ticket.get("linked_memory_id")
+    if mem_id is not None:
+        return f" · handoff #{mem_id}"
+    return ""
 
 
 def _format_tickets_prompt_section(
@@ -790,7 +825,7 @@ def _format_tickets_prompt_section(
                 continue
             lines.append(
                 f"- #{ticket.get('id')} [{ticket.get('status')}] P{ticket.get('priority')} "
-                f"{ticket.get('title')}"
+                f"{ticket.get('title')}{_ticket_handoff_prompt_suffix(ticket)}"
             )
     else:
         lines.append("Assigned: (none)")

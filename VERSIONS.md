@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.7 (`Crowley V3.9.7 Workspace Experience & Reliability`)
-**Next planned:** V4 connectivity.
+**Current:** V3.9.8 (`Crowley V3.9.8 Runtime Hardening`) — local code; version bumps to 3.9.9 at ticket #63
+**Next planned:** V3.9.9 Context That Feeds → V3.9.10 Task-Frame Context → V3.9.11 Live Wire → V4 connectivity
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -29,8 +29,10 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.5  | shipped  | 2026-07-02 | Conversation + Model Behavior — mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6  | shipped  | 2026-07-02 | Workspace Polish — panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | V3.9.7  | shipped  | 2026-07-02 | Workspace Experience & Reliability — UI polish, embed fallback, CI slim deps, module extraction, metrics |
-| V3.9.8  | reserve  | TBD        | Work Intelligence |
-| V3.9.9  | reserve  | TBD        | Operator Confidence / Preflight |
+| V3.9.8  | shipped  | 2026-07-02 | Runtime Hardening — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite |
+| V3.9.9  | active   | 2026-07-02 | Context That Feeds — quality gate, slim sync, handoff upgrade, UI/hygiene (#56–#63) |
+| V3.9.10 | reserve  | TBD        | Task-Frame Context — minted #64–#69 |
+| V3.9.11 | reserve  | TBD        | Live Wire — minted #70–#75 |
 
 ---
 

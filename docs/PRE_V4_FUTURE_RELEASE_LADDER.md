@@ -1,7 +1,7 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** Planning reserve — do not mint tickets until V4 connectivity is underway or re-scoped.
-**Baseline:** V3.9.7 shipped; Pre-V4 quality plan and experience batch complete.
+**Status:** V3.9.9 active locally · V3.9.10–V3.9.11 minted · V4 after .9/.10/.11 gate.
+**Baseline:** V3.9.7 on `origin/main`; V3.9.8+ in local working tree.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
 ---
@@ -26,9 +26,13 @@ The target state before V4:
 | V3.9.5 | Conversation + Model Behavior | Shipped (#25–#30) |
 | V3.9.6 | Workspace Polish | Shipped (#31–#36) |
 | V3.9.7 | Workspace Experience & Reliability | Shipped (#40–#49) |
+| V3.9.8 | Runtime Hardening | Local (#50–#55) — push with V3.9.9 lock |
+| V3.9.9 | Context That Feeds | **Active** (#56–#61 done; #62 QA; #63 lock) |
+| V3.9.10 | Task-Frame Context | Minted (#64–#69) — after V3.9.9 |
+| V3.9.11 | Live Wire | Minted (#70–#75) — after V3.9.10 |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-V4 connectivity is the active initiative. V3.9.8–V3.9.9 remain planning reserve.
+V4 connectivity starts after V3.9.11 doc lock (or Mr. Go reprioritizes).
 
 ---
 
@@ -38,34 +42,31 @@ V4 connectivity is the active initiative. V3.9.8–V3.9.9 remain planning reserv
 
 Shipped as experience + reliability dual track — see [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md). Original "Memory Freshness" theme deferred to a future gate if needed.
 
-### V3.9.8 -- Work Intelligence
+### V3.9.8 — Runtime Hardening (shipped)
 
-**Goal:** make Crowley understand the work board, not just display it.
+Shipped — see [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md). Unified test mode, model probe, `/api/health` runtime block, sqlite-vec safe fallback, fragile-startup regression suite.
 
-Likely focus:
+### V3.9.9 — Context That Feeds (active)
 
-- Release grouping for tickets.
-- Ticket dependency and blocked-risk summaries.
-- "What is next and why?" reasoning from tickets, handoffs, docs, and decisions.
-- Automatic shipped-work timelines from ticket events and handoffs.
-- Better summaries of Cursor/Codex work without raw handoff reading.
+**Goal:** Better memory entering better handoffs — quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene.
 
-Done when Crowley can explain the current work program like a project co-founder.
+**Packet:** `tickets/v3.9.9_context_that_feeds.json` — approved, minted #56–#63.
 
-### V3.9.9 -- Operator Confidence / Preflight
+**Status:** #56–#61 closed locally; **#62 in_progress** (UI + hygiene — awaiting QA); **#63** doc lock pending.
 
-**Goal:** make it safe to start V4.
+### V3.9.10 — Task-Frame Context (minted)
 
-Likely focus:
+**Goal:** Task frame first, supporting retrieval second — ticket narrative drives context, not generic search.
 
-- One-command health/preflight check.
-- Bus/version drift detection.
-- Doc-lock checks.
-- Test/QA summary.
-- V4 readiness diagnostic with hard yes/no and blockers.
-- Final cleanup of stale state, loops, docs, and tickets.
+**Packet:** `tickets/v3.9.10_task_frame_context.json` — approved 2026-07-02, minted #64–#69. Do not claim until V3.9.9 #63 closes.
 
-Done when Crowley can tell Mr. Go whether V4 can begin and why.
+### V3.9.11 — Live Wire (minted)
+
+**Goal:** Compose "In the air" live activity wire — agent pulses, ticket moves, ambient fallbacks; exposed to browser and agent sync.
+
+**Packet:** `tickets/v3.9.11_live_wire.json` — approved 2026-07-02, minted #70–#75. Do not claim until V3.9.10 #69 closes.
+
+Reserve packet `tickets/v3.9.9_memory_judgment_work_intelligence.json` — superseded by Context That Feeds theme.
 
 ---
 

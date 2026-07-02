@@ -215,7 +215,7 @@ def print_tickets_summary(sync: dict[str, Any], *, agent: str) -> None:
                 parent_note = f" child of #{parent}" if parent is not None else ""
                 print(
                     f"  - #{item.get('id')} [{item.get('status')}] P{item.get('priority')} "
-                    f"{clip(str(item.get('title', '')))}{parent_note}"
+                    f"{clip(str(item.get('title', '')))}{parent_note}{ticket_handoff_note(item)}"
                 )
     print("")
     grouped = as_list(tickets.get("grouped_open"))
@@ -230,13 +230,13 @@ def print_tickets_summary(sync: dict[str, Any], *, agent: str) -> None:
             label = "initiative" if group.get("is_initiative") else "ticket"
             print(
                 f"  - {label} #{ticket.get('id')} [{ticket.get('status')}] P{ticket.get('priority')} "
-                f"{clip(str(ticket.get('title', '')))}"
+                f"{clip(str(ticket.get('title', '')))}{ticket_handoff_note(ticket)}"
             )
             for child in as_list(group.get("children"))[:5]:
                 if isinstance(child, dict):
                     print(
                         f"    - child #{child.get('id')} [{child.get('status')}] P{child.get('priority')} "
-                        f"{clip(str(child.get('title', '')))}"
+                        f"{clip(str(child.get('title', '')))}{ticket_handoff_note(child)}"
                     )
         print("")
     blocked = as_list(tickets.get("blocked"))
@@ -246,7 +246,19 @@ def print_tickets_summary(sync: dict[str, Any], *, agent: str) -> None:
     else:
         for item in blocked[:5]:
             if isinstance(item, dict):
-                print(f"  - #{item.get('id')} {clip(str(item.get('title', '')))}")
+                print(
+                    f"  - #{item.get('id')} {clip(str(item.get('title', '')))}"
+                    f"{ticket_handoff_note(item)}"
+                )
+    closed = as_list(tickets.get("recently_closed"))
+    if closed:
+        print("recently closed (handoff-linked):")
+        for item in closed[:5]:
+            if isinstance(item, dict):
+                print(
+                    f"  - #{item.get('id')} {clip(str(item.get('title', '')))}"
+                    f"{ticket_handoff_note(item)}"
+                )
     print("")
 
 
@@ -255,6 +267,15 @@ def clip(text: str, limit: int = 180) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 3].rstrip() + "..."
+
+
+def feedback_section_markdown(title: str, items: list[str]) -> str:
+    """Optional post-work feedback section — omitted when empty (V3.9.9 #60)."""
+    cleaned = [item.strip() for item in items if item and item.strip()]
+    if not cleaned:
+        return ""
+    body = "\n".join(f"- {item}" for item in cleaned)
+    return f"## {title}\n\n{body}\n\n"
 
 
 def handoff_summary_line(content: str) -> str:
@@ -277,6 +298,24 @@ def handoff_summary_line(content: str) -> str:
                 return stripped
     first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
     return clip(first, 160)
+
+
+def ticket_handoff_note(ticket: dict[str, object]) -> str:
+    """Short handoff link suffix for ticket sync lines (V3.9.9 #61)."""
+    linked = ticket.get("linked_handoff")
+    if isinstance(linked, dict):
+        mem_id = linked.get("memory_id")
+        summary = linked.get("summary")
+        if mem_id is not None:
+            return f" · handoff #{mem_id}: {clip(str(summary or ''))}"
+    mem_id = ticket.get("linked_memory_id")
+    if mem_id is not None:
+        return f" · handoff #{mem_id}"
+    return ""
+
+
+def format_handoff_closed_ticket(memory_id: int, ticket_id: int) -> str:
+    return f"Handoff #{memory_id} closed ticket #{ticket_id}."
 
 
 def as_list(value: Any) -> list[Any]:
@@ -332,7 +371,14 @@ def print_agent_activity(sync: dict[str, Any]) -> None:
         last_at = entry.get("last_at", "?")
         summary = entry.get("summary", "")
         mem_id = entry.get("memory_id", "?")
-        print(f"  - {source}: {last_at} (#{mem_id}) — {clip(str(summary), 120)}")
+        ticket_note = ""
+        linked = entry.get("linked_ticket_ids")
+        if isinstance(linked, list) and linked:
+            ticket_note = " [tickets: " + ", ".join(f"#{tid}" for tid in linked) + "]"
+        print(
+            f"  - {source}: {last_at} (#{mem_id}) — "
+            f"{clip(str(summary), 120)}{ticket_note}"
+        )
     print("")
 
 
@@ -365,12 +411,27 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
     print("")
     print_agent_activity(sync)
 
-    print("events from this agent:")
-    own = as_list(sync.get("events_from_this_agent"))
-    if not own:
+    print_tickets_summary(sync, agent=agent)
+
+    decisions = as_list(sync.get("recent_decisions"))
+    print("recent decisions:")
+    if not decisions:
         print("  - (none)")
     else:
-        for item in own[:5]:
+        for item in decisions[:5]:
+            if isinstance(item, dict):
+                text = item.get("summary") or item.get("detail") or item.get("decision")
+                print(f"  - {clip(str(text or item))}")
+            else:
+                print(f"  - {clip(str(item))}")
+
+    print("")
+    constraints = as_list(sync.get("constraint_memories"))
+    print("constraint memories:")
+    if not constraints:
+        print("  - (none)")
+    else:
+        for item in constraints[:5]:
             print(f"  - {event_display_line(item)}")
 
     print("")
@@ -383,20 +444,27 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
             print(f"  - {event_display_line(item)}")
 
     print("")
-    print_tickets_summary(sync, agent=agent)
-
-    print("open tasks:")
-    tasks = as_list(sync.get("open_tasks"))
-    if not tasks:
+    print("events from this agent:")
+    own = as_list(sync.get("events_from_this_agent"))
+    if not own:
         print("  - (none)")
     else:
-        for item in tasks[:5]:
-            if isinstance(item, dict):
-                title = item.get("title") or item.get("task") or item.get("content")
-                tid = item.get("id", "?")
-                print(f"  - #{tid} {clip(str(title or item))}")
-            else:
-                print(f"  - {clip(str(item))}")
+        for item in own[:3]:
+            print(f"  - {event_display_line(item)}")
+
+    print("")
+    memories = as_list(sync.get("relevant_memories"))
+    print("top retrieved memories:")
+    if not memories:
+        print("  - (none)")
+    else:
+        for item in memories[:8]:
+            line = event_display_line(item)
+            reason = item.get("inclusion_reason") if isinstance(item, dict) else None
+            if isinstance(reason, str) and reason.strip():
+                line = f"{line} [{clip(reason, 120)}]"
+            print(f"  - {line}")
+    print("")
 
 
 def verify_agent_handoff(agent: str) -> tuple[bool, str]:
@@ -477,8 +545,26 @@ def handoff_since_session(agent: str) -> bool:
         return False
 
 
+def is_slim_sync_bundle(sync: dict[str, Any]) -> bool:
+    """True when /api/agent/sync returned the V3.9.9 slim bundle."""
+    if sync.get("bundle_shape") == "slim_v399":
+        return True
+    if isinstance(sync.get("bundle_caps"), dict):
+        return True
+    if (
+        "constraint_memories" in sync
+        and "canon" not in sync
+        and "open_loops" not in sync
+        and "open_tasks" not in sync
+    ):
+        return True
+    return False
+
+
 def print_sync_extras(sync: dict[str, Any], *, agent: str) -> None:
-    """Decisions, loops, tickets, and retrieved memories."""
+    """Legacy extras — slim bundles print everything in print_agent_sync_bundle."""
+    if is_slim_sync_bundle(sync):
+        return
     decisions = as_list(sync.get("recent_decisions"))
     print("recent decisions:")
     if not decisions:

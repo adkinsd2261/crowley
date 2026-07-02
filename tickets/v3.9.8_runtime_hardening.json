@@ -1,0 +1,99 @@
+{
+  "objective": "V3.9.8 — Runtime Hardening: boot and test cleanly with no Ollama, no OpenAI key, no sqlite-vec, no Torch.",
+  "context": "V3.9.7 shipped embed-off CI, lazy backfill, preflight, and basic /api/health flags. V3.9.8 adds unified test mode, model probes, richer runtime diagnostics, sqlite-vec safe fallback, and a fragile-startup regression suite. One ticket at a time with QA gate.",
+  "decisions": [
+    "One ticket at a time — claim, implement, self-QA, approval, close, next",
+    "No version bump or doc lock until ticket #55",
+    "Do not re-ship V3.9.7 embed-off / lazy backfill / preflight work"
+  ],
+  "non_goals": [
+    "V4 connectivity",
+    "Memory judgment or work intelligence (V3.9.9)",
+    "New UI features",
+    "Batch shipping all tickets in one commit"
+  ],
+  "risks": [
+    "Model stub must not break existing mocked tests",
+    "Test mode env must apply before first crowley import in CI"
+  ],
+  "qa_expectations": "./venv/bin/python3 -m unittest discover -s tests -q with CROWLEY_TEST_MODE=1; node --check static/app.js",
+  "next_action": "Cursor: claim and implement #50 CROWLEY_TEST_MODE foundation only",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-01",
+    "note": "Build permission granted; one ticket at a time"
+  },
+  "tickets": [
+    {
+      "title": "V3.9.8 Runtime: CROWLEY_TEST_MODE foundation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Unified test mode via CROWLEY_TEST_MODE=1: force embed provider off, stub model calls with deterministic reply, expose is_test_mode(). Wire tests/db_helpers.py and CI to set the env. Add focused unit tests.",
+      "acceptance": [
+        "CROWLEY_TEST_MODE=1 forces embed off regardless of CROWLEY_EMBED_PROVIDER",
+        "iter_model_tokens and call_model return deterministic stub without network",
+        "is_test_mode() exported and documented",
+        "db_helpers sets CROWLEY_TEST_MODE=1 in setUp",
+        "CI workflow sets CROWLEY_TEST_MODE=1",
+        "New tests/test_test_mode.py passes"
+      ]
+    },
+    {
+      "title": "V3.9.8 Runtime: model availability probe",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Probe Ollama/OpenAI reachability at runtime. Chat fails gracefully with operator-visible message when no model is available (outside test mode).",
+      "acceptance": [
+        "probe_model_availability() returns structured status",
+        "Chat SSE returns clear error when no provider reachable",
+        "Unmocked test verifies graceful failure without crash"
+      ]
+    },
+    {
+      "title": "V3.9.8 Runtime: diagnostics on /api/health",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Rich runtime block on /api/health: embeddings, vector_store, retrieval, model probe. Extend preflight to check runtime block.",
+      "acceptance": [
+        "/api/health includes runtime object with embed, vec, retrieval, model fields",
+        "preflight --quick validates runtime block",
+        "Static tests or API tests cover shape"
+      ]
+    },
+    {
+      "title": "V3.9.8 Runtime: sqlite-vec safe fallback",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Log sqlite-vec load failures; never raise through setup_db or retrieve. Keyword-only fallback remains operator-visible.",
+      "acceptance": [
+        "Vec init failure logged once, not raised",
+        "Retrieval continues keyword-only after vec failure",
+        "Regression test for missing sqlite-vec extension"
+      ]
+    },
+    {
+      "title": "V3.9.8 Runtime: fragile startup regression suite",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "tests/test_runtime_hardening.py: import crowley, setup_db, health, chat stub path — all without Ollama/OpenAI/Torch/sqlite-vec.",
+      "acceptance": [
+        "Suite runs in CI with CROWLEY_TEST_MODE=1",
+        "Covers import, setup_db, health endpoint, chat turn stub",
+        "Documents expected runtime flags in test docstrings"
+      ]
+    },
+    {
+      "title": "V3.9.8 Runtime: doc lock and version bump",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump CROWLEY_VERSION to 3.9.8, ADR-037, release doc, VERSIONS/PROJECT_STATE/TICKETS/WHERE_WE_ARE lock.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.8",
+        "docs/V3.9.8_RUNTIME_HARDENING.md",
+        "ADR-037 in DECISION_LOG",
+        "preflight and full test suite green"
+      ]
+    }
+  ]
+}

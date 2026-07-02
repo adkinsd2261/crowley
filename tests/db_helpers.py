@@ -36,6 +36,7 @@ class IsolatedDbTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        os.environ["CROWLEY_TEST_MODE"] = "1"
         os.environ["CROWLEY_EMBED_PROVIDER"] = "off"
         self._tmpdir = tempfile.TemporaryDirectory(prefix="crowley-test-")
         crowley.set_db_path(Path(self._tmpdir.name) / "test.db")

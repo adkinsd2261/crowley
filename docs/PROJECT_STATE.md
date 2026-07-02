@@ -1,8 +1,9 @@
 # Crowley — Project State
 
-**As of:** V3.9.7 · Workspace Experience & Reliability shipped
-**Planning:** V4 connectivity — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) · completed quality arc — [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
-**Last doc sync:** 2026-07-02 (V3.9.7 shipped; experience + reliability batch complete)
+**As of:** V3.9.8 local · V3.9.9 in progress (#62/#63)
+**Planning:** V3.9.10 Task-Frame Context (#64–#69) · V3.9.11 Live Wire (#70–#75) minted — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
+**Last doc sync:** 2026-07-02 (session pause — resume at #62 QA)
+**Git:** `origin/main` at V3.9.7; V3.9.8+ local uncommitted
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -33,7 +34,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **V3.9.4 shipped on `main`** — Agent Feed, ticket detail, handoff↔ticket links, work-board clarity, V4 onboarding lock
 - **V3.9.5 shipped on `main`** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30)
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
-- **V3.9.7 shipped on `main`** — drawer/chat polish, embed fallback, CI slim deps, `diagnostics.py`/`tickets.py` extraction, operator metrics, preflight (#40–#49)
+- **V3.9.8 shipped on `main`** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -67,7 +68,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**157**; isolated DB; gated by GitHub Actions on `main`) |
+| `tests/` | **Active** | QA unit tests (**219** locally; 4 doc-lock failures until #63) |
 | `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
 | `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
 | `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
@@ -123,7 +124,9 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.1 / V3.9.7 | GitHub Actions — core deps only; **157** tests with embed off |
+| Git + CI | ✅ V3.9.8 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **171** tests |
+| Test mode | ✅ V3.9.8 | `CROWLEY_TEST_MODE=1` — embed off + model stub |
+| Runtime health | ✅ V3.9.8 | `/api/health` `runtime` block; preflight validates |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
 | Canon synthesis | ✅ V3.9.2 | `scripts/synthesize_canon.py` — manual workflow; first run complete — see `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` |
 | Embed provider gate | ✅ V3.9.7 | `CROWLEY_EMBED_PROVIDER` env; lazy backfill; health flags |
@@ -233,7 +236,7 @@ curl http://127.0.0.1:8765/api/bus/health
 - [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md)
 - [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
 - [V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
-- [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md)
+- [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md)
 - [V3.9.6_WORKSPACE_POLISH.md](./V3.9.6_WORKSPACE_POLISH.md)
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 - [V3.9_CONCURRENT_TICKETING.md](./V3.9_CONCURRENT_TICKETING.md)

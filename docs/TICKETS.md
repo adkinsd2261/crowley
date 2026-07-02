@@ -1,37 +1,55 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.7 shipped · V4 connectivity next (2026-07-02)
+**As of:** V3.9.8 local · V3.9.9 in progress · V3.9.10–V3.9.11 minted (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Active initiative
+## Active initiative — resume at #62
 
-**Active:** V4 connectivity planning. Pre-V4 quality plan (V3.9.5 + V3.9.6) and V3.9.7 experience & reliability batch (#40–#49) are complete. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md](./V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md).
+**Current:** V3.9.9 Context That Feeds — `#56–#61` closed locally; `**#62` in_progress** (implemented, awaiting Mr. Go QA); `**#63` open** (doc lock + version bump to 3.9.9).
 
-| Ticket theme | Status |
-|--------------|--------|
-| V3.9.2 Memory Clarity (#9–#13) | Shipped on `main` |
-| V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
-| V3.9.4 Agent Visibility (#19–#23) | Shipped on `main` |
-| V3.9.5 Conversation + Model Behavior (#25–#30) | Shipped on `main` |
-| V3.9.6 Workspace Polish (#31–#36) | Shipped on `main` |
-| Pre-V4 QA hygiene (#37) | Shipped on `main` |
-| V3.9.7 Experience & Reliability (#40–#49) | Shipped on `main` |
+**Next ladders (minted, do not claim until prior ladder doc-locked):**
+
+
+| Release                    | Tickets | Packet                                    | Status                          |
+| -------------------------- | ------- | ----------------------------------------- | ------------------------------- |
+| V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Active** — finish #62 → #63   |
+| V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | Minted · approved · not started |
+| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | Minted · approved · not started |
+
+
+See [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+
+
+| Ticket theme                                   | Status                                       |
+| ---------------------------------------------- | -------------------------------------------- |
+| V3.9.2 Memory Clarity (#9–#13)                 | Shipped on `main`                            |
+| V3.9.3 Planning Workflow (#14–#18)             | Shipped on `main`                            |
+| V3.9.4 Agent Visibility (#19–#23)              | Shipped on `main`                            |
+| V3.9.5 Conversation + Model Behavior (#25–#30) | Shipped on `main`                            |
+| V3.9.6 Workspace Polish (#31–#36)              | Shipped on `main`                            |
+| Pre-V4 QA hygiene (#37)                        | Shipped on `main`                            |
+| V3.9.7 Experience & Reliability (#40–#49)      | Shipped on `main`                            |
+| V3.9.8 Runtime Hardening (#50–#55)             | **Local only** — not pushed to `origin/main` |
+| V3.9.9 Context That Feeds (#56–#63)            | **Local only** — #62/#63 remain              |
+
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
-Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`, `#25-#30`, `#31-#36`, `#37`, `#40-#49`; no active V3.9.7 implementation tickets remain.
+Draft tickets `#4-#8` were cancelled as superseded. Reserve packet `tickets/v3.9.9_memory_judgment_work_intelligence.json` superseded by Context That Feeds theme.
 
 ---
 
 ## Open loops (tracked in DB — post lock-in hygiene)
 
-| Priority | Item |
-|----------|------|
-| P1 | LLM merge of duplicate content bodies (deferred) |
-| P3 | Debounced canon synthesis after ingest |
-| P4 | QA autonomous extraction |
+
+| Priority | Item                                             |
+| -------- | ------------------------------------------------ |
+| P1       | LLM merge of duplicate content bodies (deferred) |
+| P3       | Debounced canon synthesis after ingest           |
+| P4       | QA autonomous extraction                         |
+
 
 Resolved: test DB isolation (#13, shipped).
 
@@ -70,3 +88,4 @@ Resolved: test DB isolation (#13, shipped).
 6. New session onboarding: read `docs/WHERE_WE_ARE.md` (loaded in every Crowley prompt).
 7. Re-run lock-in after major ships: `scripts/lock_in_state.py`.
 8. CI runs on every push/PR to `main` — keep tests green before merge.
+
