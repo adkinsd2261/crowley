@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9.5 · V3.9.6 Workspace Polish active
-**Planning:** Active — [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) · future gates — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-02 (V3.9.5 shipped; V3.9.6 active)
+**As of:** V3.9.6 · Pre-V4 quality plan complete
+**Planning:** V4 connectivity — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) · completed quality arc — [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
+**Last doc sync:** 2026-07-02 (V3.9.6 shipped; Pre-V4 quality plan complete)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -32,7 +32,7 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **V3.9.3 shipped on `main`** — planning workflow, packet validation, parent tickets, cancel path
 - **V3.9.4 shipped on `main`** — Agent Feed, ticket detail, handoff↔ticket links, work-board clarity, V4 onboarding lock
 - **V3.9.5 shipped on `main`** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30)
-- **V3.9.6 planned** — workspace loading/error/empty states, streaming polish, navigation flow, recent changes feed, final docs lock
+- **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 
 It is **not** a multi-user service and **not** a full agent framework with tool use.
@@ -62,7 +62,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**140**; isolated DB; gated by GitHub Actions on `main`) |
+| `tests/` | **Active** | QA unit tests (**147**; isolated DB; gated by GitHub Actions on `main`) |
 | `.github/workflows/tests.yml` | **Active** | CI — `unittest discover` on push/PR |
 | `requirements.txt` | **Active** | Dependencies |
 | `VERSIONS.md` | **Active** | Release log |
@@ -89,7 +89,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.1 | Repository & CI | GitHub remote, Actions test gate, doc sweep |
 | V3.9.4 | Agent Visibility | Pre-V4 ladder complete; Agent Feed, ticket detail, handoff links, V4 doc lock |
 | V3.9.5 | Conversation + Model Behavior | Mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX |
-| V3.9.6 | Workspace Polish | Planned; UI states, streaming, navigation, recent changes, docs lock |
+| V3.9.6 | Workspace Polish | Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 

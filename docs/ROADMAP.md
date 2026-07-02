@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.5 shipped · V3.9.6 active · **2026-07-02**
+**As of:** V3.9.6 shipped · V4 connectivity next · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -61,18 +61,18 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     Pre-V4 quality V3.9.5 ✅
                                       │
                                       ▼
-                    Pre-V4 quality V3.9.6  ◄── YOU ARE HERE
+                    Pre-V4 quality V3.9.6 ✅
+                                      │
+                                      ▼
+                    V4 connectivity  ◄── YOU ARE HERE
                                       │
                                       ▼
                     Future pre-V4 gates (V3.9.7–V3.9.9)
-                                      │
-                                      ▼
-                              V4 connectivity
 ```
 
-**Shipped through V3.9.5:** … agent visibility, V4 doc lock, conversation mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX sweep.
+**Shipped through V3.9.6:** … conversation/model behavior (#25–#30), workspace polish — panel states, streaming, navigation, what-changed feed, livability (#31–#36).
 
-**Active initiative:** V3.9.6 Workspace Polish — loading/error/empty states, streaming polish, navigation, what-changed feed. V4 connectivity waits until V3.9.6 ships — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V4 connectivity — Codex plans architecture and mints tickets; Cursor implements when assigned. Pre-V4 quality plan complete — see [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md) and [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -174,13 +174,14 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 | Item | Rationale | Complexity | Status |
 |------|-----------|------------|--------|
-| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**90** tests) |
+| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**147** tests) |
 | V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
 | V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
 | V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | ✅ Shipped on `main` (#19–#23) |
 | V3.9.5 Conversation + Model Behavior | Make Crowley pleasant and mode-aware for daily project work | Medium | ✅ Shipped on `main` (#25–#30) |
-| V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | Open (#31–#36) |
-| Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | Open (#37) |
+| V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | ✅ Shipped on `main` (#31–#36) |
+| Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
+| V4 connectivity | External collectors and integrations | High | **Next** — Codex plans, Cursor implements |
 | V3.9.7 Memory Freshness + Truth Maintenance | Keep state, loops, canon, and recency aligned | Medium | Future planning reserve |
 | V3.9.8 Work Intelligence | Make Crowley reason over the work board and shipped timeline | Medium | Future planning reserve |
 | V3.9.9 Operator Confidence / Preflight | Health, doc-lock, test, and V4 readiness checks | Medium | Future planning reserve |
@@ -252,7 +253,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
 | **V3.9.4** | Agent Visibility | ✅ Agent feed, ticket detail/history, work-board clarity, V4 doc lock |
 | **V3.9.5** | Conversation + Model Behavior | ✅ Mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
-| **V3.9.6** | Workspace Polish | Planned UI states, streaming, navigation, recent changes, docs lock |
+| **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | **V3.9.7** | Memory Freshness + Truth Maintenance | Planning reserve; no tickets yet |
 | **V3.9.8** | Work Intelligence | Planning reserve; no tickets yet |
 | **V3.9.9** | Operator Confidence / Preflight | Planning reserve; no tickets yet |

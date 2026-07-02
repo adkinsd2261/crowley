@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.5 shipped · V3.9.6 active (2026-07-02)
+**As of:** V3.9.6 shipped · V4 connectivity next (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative
 
-**Active:** V3.9.6 Workspace Polish. V4 connectivity waits until V3.9.6 ships and docs are locked. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
+**Active:** V4 connectivity planning. Pre-V4 quality plan (V3.9.5 + V3.9.6) is complete. See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
 
 | Ticket theme | Status |
 |--------------|--------|
@@ -15,12 +15,12 @@
 | V3.9.3 Planning Workflow (#14–#18) | Shipped on `main` |
 | V3.9.4 Agent Visibility (#19–#23) | Shipped on `main` |
 | V3.9.5 Conversation + Model Behavior (#25–#30) | Shipped on `main` |
+| V3.9.6 Workspace Polish (#31–#36) | Shipped on `main` |
 | Pre-V4 QA hygiene (#37) | Shipped on `main` |
-| V3.9.6 Workspace Polish (#31–#36) | Open |
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
-Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`, `#25-#30`, `#37`; active implementation tickets are `#31-#36`.
+Draft tickets `#4-#8` were created during planning and are cancelled as superseded. Completed Cursor implementation tickets are `#9-#24`, `#25-#30`, `#31-#36`, `#37`; no active V3.9.6 implementation tickets remain.
 
 ---
 
@@ -39,6 +39,7 @@ Resolved: test DB isolation (#13, shipped).
 ## Completed (recent)
 
 - **V3.9.5 Conversation + Model Behavior** — mode classifier (#25), depth (#26), personality (#27), diagnostics separation (#28), fixtures (#29), chat UX (#30)
+- **V3.9.6 Workspace Polish** — panel states (#31), streaming (#32), navigation (#33), what-changed feed (#34), livability (#35), docs lock (#36)
 - **V3.9.4 Agent Visibility** — Agent Feed (#19), ticket detail (#20), handoff links (#21), work-board clarity (#22), V4 doc lock (#23)
 - **V3.9.3 Planning Workflow** — packet template/validation, parent initiatives, cancel path (#14–#18)
 - **V3.9.2 Memory Clarity** — canon workflow, retrieval explanations, hierarchy, hygiene, test isolation (#9–#13)

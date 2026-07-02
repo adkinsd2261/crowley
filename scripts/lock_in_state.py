@@ -65,27 +65,30 @@ SHIPPED_LOOP_SNIPPETS = (
     "loop hygiene and state lock-in",
     "bus restart/version drift",
     "version drift hardening",
+    # V3.9.6 workspace polish shipped (#31–#36)
+    "proceed to ticket #34",
+    "ticket #34 to implement",
+    "workspace polish in progress",
+    # V3.9.5 conversation shipped (#25–#30)
+    "v3.9.5 conversation",
 )
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields for the active V3.9.6 workspace polish batch."""
+    """Current world-model fields after V3.9.6 ship."""
     return {
-        "phase": "V3.9.5 shipped — V3.9.6 Workspace Polish in progress",
-        "focus": (
-            "V3.9.6 Workspace Polish (#31–#36): loading/error/empty states, "
-            "streaming polish, navigation, what-changed feed"
-        ),
+        "phase": "V3.9.6 shipped — Pre-V4 quality plan complete",
+        "focus": "V4 connectivity planning — Codex mints implementation tickets",
         "current_risk": (
-            "Ticket detail flickers on poll until #33; restart bus after version bumps."
+            "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Cursor: ship #31 loading/error/empty states; Codex reviews V3.9.6 slices."
+            "Codex: V4 connectivity planning/ticketing; Mr. Go validates workspace in browser."
         ),
         "what_changed": (
-            "V3.9.5 Conversation + Model Behavior shipped (#25–#30): mode classifier, "
-            "depth controller, co-founder voice, diagnostics separation, regression "
-            "fixtures, chat UX sweep. Version constants bumped to 3.9.5."
+            "V3.9.6 Workspace Polish shipped (#31–#36): panel states, streaming polish, "
+            "navigation flow, what-changed feed, livability pass, Changes fallback, "
+            "version lock. Constants bumped to 3.9.6."
         ),
     }
 

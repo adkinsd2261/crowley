@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.5 · V3.9.6 Workspace Polish active · **2026-07-02**
+**As of:** V3.9.6 · Pre-V4 quality plan complete · **2026-07-02**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 ---
@@ -38,9 +38,9 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.3** | **Shipped on `main`** — planning workflow doc, packet template/validation, parent initiatives, draft ticket cancel path |
 | **V3.9.4** | **Shipped** — Agent Feed, ticket detail, handoff links, work-board clarity, V4 doc lock (#19–#23) |
 | **V3.9.5** | **Shipped** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30) |
-| **V3.9.6** | **Planned** — loading/error/empty states, streaming polish, navigation flow, "what changed" feed |
+| **V3.9.6** | **Shipped** — panel states, streaming polish, navigation flow, what-changed feed, livability pass (#31–#36) |
 
-**Current constants:** `CROWLEY_VERSION = "3.9.5"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"`
+**Current constants:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -115,7 +115,7 @@ Hooks run `--before` automatically. After shipping:
 
 **Done and stable:**
 
-- Web UI + SSE chat, markdown replies, intelligence drawer (**Tickets**, Tasks, Loops, Decisions, **Agent Feed**, Memory)
+- Web UI + SSE chat, markdown replies, intelligence drawer (**Tickets**, Tasks, Loops, Decisions, **Changes**, **Agent Feed**, Memory)
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
@@ -133,7 +133,7 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 ladder complete. The active pre-V4 quality plan adds two small releases before connectivity: [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
+Pre-V4 quality plan complete (V3.9.5 + V3.9.6). See [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
@@ -141,10 +141,10 @@ Pre-V4 ladder complete. The active pre-V4 quality plan adds two small releases b
 | **V3.9.3 Planning Workflow** | Shipped on `main` | Tickets `#14–#18` |
 | **V3.9.4 Agent Visibility** | Shipped on `main` | Tickets `#19–#23` |
 | **V3.9.5 Conversation + Model Behavior** | Shipped on `main` | Tickets `#25–#30` |
-| **V3.9.6 Workspace Polish** | Open | Tickets `#31–#36` |
+| **V3.9.6 Workspace Polish** | Shipped on `main` | Tickets `#31–#36` |
 | **Pre-V4 QA Hygiene** | Shipped on `main` | Ticket `#37` |
 
-**V4 connectivity** waits until V3.9.6 ships and docs are locked.
+**V4 connectivity** is the next initiative — Codex plans; Cursor implements when tickets are minted.
 
 ---
 

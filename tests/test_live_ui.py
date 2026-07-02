@@ -113,10 +113,20 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
+    def test_onboarding_docs_locked_for_v396(self) -> None:
+        where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
+        versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
+        self.assertIn('CROWLEY_VERSION = "3.9.6"', where)
+        self.assertIn("V3.9.6 Workspace Polish", versions)
+        self.assertIn("shipped", versions.lower())
+        self.assertTrue((ROOT / "docs" / "V3.9.6_WORKSPACE_POLISH.md").is_file())
+        self.assertIn("Shipped", (ROOT / "docs" / "V3.9.6_WORKSPACE_POLISH.md").read_text(encoding="utf-8"))
+
     def test_onboarding_docs_locked_for_v395(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.5"', where)
+        self.assertIn("V3.9.5", where)
+        self.assertIn("Shipped", where)
         self.assertIn("V3.9.5 Conversation + Model Behavior", versions)
         self.assertIn("shipped", versions.lower())
         self.assertTrue((ROOT / "docs" / "V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md").is_file())

@@ -39,8 +39,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.5"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"
+CROWLEY_VERSION = "3.9.6"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"

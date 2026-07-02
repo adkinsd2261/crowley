@@ -290,8 +290,8 @@ Gate and apply logic should be deterministic; model output tested via fixtures/m
 
 ### 11.1 Dual version labels **(fact)**
 
-- `CROWLEY_VERSION` — `"3.9.5"`
-- `CROWLEY_RELEASE_LABEL` — `"Crowley V3.9.5 Conversation + Model Behavior"`
+- `CROWLEY_VERSION` — `"3.9.6"`
+- `CROWLEY_RELEASE_LABEL` — `"Crowley V3.9.6 Workspace Polish"`
 
 ### 11.2 VERSIONS.md is release log **(fact)**
 

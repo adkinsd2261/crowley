@@ -1,7 +1,7 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** Planning reserve — do not mint tickets until V3.9.6 is reviewed.
-**Baseline:** V3.9.5 shipped; active batch is V3.9.6 (#31–#36).
+**Status:** Planning reserve — do not mint tickets until V4 connectivity is underway or re-scoped.
+**Baseline:** V3.9.6 shipped; Pre-V4 quality plan complete.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
 ---
@@ -24,10 +24,10 @@ The target state before V4:
 | Release | Theme | Status |
 |---------|-------|--------|
 | V3.9.5 | Conversation + Model Behavior | Shipped (#25–#30) |
-| V3.9.6 | Workspace Polish | Active tickets #31–#36 |
+| V3.9.6 | Workspace Polish | Shipped (#31–#36) |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-Do not mint tickets for later releases until V3.9.6 is done or intentionally re-scoped.
+V4 connectivity is the active initiative. Later V3.9.7–V3.9.9 releases remain planning reserve.
 
 ---
 

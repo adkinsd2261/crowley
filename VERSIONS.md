@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.5 (`Crowley V3.9.5 Conversation + Model Behavior`)
-**Next planned:** V3.9.6 Workspace Polish. Future pre-V4 gates V3.9.7–V3.9.9 are planning reserve before V4 connectivity.
+**Current:** V3.9.6 (`Crowley V3.9.6 Workspace Polish`)
+**Next planned:** V4 connectivity. Future pre-V4 gates V3.9.7–V3.9.9 are planning reserve.
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -27,7 +27,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.1  | shipped  | 2026-07-01 | GitHub repo baseline + GitHub Actions CI |
 | V3.9.4  | shipped  | 2026-07-02 | Pre-V4 ladder complete — memory clarity, planning workflow, agent visibility, doc lock |
 | V3.9.5  | shipped  | 2026-07-02 | Conversation + Model Behavior — mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
-| V3.9.6  | planned  | TBD        | Workspace Polish — states, streaming, navigation, recent changes, docs lock |
+| V3.9.6  | shipped  | 2026-07-02 | Workspace Polish — panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | V3.9.7  | reserve  | TBD        | Memory Freshness + Truth Maintenance |
 | V3.9.8  | reserve  | TBD        | Work Intelligence |
 | V3.9.9  | reserve  | TBD        | Operator Confidence / Preflight |
@@ -446,6 +446,25 @@ Plan: [docs/V3.9.4_AGENT_VISIBILITY.md](./docs/V3.9.4_AGENT_VISIBILITY.md)
 **Version:** `CROWLEY_VERSION = "3.9.5"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.5 Conversation + Model Behavior"`
 
 Plan: [docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
+
+---
+
+## V3.9.6 — Workspace Polish
+
+**Shipped:** 2026-07-02 · Tickets `#31–#36`
+
+| Area | Detail |
+|------|--------|
+| Panel states | Loading/error/empty across chat, panels, ticket detail, Memory |
+| Streaming | RAF-batched updates, stick-to-bottom scroll, writing indicator, safe Refresh |
+| Navigation | Session tab/ticket persistence; fingerprint-gated re-renders; stable ticket detail |
+| What changed | `build_recent_changes_feed()` + Changes tab; agent-feed fallback for stale bus |
+| Livability | Overflow/wrap, drawer heights, mobile-ish tab layout |
+| Tests | **147 tests** (GitHub Actions on `main`) |
+
+**Version:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
+
+Plan: [docs/V3.9.6_WORKSPACE_POLISH.md](./docs/V3.9.6_WORKSPACE_POLISH.md)
 
 ---
 

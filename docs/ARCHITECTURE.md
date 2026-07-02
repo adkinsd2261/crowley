@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.5"` (`Crowley V3.9.5 Conversation + Model Behavior`)
+**Code version:** `CROWLEY_VERSION = "3.9.6"` (`Crowley V3.9.6 Workspace Polish`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -24,7 +24,7 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 11. **Multi-agent hub (V3.8)** — Codex/Cursor sync via `/api/agent/sync`; Crowley-only messaging.
 12. **Agent parity (V3.8.1)** — `agent_activity` in context/sync bundles; stop hook; activity-based verify.
 13. **Concurrent ticketing (V3.9)** — `tickets` board, sync mint/claim/close/cancel.
-14. **Pre-V4 quality (2026-07)** — V3.9.5 conversation/model behavior **shipped** (#25–#30); V3.9.6 workspace polish active.
+14. **Pre-V4 quality (2026-07)** — V3.9.5 conversation/model behavior **shipped** (#25–#30); V3.9.6 workspace polish **shipped** (#31–#36).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
 
@@ -235,8 +235,8 @@ crowley.py
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.5"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.5 Conversation + Model Behavior"` |
+| `CROWLEY_VERSION` | `"3.9.6"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.6 Workspace Polish"` |
 
 ---
 

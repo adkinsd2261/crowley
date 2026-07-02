@@ -18,6 +18,30 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-035 — V3.9.6 Workspace Polish shipped (Pre-V4 quality plan complete)
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.6`, `docs/V3.9.6_WORKSPACE_POLISH.md`, tickets `#31–#36`, **147 tests**, bus restart QA on `127.0.0.1:8765`
+
+### Context
+
+Pre-V4 quality plan required a livable browser workspace before V4 connectivity.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
+- Ship panel states, streaming polish, navigation flow, what-changed feed, livability pass, and onboarding doc lock
+- Declare Pre-V4 quality plan (V3.9.5 + V3.9.6) complete; V4 connectivity is the next initiative
+
+### Rejected
+
+- Visual redesign in V3.9.6
+- V4 collectors before quality plan completion
+- Deduplicating closeout events in Changes feed (deferred polish)
+
+---
+
 ## ADR-034 — V3.9.5 Conversation + Model Behavior shipped
 
 **Date:** 2026-07-02

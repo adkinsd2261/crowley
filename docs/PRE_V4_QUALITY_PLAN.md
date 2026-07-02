@@ -1,7 +1,7 @@
 # Crowley V3.9.5 + V3.9.6 -- Pre-V4 Quality Plan
 
-**Status:** V3.9.5 shipped · V3.9.6 active
-**Baseline:** V3.9.5 (`Crowley V3.9.5 Conversation + Model Behavior`)
+**Status:** Complete — V3.9.5 + V3.9.6 shipped (2026-07-02)
+**Baseline:** V3.9.6 (`Crowley V3.9.6 Workspace Polish`)
 **Owner model:** Mr. Go sets intent; Codex plans and reviews; Cursor implements; Crowley stores truth.
 
 ---
@@ -15,7 +15,7 @@ Ship two small releases before V4 connectivity:
 2. **V3.9.6 -- Workspace Polish**
    Make the browser workspace livable for daily use by tightening loading, error, empty, streaming, navigation, and "what changed" flow.
 
-V4 connectivity waits until both releases are shipped and docs are locked. Later pre-V4 gates are captured in [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) and should not be ticketed until this active batch is reviewed.
+V4 connectivity is the next initiative. Later pre-V4 gates are captured in [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md) and should not be ticketed until V4 planning begins.
 
 ---
 
@@ -106,10 +106,10 @@ Do not begin V4 connectivity until these are true:
 - Planning and exploration asks can become deep without a manual toggle. ✅
 - Diagnostics tone is separate from chat tone. ✅
 - Confirmed chat UX bugs are fixed without feature creep. ✅
-- Workspace panels have loading/error/empty states.
-- Recent Cursor/Codex changes are obvious from the browser.
-- V3.9.5 and V3.9.6 docs are current. (V3.9.5 locked 2026-07-02)
-- Full regression suite passes.
+- Workspace panels have loading/error/empty states. ✅
+- Recent Cursor/Codex changes are obvious from the browser. ✅
+- V3.9.5 and V3.9.6 docs are current. ✅ (locked 2026-07-02)
+- Full regression suite passes. ✅ (**147 tests**)
 
 ---
 
