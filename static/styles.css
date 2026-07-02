@@ -816,6 +816,102 @@ body {
   overflow-wrap: anywhere;
 }
 
+.project-panel,
+.project-panel-body {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.project-panel-head {
+  margin-bottom: 0.65rem;
+}
+
+.project-panel-name {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.project-panel-status {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.project-panel-version {
+  margin: 0 0 0.2rem;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--accent-soft);
+  overflow-wrap: anywhere;
+}
+
+.project-panel-sync {
+  margin: 0;
+  font-size: 0.625rem;
+  line-height: 1.35;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.project-state-grid {
+  margin: 0 0 0.65rem;
+  display: grid;
+  grid-template-columns: minmax(4.75rem, auto) minmax(0, 1fr);
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+}
+
+.project-state-grid div {
+  display: contents;
+}
+
+.project-state-grid dt {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+  padding-top: 0.1rem;
+}
+
+.project-state-grid dd {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.project-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--divider);
+}
+
+.project-count-pill {
+  font-size: 0.625rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.project-count-pill strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.project-panel .panel-state {
+  margin: 0;
+  padding: 0.35rem 0;
+  font-size: 0.75rem;
+}
+
 .memory-badge {
   display: inline-block;
   margin-right: 0.35rem;
@@ -1601,5 +1697,22 @@ body {
 
   .ticket-detail-meta {
     grid-template-columns: 1fr;
+  }
+
+  .project-state-grid {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .project-state-grid div {
+    display: block;
+  }
+
+  .project-state-grid dt {
+    margin-bottom: 0.12rem;
+  }
+
+  .project-counts {
+    gap: 0.3rem 0.45rem;
   }
 }

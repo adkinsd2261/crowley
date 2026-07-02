@@ -207,6 +207,38 @@ class WorldDashboardTests(IsolatedDbTestCase):
         ):
             self.assertIn(token, css)
 
+    def test_ui_contains_project_tab(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('data-tab="project"', html)
+        self.assertIn('data-label="Project"', html)
+        self.assertIn('id="panel-project"', html)
+        project_pos = html.index('data-tab="project"')
+        tickets_pos = html.index('data-tab="tickets"')
+        self.assertLess(project_pos, tickets_pos)
+        for token in (
+            "renderProjectPanel",
+            "projectPanelFingerprint",
+            "project-state-grid",
+            "project-counts",
+            "project-panel-version",
+            'activeContextTab = "project"',
+            "Next action",
+            "What changed",
+            "release_label",
+        ):
+            self.assertIn(token, js)
+        for token in (
+            ".project-state-grid",
+            ".project-counts",
+            ".project-panel-version",
+            "@media (max-width: 520px)",
+            ".project-state-grid div",
+            "display: block",
+        ):
+            self.assertIn(token, css)
+
     def test_ui_narrow_viewport_overflow_guards(self) -> None:
         css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

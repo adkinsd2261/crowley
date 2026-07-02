@@ -102,7 +102,10 @@
 
       <div class="context-body hidden" id="context-body">
         <div class="context-tabs" role="tablist" aria-label="Intelligence views">
-          <button type="button" class="context-tab is-active" role="tab" data-tab="tickets" data-label="Tickets" aria-selected="true">
+          <button type="button" class="context-tab is-active" role="tab" data-tab="project" data-label="Project" aria-selected="true">
+            Project
+          </button>
+          <button type="button" class="context-tab" role="tab" data-tab="tickets" data-label="Tickets" aria-selected="false">
             Tickets
           </button>
           <button type="button" class="context-tab" role="tab" data-tab="tasks" data-label="Tasks" aria-selected="false">
@@ -126,7 +129,10 @@
         </div>
         <p class="context-panel-meta" id="context-panel-meta">—</p>
         <div class="context-panels">
-          <div class="context-panel is-active" data-panel="tickets" role="tabpanel">
+          <div class="context-panel is-active" data-panel="project" role="tabpanel">
+            <div class="project-panel" id="panel-project" aria-live="polite"></div>
+          </div>
+          <div class="context-panel" data-panel="tickets" role="tabpanel" hidden>
             <p class="panel-role-note">Agent work board — Codex mints tickets; Cursor claims and ships them.</p>
             <ul class="panel-list" id="panel-tickets"></ul>
             <div class="ticket-detail hidden" id="ticket-detail" aria-live="polite"></div>

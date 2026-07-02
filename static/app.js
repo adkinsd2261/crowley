@@ -13,6 +13,7 @@ const phaseProgressLabelEl = document.getElementById("phase-progress-label");
 const phaseProgressCountEl = document.getElementById("phase-progress-count");
 const phaseProgressFillEl = document.getElementById("phase-progress-fill");
 const stateSyncEl = document.getElementById("state-sync");
+const panelProjectEl = document.getElementById("panel-project");
 const panelTicketsEl = document.getElementById("panel-tickets");
 const ticketDetailEl = document.getElementById("ticket-detail");
 const panelTasksEl = document.getElementById("panel-tasks");
@@ -41,7 +42,7 @@ const objectiveEl = document.getElementById("current-objective");
 
 let streaming = false;
 let pollTimer = null;
-let activeContextTab = "tickets";
+let activeContextTab = "project";
 let selectedTicketId = null;
 let lastDashboardFingerprint = "";
 let lastDashboardData = null;
@@ -49,6 +50,7 @@ let memorySearchTimer = null;
 let streamRenderFrame = null;
 let pendingStreamUpdate = null;
 let chatAutoscroll = true;
+let lastProjectPanelFingerprint = "";
 let lastTicketsFingerprint = "";
 let lastTicketDetailId = null;
 let lastTicketDetailFingerprint = "";
@@ -214,6 +216,7 @@ function changesItemsForDashboard(data = {}) {
 function updateTabBadges(counts = {}, data = {}) {
   const fallbackChanges = counts.recent_changes || changesItemsForDashboard(data).length;
   const map = {
+    project: 0,
     tickets: counts.tickets_open_total || counts.tickets_open || 0,
     tasks: counts.tasks_open || 0,
     loops: counts.loops_open || 0,
@@ -225,6 +228,11 @@ function updateTabBadges(counts = {}, data = {}) {
   contextTabs.forEach((tab) => {
     const key = tab.dataset.tab;
     const label = tab.dataset.label || key;
+    if (key === "project") {
+      tab.textContent = label;
+      tab.classList.remove("has-items");
+      return;
+    }
     const count = map[key] || 0;
     tab.textContent = count > 0 ? `${label} (${count})` : label;
     tab.classList.toggle("has-items", count > 0);
@@ -232,6 +240,17 @@ function updateTabBadges(counts = {}, data = {}) {
 }
 
 const PANEL_META = {
+  project: {
+    title: "Project state",
+    hint: "Live snapshot from /api/world — expanded view of the right rail.",
+    empty: "No active project.",
+    loading: "Loading project state…",
+    describe: (_items, data = {}) => {
+      const project = data.project;
+      if (!project) return "no active project";
+      return `${project.name} (${project.status})`;
+    },
+  },
   tickets: {
     title: "Agent work board",
     hint: "Authoritative for Codex/Cursor assigned work.",
@@ -301,6 +320,10 @@ function renderPanelState(el, kind, message) {
 }
 
 function setAllPanelsLoading() {
+  if (panelProjectEl) {
+    panelProjectEl.innerHTML =
+      '<p class="panel-state panel-state-loading" role="status">Loading project state…</p>';
+  }
   for (const [key, el] of Object.entries(PANEL_LISTS)) {
     if (!el) continue;
     const meta = PANEL_META[key];
@@ -310,6 +333,10 @@ function setAllPanelsLoading() {
 }
 
 function setAllPanelsError(message) {
+  if (panelProjectEl) {
+    panelProjectEl.innerHTML =
+      `<p class="panel-state panel-state-error" role="alert">${escapeHtml(message)}</p>`;
+  }
   for (const el of Object.values(PANEL_LISTS)) {
     if (el) renderPanelState(el, "error", message);
   }
@@ -334,6 +361,8 @@ function memoryLayerBadge(m) {
 
 function itemsForTab(data, tab) {
   switch (tab) {
+    case "project":
+      return data.project ? [data.project] : [];
     case "tickets":
       return data.tickets || [];
     case "tasks":
@@ -731,6 +760,7 @@ function renderTicketsPanel(groups = [], flat = []) {
     }
   }
   if (!blocks.length) {
+    lastProjectPanelFingerprint = "";
     lastTicketsFingerprint = "";
     renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
     return;
@@ -1308,6 +1338,124 @@ function renderStateSync(state, version, releaseLabel, filesystem = {}) {
   stateSyncEl.title = fsTitle || state?.updated_at || "";
 }
 
+function projectPanelFingerprint(data) {
+  const project = data.project;
+  const state = data.state || {};
+  const counts = data.counts || {};
+  return JSON.stringify({
+    project: project ? [project.id, project.name, project.status] : null,
+    state: [
+      state.phase,
+      state.focus,
+      state.current_risk,
+      state.next_action,
+      state.what_changed,
+      state.updated_at,
+    ],
+    version: data.version,
+    release_label: data.release_label,
+    phase_progress: data.phase_progress,
+    counts: [
+      counts.tickets_open_total ?? counts.tickets_open,
+      counts.tasks_open,
+      counts.loops_open,
+      counts.decisions,
+      counts.recent_changes,
+      counts.agent_feed,
+      counts.memory,
+    ],
+    synced_at: data.synced_at,
+  });
+}
+
+function renderProjectPanel(data) {
+  const el = panelProjectEl;
+  if (!el) return;
+  const fingerprint = projectPanelFingerprint(data);
+  if (fingerprint === lastProjectPanelFingerprint) return;
+  lastProjectPanelFingerprint = fingerprint;
+
+  if (!data.project) {
+    el.innerHTML =
+      '<p class="panel-state panel-state-empty" role="status">No active project.</p>';
+    return;
+  }
+
+  const project = data.project;
+  const state = data.state || {};
+  const counts = data.counts || {};
+  const version = data.version ? `v${data.version}` : "";
+  const release = data.release_label || "";
+  const versionLine = [version, release].filter(Boolean).join(" · ");
+
+  const syncParts = [];
+  const fs = data.filesystem || {};
+  if (fs.project_state_as_of) {
+    syncParts.push(String(fs.project_state_as_of).replace(/\*\*/g, "").trim());
+  }
+  if (state.updated_at) {
+    const rel = formatRelativeTime(state.updated_at);
+    const by = state.updated_by ? ` · ${state.updated_by}` : "";
+    syncParts.push(`DB ${rel}${by}`);
+  }
+  if (data.synced_at) {
+    syncParts.push(`↻ ${formatRelativeTime(data.synced_at)}`);
+  }
+
+  const progress = data.phase_progress;
+  let phaseValue = state.phase || "(unset)";
+  if (progress?.current && progress?.total) {
+    phaseValue = `${phaseValue} (${progress.current}/${progress.total})`;
+  }
+
+  const fields = [
+    ["Phase", phaseValue],
+    ["Focus", state.focus || "(unset)"],
+    ["Risk", state.current_risk || "(unset)"],
+    ["Next action", state.next_action || "(unset)"],
+    ["What changed", state.what_changed || "(unset)"],
+  ];
+
+  const fieldHtml = fields
+    .map(
+      ([label, value]) =>
+        `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`
+    )
+    .join("");
+
+  const countItems = [
+    ["Tickets", counts.tickets_open_total ?? counts.tickets_open ?? 0],
+    ["Tasks", counts.tasks_open ?? 0],
+    ["Loops", counts.loops_open ?? 0],
+    ["Decisions", counts.decisions ?? 0],
+    ["Changes", counts.recent_changes ?? 0],
+    ["Agent feed", counts.agent_feed ?? 0],
+    ["Memory", counts.memory ?? 0],
+  ]
+    .map(
+      ([label, count]) =>
+        `<span class="project-count-pill">${escapeHtml(label)} ` +
+        `<strong>${Number(count) || 0}</strong></span>`
+    )
+    .join("");
+
+  el.innerHTML =
+    `<div class="project-panel-body">` +
+    `<header class="project-panel-head">` +
+    `<p class="project-panel-name">${escapeHtml(project.name)} ` +
+    `<span class="project-panel-status">(${escapeHtml(project.status)})</span></p>` +
+    (versionLine
+      ? `<p class="project-panel-version">${escapeHtml(versionLine)}</p>`
+      : "") +
+    (syncParts.length
+      ? `<p class="project-panel-sync">${escapeHtml(syncParts.join(" · "))}</p>`
+      : "") +
+    `</header>` +
+    `<dl class="project-state-grid">${fieldHtml}</dl>` +
+    `<div class="project-counts" aria-label="Intelligence counts">${countItems}</div>` +
+    `</div>`;
+}
+
 function renderDashboard(data, { animate = false } = {}) {
   const fingerprint = dashboardFingerprint(data);
   const changed = fingerprint !== lastDashboardFingerprint;
@@ -1325,6 +1473,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderWorldState([]);
     renderPhaseProgress(null);
     renderStateSync(null, data.version, data.release_label);
+    renderProjectPanel(data);
     renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
     renderPanelList(panelTasksEl, [], () => "", PANEL_META.tasks.empty);
     renderPanelList(panelLoopsEl, [], () => "", PANEL_META.loops.empty);
@@ -1334,6 +1483,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
     selectedTicketId = null;
+    lastProjectPanelFingerprint = "";
     lastTicketsFingerprint = "";
     lastTicketDetailId = null;
     lastTicketDetailFingerprint = "";
@@ -1354,6 +1504,8 @@ function renderDashboard(data, { animate = false } = {}) {
     ["Next action", state.next_action || "(unset)"],
     ["What changed", state.what_changed || "(unset)"],
   ]);
+
+  renderProjectPanel(data);
 
   renderTicketsPanel(data.ticket_groups || [], data.tickets || []);
   syncSelectedTicketDetail(data.ticket_groups || [], data.tickets || []);
