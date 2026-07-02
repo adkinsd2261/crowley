@@ -1086,6 +1086,36 @@ body {
   line-height: 1.3;
 }
 
+.panel-list .change-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.panel-list .change-head {
+  display: block;
+}
+
+.panel-list .change-summary {
+  display: block;
+  line-height: 1.35;
+}
+
+.panel-list .change-next {
+  display: block;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.3;
+}
+
+.panel-list .change-kind-handoff {
+  color: #9fd0ff;
+}
+
+.panel-list .change-kind-ticket {
+  color: #ffd28a;
+}
+
 .panel-list .meta.agent-source-cursor {
   color: #9fd0ff;
 }

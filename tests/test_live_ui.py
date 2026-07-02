@@ -63,6 +63,24 @@ class WorldDashboardTests(IsolatedDbTestCase):
         assert isinstance(recent, list)
         self.assertEqual(dash["counts"]["agent_feed"], len(recent))
 
+    def test_dashboard_includes_recent_changes_feed(self) -> None:
+        dash = crowley.build_world_dashboard()
+        self.assertIn("recent_changes", dash)
+        self.assertIsInstance(dash["recent_changes"], list)
+        self.assertIn("recent_changes", dash["counts"])
+
+    def test_ui_contains_what_changed_feed(self) -> None:
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('data-tab="changes"', html)
+        self.assertIn('id="panel-changes"', html)
+        self.assertIn("renderChangesPanel", js)
+        self.assertIn("recent_changes", js)
+        self.assertIn("changes:", js)
+        for token in (".change-row", ".change-kind-handoff", ".change-kind-ticket"):
+            self.assertIn(token, css)
+
     def test_ui_contains_agent_feed_tab(self) -> None:
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")

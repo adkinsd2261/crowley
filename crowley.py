@@ -2745,6 +2745,148 @@ def list_ticket_events(ticket_id: int, *, limit: int = 20) -> list[sqlite3.Row]:
         conn.close()
 
 
+def list_recent_ticket_events_for_project(
+    project_id: int,
+    *,
+    limit: int = 20,
+) -> list[sqlite3.Row]:
+    """Recent ticket board events across a project (newest first)."""
+    limit = max(1, min(int(limit), 50))
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                te.id AS event_id,
+                te.ticket_id,
+                te.event_type,
+                te.actor,
+                te.payload,
+                te.created_at,
+                t.title AS ticket_title,
+                t.status AS ticket_status
+            FROM ticket_events te
+            INNER JOIN tickets t ON t.id = te.ticket_id
+            WHERE t.project_id = ?
+            ORDER BY datetime(te.created_at) DESC, te.id DESC
+            LIMIT ?
+            """,
+            (project_id, limit),
+        ).fetchall()
+        return list(rows)
+    finally:
+        conn.close()
+
+
+def _format_ticket_event_feed_summary(
+    event_type: str,
+    actor: str,
+    payload: dict[str, object],
+    *,
+    ticket_id: int,
+    ticket_title: str,
+) -> str:
+    title = _truncate(str(ticket_title or f"Ticket #{ticket_id}"), 80)
+    normalized = str(event_type or "event")
+    if normalized == "status_change":
+        return (
+            f"Ticket #{ticket_id} {title} — "
+            f"{payload.get('from', '?')} → {payload.get('to', '?')}"
+        )
+    if normalized == "created":
+        return f"Ticket #{ticket_id} opened — {title}"
+    if normalized == "claimed":
+        return f"Ticket #{ticket_id} claimed by {actor} — {title}"
+    if normalized == "cancelled":
+        reason = str(payload.get("reason") or "").strip()
+        base = f"Ticket #{ticket_id} cancelled — {title}"
+        return f"{base} ({reason})" if reason else base
+    if normalized == "handoff_linked":
+        mem = payload.get("memory_id")
+        return f"Ticket #{ticket_id} linked handoff memory #{mem} — {title}"
+    if normalized == "comment":
+        text = _truncate(str(payload.get("text") or ""), 120)
+        return f"Ticket #{ticket_id} comment — {text}" if text else f"Ticket #{ticket_id} comment — {title}"
+    if normalized == "assignee_change":
+        return (
+            f"Ticket #{ticket_id} assignee {payload.get('from', '?')} → "
+            f"{payload.get('to', '?')} — {title}"
+        )
+    if normalized == "priority_change":
+        return (
+            f"Ticket #{ticket_id} priority P{payload.get('from', '?')} → "
+            f"P{payload.get('to', '?')} — {title}"
+        )
+    return f"Ticket #{ticket_id} {normalized} — {title}"
+
+
+def build_recent_changes_feed(
+    project_id: int | None,
+    *,
+    limit: int = 20,
+) -> dict[str, object]:
+    """Unified recent-changes timeline from handoffs and ticket events."""
+    if project_id is None:
+        return {"items": []}
+
+    limit = max(1, min(int(limit), 50))
+    per_source = max(5, limit // 2)
+
+    agent_rows = list_recent_agent_events(limit=per_source, project_id=project_id)
+    memory_ids = [int(row["id"]) for row in agent_rows]
+    linked_tickets = _tickets_by_linked_memory_ids(memory_ids)
+    ticket_rows = list_recent_ticket_events_for_project(project_id, limit=per_source)
+
+    items: list[dict[str, object]] = []
+    for row in agent_rows:
+        items.append(
+            {
+                "kind": "handoff",
+                "id": f"handoff:{row['id']}",
+                "created_at": row["created_at"],
+                "source": row["source"],
+                "memory_type": row["memory_type"],
+                "summary": _handoff_summary_line(str(row["content"])),
+                "next_action": _handoff_next_action_line(str(row["content"])),
+                "linked_ticket_ids": linked_tickets.get(int(row["id"]), []),
+            }
+        )
+
+    for row in ticket_rows:
+        payload_raw = row["payload"]
+        try:
+            payload = json.loads(str(payload_raw or "{}"))
+        except json.JSONDecodeError:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        ticket_id = int(row["ticket_id"])
+        items.append(
+            {
+                "kind": "ticket",
+                "id": f"ticket_event:{row['event_id']}",
+                "created_at": row["created_at"],
+                "source": str(row["actor"] or "system"),
+                "event_type": row["event_type"],
+                "ticket_id": ticket_id,
+                "ticket_title": row["ticket_title"],
+                "summary": _format_ticket_event_feed_summary(
+                    str(row["event_type"]),
+                    str(row["actor"]),
+                    payload,
+                    ticket_id=ticket_id,
+                    ticket_title=str(row["ticket_title"] or ""),
+                ),
+            }
+        )
+
+    items.sort(
+        key=lambda item: (str(item.get("created_at") or ""), str(item.get("id") or "")),
+        reverse=True,
+    )
+    return {"items": items[:limit]}
+
+
 def list_tickets(
     *,
     project_id: int | None = None,
@@ -4711,6 +4853,7 @@ def build_world_dashboard() -> dict[str, object]:
                 "tickets_in_progress": 0,
                 "tickets_blocked": 0,
                 "agent_feed": 0,
+                "recent_changes": 0,
                 **_memory_counts_payload(0),
             },
             "tasks": [],
@@ -4719,6 +4862,7 @@ def build_world_dashboard() -> dict[str, object]:
             "loops": [],
             "decisions": [],
             "memory_items": [],
+            "recent_changes": [],
             "agent_activity": {"last_by_source": {}, "recent": []},
             "synced_at": _now_iso(),
         }
@@ -4739,6 +4883,8 @@ def build_world_dashboard() -> dict[str, object]:
     memory_counts = _memory_counts_payload(len(memory_rows))
     agent_activity = _agent_activity_summary(project_id)
     recent_activity = agent_activity.get("recent") or []
+    recent_changes = build_recent_changes_feed(project_id)
+    recent_change_items = recent_changes.get("items") or []
 
     return {
         "project": row_to_dict(project),
@@ -4759,6 +4905,7 @@ def build_world_dashboard() -> dict[str, object]:
                 (ticket_summary.get("counts") or {}).get("open_total", 0)
             ),
             "agent_feed": len(recent_activity),
+            "recent_changes": len(recent_change_items),
             **memory_counts,
         },
         "tasks": [row_to_dict(row) for row in tasks],
@@ -4767,6 +4914,7 @@ def build_world_dashboard() -> dict[str, object]:
         "loops": [row_to_dict(row) for row in loops_sorted],
         "decisions": [row_to_dict(row) for row in decisions],
         "memory_items": [_memory_item_api_dict(row) for row in memory_rows],
+        "recent_changes": recent_change_items,
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
         "agent_activity": agent_activity,

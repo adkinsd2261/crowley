@@ -287,6 +287,32 @@ class TicketTests(IsolatedDbTestCase):
         with self.assertRaises(ValueError):
             crowley.cancel_ticket(ticket_id, actor="codex", comment="   ")
 
+    def test_build_recent_changes_feed_merges_handoffs_and_ticket_events(self) -> None:
+        ticket_id = self._create(title="Recent changes probe", assignee="cursor")
+        crowley.save_memory_item(
+            "project_update",
+            (
+                "# Crowley Handoff\n\nSource: cursor\n\n"
+                "## Summary\n\n- changes feed handoff probe"
+            ),
+            source="cursor",
+            project_id=self.project_id,
+        )
+        feed = crowley.build_recent_changes_feed(self.project_id, limit=20)
+        items = feed["items"]
+        self.assertIsInstance(items, list)
+        kinds = {item["kind"] for item in items}
+        self.assertIn("handoff", kinds)
+        self.assertIn("ticket", kinds)
+        handoff = next(item for item in items if item["kind"] == "handoff")
+        self.assertIn("changes feed handoff probe", str(handoff["summary"]))
+        ticket_item = next(
+            item
+            for item in items
+            if item["kind"] == "ticket" and int(item["ticket_id"]) == int(ticket_id)
+        )
+        self.assertIn("Recent changes probe", str(ticket_item["summary"]))
+
 
 if __name__ == "__main__":
     unittest.main()

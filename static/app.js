@@ -18,6 +18,7 @@ const ticketDetailEl = document.getElementById("ticket-detail");
 const panelTasksEl = document.getElementById("panel-tasks");
 const panelLoopsEl = document.getElementById("panel-loops");
 const panelDecisionsEl = document.getElementById("panel-decisions");
+const panelChangesEl = document.getElementById("panel-changes");
 const panelAgentFeedEl = document.getElementById("panel-agent-feed");
 const panelMemoryEl = document.getElementById("panel-memory");
 const memorySearchEl = document.getElementById("memory-search");
@@ -197,6 +198,7 @@ function updateTabBadges(counts = {}) {
     tasks: counts.tasks_open || 0,
     loops: counts.loops_open || 0,
     decisions: counts.decisions || 0,
+    changes: counts.recent_changes || 0,
     agent_feed: counts.agent_feed || 0,
     memory: counts.memory || 0,
   };
@@ -238,6 +240,14 @@ const PANEL_META = {
     empty: "No recent decisions.",
     describe: (items) => `${items.length} logged decision${items.length === 1 ? "" : "s"}`,
   },
+  changes: {
+    title: "What changed",
+    hint: "Handoff summaries and ticket moves — not raw dumps.",
+    empty: "No recent changes yet.",
+    loading: "Loading recent changes…",
+    error: "Recent changes unavailable. Try Refresh.",
+    describe: (items) => `${items.length} recent change${items.length === 1 ? "" : "s"}`,
+  },
   agent_feed: {
     title: "Agent feed",
     empty: "No agent handoffs yet.",
@@ -257,6 +267,7 @@ const PANEL_LISTS = {
   tasks: panelTasksEl,
   loops: panelLoopsEl,
   decisions: panelDecisionsEl,
+  changes: panelChangesEl,
   agent_feed: panelAgentFeedEl,
   memory: panelMemoryEl,
 };
@@ -311,6 +322,8 @@ function itemsForTab(data, tab) {
       return data.loops || [];
     case "decisions":
       return data.decisions || [];
+    case "changes":
+      return data.recent_changes || [];
     case "agent_feed":
       return (data.agent_activity && data.agent_activity.recent) || [];
     case "memory":
@@ -711,6 +724,60 @@ function agentSourceClass(source) {
   if (normalized === "codex") return "agent-source-codex";
   if (normalized === "crowley") return "agent-source-crowley";
   return "agent-source-other";
+}
+
+function renderChangesPanel(items = []) {
+  if (!panelChangesEl) return;
+  const fingerprint = fingerprintList(items, [
+    "id",
+    "kind",
+    "created_at",
+    "summary",
+    "source",
+    "ticket_id",
+    "event_type",
+  ]);
+  renderPanelListIfChanged(
+    panelChangesEl,
+    items,
+    (item) => {
+      const kind = String(item.kind || "handoff");
+      const when = item.created_at ? formatRelativeTime(item.created_at) : "";
+      const summary = escapeHtml(String(item.summary || "(no summary)"));
+      const source = String(item.source || "system");
+      const kindMeta =
+        kind === "ticket"
+          ? `<span class="meta change-kind change-kind-ticket">ticket</span> `
+          : `<span class="meta change-kind change-kind-handoff">handoff</span> `;
+      const ticketMeta =
+        item.ticket_id != null
+          ? `<span class="meta">· #${escapeHtml(String(item.ticket_id))}</span> `
+          : "";
+      const linked = Array.isArray(item.linked_ticket_ids) ? item.linked_ticket_ids : [];
+      const linkedMeta =
+        kind === "handoff" && linked.length
+          ? `<span class="meta">· ticket #${escapeHtml(String(linked[0]))}</span> `
+          : "";
+      const nextAction = item.next_action
+        ? `<span class="change-next">Next: ${escapeHtml(String(item.next_action))}</span>`
+        : "";
+      return (
+        `<span class="change-row" data-change-kind="${escapeHtml(kind)}">` +
+        `<span class="change-head">` +
+        kindMeta +
+        `<span class="meta ${agentSourceClass(source)}">${escapeHtml(source)}</span> ` +
+        ticketMeta +
+        linkedMeta +
+        (when ? `<span class="meta">· ${escapeHtml(when)}</span>` : "") +
+        `</span>` +
+        `<span class="change-summary">${summary}</span>` +
+        nextAction +
+        `</span>`
+      );
+    },
+    PANEL_META.changes.empty,
+    fingerprint
+  );
 }
 
 function renderAgentFeedPanel(events = []) {
@@ -1242,6 +1309,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelTasksEl, [], () => "", PANEL_META.tasks.empty);
     renderPanelList(panelLoopsEl, [], () => "", PANEL_META.loops.empty);
     renderPanelList(panelDecisionsEl, [], () => "", PANEL_META.decisions.empty);
+    renderPanelList(panelChangesEl, [], () => "", PANEL_META.changes.empty);
     renderPanelList(panelAgentFeedEl, [], () => "", PANEL_META.agent_feed.empty);
     renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
@@ -1307,6 +1375,7 @@ function renderDashboard(data, { animate = false } = {}) {
 
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
   renderAgentFeedPanel(agentEvents);
+  renderChangesPanel(data.recent_changes || []);
 
   const memoryItems = [...(data.memory_items || [])].reverse();
   renderMemoryItems(memoryItems);
@@ -1447,6 +1516,7 @@ function updateContextSummary(data = {}, state = null) {
   if (counts.tasks_open) parts.push(`${counts.tasks_open} Task${counts.tasks_open !== 1 ? "s" : ""}`);
   if (counts.loops_open) parts.push(`${counts.loops_open} Loop${counts.loops_open !== 1 ? "s" : ""}`);
   if (counts.decisions) parts.push(`${counts.decisions} Dec`);
+  if (counts.recent_changes) parts.push(`${counts.recent_changes} Chg`);
   if (counts.memory) parts.push(`${counts.memory} Mem`);
 
   const synced = data.synced_at ? formatRelativeTime(data.synced_at) : "";
