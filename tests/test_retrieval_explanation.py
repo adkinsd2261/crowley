@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import struct
 import sys
 import unittest
 from pathlib import Path
@@ -11,6 +12,17 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import crowley  # noqa: E402
+
+
+def _unit_embedding(dim: int = crowley.EMBED_DIM) -> list[float]:
+    vector = [0.0] * dim
+    vector[0] = 1.0
+    return vector
+
+
+def _pack(vector: list[float]) -> bytes:
+    return struct.pack(f"{len(vector)}f", *vector)
+
 
 EXPLANATION_KEYS = {
     "source",
@@ -34,8 +46,11 @@ class RetrievalExplanationTests(unittest.TestCase):
         assert self.project_id is not None
         self.probe = f"retrieval explanation probe {crowley._now_iso()}"
         self.memory_id: int | None = None
+        self._original_embed_text = crowley.embed_text
+        crowley.embed_text = lambda _text: None  # type: ignore[assignment]
 
     def tearDown(self) -> None:
+        crowley.embed_text = self._original_embed_text  # type: ignore[assignment]
         if self.memory_id is not None:
             self.conn.execute("DELETE FROM memory_items WHERE id = ?", (self.memory_id,))
             self.conn.commit()
@@ -43,12 +58,14 @@ class RetrievalExplanationTests(unittest.TestCase):
 
     def _insert_probe(self, *, content: str, **kwargs: object) -> int:
         now = crowley._now_iso()
+        embedding = kwargs.get("embedding")
+        embedding_blob = _pack(embedding) if isinstance(embedding, list) else None
         cur = self.conn.execute(
             """
             INSERT INTO memory_items (
                 created_at, updated_at, project_id, memory_type, content, summary,
-                importance, source, pinned, status, confidence, decision_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0.9, ?)
+                importance, source, pinned, status, confidence, decision_id, embedding_blob
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0.9, ?, ?)
             """,
             (
                 now,
@@ -61,6 +78,7 @@ class RetrievalExplanationTests(unittest.TestCase):
                 str(kwargs.get("source", "cursor")),
                 1 if kwargs.get("pinned") else 0,
                 kwargs.get("decision_id"),
+                embedding_blob,
             ),
         )
         self.conn.commit()
@@ -96,11 +114,15 @@ class RetrievalExplanationTests(unittest.TestCase):
         self.assertEqual(int(available["memory_item_id"]), int(item["id"]))
 
     def test_vector_keyword_explanation_payload(self) -> None:
+        vector = _unit_embedding()
         memory_id = self._insert_probe(
             content=f"{self.probe} vector keyword explanation ticket ten",
             decision_id=42,
+            embedding=vector,
         )
+        crowley.embed_text = lambda _text: vector  # type: ignore[assignment]
         results = crowley.retrieve_memories(self.probe, limit=50, project_id=self.project_id)
+        self.assertEqual(crowley.get_last_retrieval_mode(), "vector+keyword")
         self.assertGreaterEqual(len(results), 1)
         hit = next((item for item in results if int(item["id"]) == memory_id), None)
         self.assertIsNotNone(hit, msg=f"probe memory #{memory_id} not in retrieval results")
@@ -118,13 +140,7 @@ class RetrievalExplanationTests(unittest.TestCase):
         memory_id = self._insert_probe(
             content=f"{self.probe} keyword fallback explanation only path",
         )
-        original_embed = crowley.embed_text
-        crowley.embed_text = lambda _text: None  # type: ignore[assignment]
-        try:
-            results = crowley.retrieve_memories(self.probe, limit=50, project_id=self.project_id)
-        finally:
-            crowley.embed_text = original_embed  # type: ignore[assignment]
-
+        results = crowley.retrieve_memories(self.probe, limit=50, project_id=self.project_id)
         self.assertEqual(crowley.get_last_retrieval_mode(), "keyword-only fallback")
         hit = next((item for item in results if int(item["id"]) == memory_id), None)
         self.assertIsNotNone(hit)
