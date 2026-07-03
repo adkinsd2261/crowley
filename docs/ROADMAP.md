@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.8 shipped · V3.9.9 planning · **2026-07-02**
+**As of:** V3.9.10 shipped · V3.9.11 next · V3.9.12/V4 direction pivot · **2026-07-02**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -15,6 +15,8 @@ Inferences marked **(inference)**.
 4. **Minimal diffs** — extend the monolith carefully; no rewrite without cause.
 5. **Local-first** — data stays in SQLite unless user opts into external integrations.
 6. **Engine owns logic** — `app.py` is transport only; external tools use HTTP bus.
+7. **Portable continuity** — Crowley is the persistent context layer that follows D across reasoning surfaces.
+8. **Sparks over transcripts** — raw logs are receipts; sparks are future-useful memory units.
 
 ---
 
@@ -67,21 +69,27 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.7 Experience & Reliability ✅
                                       │
                                       ▼
-                    V4 connectivity  ◄── YOU ARE HERE
+                    V3.9.8 Runtime Hardening ✅
                                       │
                                       ▼
-                    V3.9.8 Runtime Hardening ✅
+                    V3.9.9 Context That Feeds ✅
                               │
                               ▼
-                    V3.9.9 Memory Judgment + Work Intelligence (planning)
+                    V3.9.10 Task-Frame Context ✅
                               │
                               ▼
-                    V4 connectivity
+                    V3.9.11 Live Wire ◄── YOU ARE HERE
+                              │
+                              ▼
+                    V3.9.12 Portable Context Terminal
+                              │
+                              ▼
+                    V4.0 Spark Lanes
 ```
 
-**Shipped through V3.9.8:** … experience & reliability (#40–#49); runtime hardening — test mode, model probe, runtime health, sqlite-vec fallback (#50–#55).
+**Shipped through V3.9.10:** … context that feeds (#56–#63); task-frame context — task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69).
 
-**Active initiative:** V3.9.9 Memory Judgment + Work Intelligence — draft packet at `tickets/v3.9.9_memory_judgment_work_intelligence.json`. V4 connectivity after .9 gate — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V3.9.11 Live Wire (#70–#75). Existing minted ladder remains V3.9.12 Portable Context Terminal. V4.0 Spark Lanes planned after V3.9.12 — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -192,10 +200,12 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
 | V3.9.7 Workspace Experience & Reliability | UI catches up to backend depth; boring boot | Medium | ✅ Shipped on `main` (#40–#49) |
 | V3.9.8 Runtime Hardening | No fragile startup — test mode, runtime health | Medium | Local (#50–#55) — not on `origin/main` |
-| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Active** (#62 QA → #63 lock) |
-| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | Minted #64–#69 |
-| V3.9.11 Live Wire | Compose activity wire + agent pulses | Medium | Minted #70–#75 |
-| V4 connectivity | External collectors and integrations | High | After V3.9.11 gate |
+| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Shipped locally** (#56–#63) |
+| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped locally** (#64–#69) |
+| V3.9.11 Live Wire | Compose activity wire + agent pulses | Medium | Minted #70–#75 · **next** |
+| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | Minted #76–#80; after V3.9.11 |
+| V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | Planned after V3.9.12 |
+| External collectors | Optional future inputs into lanes | High | Deferred after V4 memory architecture |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
 | Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
@@ -209,15 +219,23 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 ## 8. Mid-term (V4 themes) **(inference)**
 
-### 8.1 External collectors (opt-in)
+### 8.1 portable context terminal (V3.9.12)
 
-Git/calendar → `memory_items`, not world model directly.
+Export a compact Crowley packet into ChatGPT or another AI/model surface and import structured writeback out. Store the session recap as an episodic receipt and the useful residue as candidate sparks.
 
-### 8.2 Multi-project support
+### 8.2 Spark lanes (V4.0)
+
+Primary lanes: learning, work, relationships, money, health, operating_style. Every spark gets one lane, optional domain/tags, why_keep, worth reason, confidence, sensitivity, and trust state.
+
+### 8.3 External collectors (opt-in)
+
+Git/calendar/filesystem collectors become later inputs into spark lanes, not the V4 core.
+
+### 8.4 Multi-project support
 
 `/project list`, `/project switch <slug>` — schema ready; extraction must never auto-switch.
 
-### 8.3 MCP / deeper IDE integration
+### 8.5 MCP / deeper IDE integration
 
 Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
@@ -231,6 +249,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | Auto-delete / auto-archive | Safety rule from V3.2 |
 | Auto project switching | Safety rule |
 | Auth on localhost API | Trust model for single user |
+| Live terminal automation | V3.9.12 is local/manual packet + writeback |
 | Full agent tool loop (shell execution) | Out of scope |
 | WebSocket live push | Polling sufficient for local single-user |
 
@@ -267,8 +286,11 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | **V3.9.7** | Experience & Reliability | ✅ UI polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics, preflight |
 | **V3.9.8** | Runtime Hardening | ✅ test mode, model probe, runtime health, sqlite-vec fallback |
-| V3.9.9 | Memory Judgment + Work Intelligence | Draft packet — planning reserve |
-| **V4.0** | Connectivity | Git collector, multi-project commands |
+| V3.9.9 | Context That Feeds | Shipped locally (#56–#63) |
+| V3.9.10 | Task-Frame Context | Shipped locally (#64–#69) |
+| V3.9.11 | Live Wire | Minted #70–#75 · next |
+| V3.9.12 | Portable Context Terminal | Minted #76–#80; packet-in/writeback-out |
+| **V4.0** | Spark Lanes | Memory lanes, trust states, lane-aware retrieval |
 
 ---
 

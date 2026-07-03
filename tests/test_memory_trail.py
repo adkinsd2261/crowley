@@ -162,7 +162,7 @@ class MemoryTrailTests(IsolatedDbTestCase):
         self.assertIn("last_by_source", context["agent_activity"])
 
         sync = crowley.build_agent_sync_bundle(agent="cursor", limit=20)
-        self.assertEqual(sync.get("bundle_shape"), "slim_v399")
+        self.assertEqual(sync.get("bundle_shape"), "task_frame_v3910")
         self.assertNotIn("canon", sync)
         self.assertNotIn("open_loops", sync)
         self.assertNotIn("open_tasks", sync)

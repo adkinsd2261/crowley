@@ -1014,6 +1014,95 @@ body {
   background: transparent;
 }
 
+.agent-feed-brief {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem 0.35rem;
+  border-radius: 0 10px 10px 0;
+  background: var(--context-card-bg);
+  border: 1px solid var(--context-card-border);
+  box-shadow: inset 3px 0 0 var(--context-card-inset);
+}
+
+.agent-feed-brief.hidden {
+  display: none;
+}
+
+.task-brief-section + .task-brief-section {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--divider);
+}
+
+.task-brief-ticket-list .task-brief-ticket-card {
+  display: block;
+}
+
+.task-brief-ticket-head {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.task-brief-ticket-title {
+  display: inline;
+  font-weight: 500;
+}
+
+.task-brief-acceptance {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.task-brief-handoff-body,
+.task-brief-guardrails {
+  font-size: 0.875rem;
+}
+
+.task-brief-handoff-card {
+  display: block;
+}
+
+.task-brief-handoff-summary,
+.task-brief-handoff-next,
+.task-brief-empty {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.task-brief-guardrails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.task-brief-guardrail-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  border: 1px solid var(--divider);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.task-brief-guardrail-decision {
+  border-color: rgba(120, 180, 255, 0.35);
+}
+
+.task-brief-guardrail-constraint {
+  border-color: rgba(255, 180, 120, 0.35);
+}
+
+.agent-feed-subhead-supporting {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .agent-feed-context {
   margin: 0 0 0.55rem;
   padding: 0.65rem 0.75rem 0.45rem;
@@ -1847,6 +1936,10 @@ body {
 
   .memory-controls {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .agent-feed-brief {
+    padding: 0.55rem 0.6rem 0.35rem;
   }
 
   .agent-feed-context {

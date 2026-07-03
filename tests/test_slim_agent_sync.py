@@ -52,7 +52,7 @@ class SlimAgentSyncBundleTests(IsolatedDbTestCase):
             )
 
         sync = crowley.build_agent_sync_bundle("cursor", limit=20)
-        self.assertEqual(sync["bundle_shape"], "slim_v399")
+        self.assertEqual(sync["bundle_shape"], "task_frame_v3910")
         caps = sync["bundle_caps"]
         assert isinstance(caps, dict)
         self.assertEqual(caps["recent_decisions"], 5)
@@ -61,8 +61,8 @@ class SlimAgentSyncBundleTests(IsolatedDbTestCase):
         self.assertLessEqual(len(sync["recent_decisions"]), 5)
         self.assertLessEqual(len(sync["constraint_memories"]), 5)
         self.assertLessEqual(len(sync["events_from_other_agents"]), 5)
-        self.assertGreaterEqual(len(sync["relevant_memories"]), 5)
-        self.assertLessEqual(len(sync["relevant_memories"]), 8)
+        self.assertGreaterEqual(len(sync["relevant_memories"]), 1)
+        self.assertLessEqual(len(sync["relevant_memories"]), crowley.SUPPORTING_MEMORIES_CAP)
         self.assertNotIn("canon", sync)
         self.assertNotIn("open_loops", sync)
         self.assertNotIn("open_tasks", sync)
@@ -124,9 +124,11 @@ class SlimAgentSyncBundleTests(IsolatedDbTestCase):
             asl.print_agent_sync_bundle(sync, agent="cursor")
         output = buffer.getvalue()
         tickets_idx = output.find("tickets assigned to you:")
-        memories_idx = output.find("top retrieved memories:")
+        working_idx = output.find("Working on:")
+        supporting_idx = output.find("Supporting (")
         self.assertGreater(tickets_idx, 0)
-        self.assertGreater(memories_idx, tickets_idx)
+        self.assertGreater(working_idx, tickets_idx)
+        self.assertGreater(supporting_idx, working_idx)
 
     def test_print_sync_extras_skips_slim_duplicate(self) -> None:
         sync = crowley.build_agent_sync_bundle("cursor", limit=8)

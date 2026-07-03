@@ -1,0 +1,102 @@
+{
+  "objective": "V3.9.12 — Portable Context Terminal: make any AI/model surface usable as a manual Crowley terminal with Crowley context in and structured writeback out.",
+  "context": "After V3.9.9–V3.9.11, Crowley has stronger context quality, task framing, and live activity. The direction pivot is that Crowley is not a single AI model or just a UI; it is the persistent context layer that follows D across reasoning surfaces. V3.9.12 proves the manual terminal loop before V4 memory lanes, with ChatGPT as the first tested surface.",
+  "decisions": [
+    "Keep existing board order: V3.9.9 #62/#63, then V3.9.10 #64-#69, then V3.9.11 #70-#75, then V3.9.12",
+    "V3.9.12 is local/manual only: no browser extension, OAuth, cloud sync, or live terminal automation",
+    "Export a medium Crowley packet, not a raw database dump",
+    "Writeback stores an episodic session receipt separately from candidate sparks",
+    "Raw transcripts are not saved by default",
+    "Persist or preserve writeback metadata instead of dropping /api/ingest metadata",
+    "V4.0 handles durable memory lanes; V3.9.12 only proves packet-in/writeback-out"
+  ],
+  "non_goals": [
+    "Live terminal connector automation",
+    "Browser extension",
+    "Cloud sync or OAuth",
+    "Full V4 lane schema migration",
+    "Replacing existing Codex/Cursor sync",
+    "Auto-promoting sensitive personal memory to canon"
+  ],
+  "risks": [
+    "Packet can become too large and make the active model overfit the packet instead of helping",
+    "Writeback can become noisy if sparks lack why_keep",
+    "Sensitive lanes must not become high-trust memory without review",
+    "Ingest metadata preservation must not break existing /api/ingest callers"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; focused tests for packet shape, writeback parsing, candidate spark ingest, metadata preservation, and do-not-save transcript behavior.",
+  "next_action": "Codex mints with scripts/codex_sync.py --create-tickets tickets/v3.9.12_portable_context_terminal.json. Cursor should not claim until V3.9.11 #75 doc lock closes.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-02",
+    "note": "Approved and minted 2026-07-02 as tickets #76-#80 after model-agnostic naming correction. Cursor should not claim until V3.9.11 closes."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.12 Portable Terminal: context packet exporter",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Build a local export path that generates a paste-ready medium Crowley packet for any AI/model surface from existing context/sync sources. Include Crowley identity, D operating context, current world, active work, constraints, recent decisions, selected relevant memories, and writeback instructions. ChatGPT is the first manual target, not the architectural boundary. Keep output compact and human-readable.",
+      "acceptance": [
+        "Exporter produces a paste-ready packet without raw DB dumps",
+        "Packet includes Crowley identity and the persistent-context-layer framing",
+        "Packet includes current work, constraints, recent decisions, and selected memories",
+        "Packet includes explicit writeback contract and soft context-pull guidance",
+        "Focused tests cover packet shape and size discipline"
+      ]
+    },
+    {
+      "title": "V3.9.12 Portable Terminal: writeback schema and parser",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Define and parse structured terminal session writeback containing session, surface, model/provider if known, sparks, decisions, lessons, open_loops, corrections, context_pull_candidates, and do_not_save. Spark entries require content, lane, why_keep, confidence, and sensitivity. Parser should return clear validation errors without mutating memory on invalid input.",
+      "acceptance": [
+        "Parser accepts valid structured writeback",
+        "Parser rejects sparks missing content, lane, why_keep, confidence, or sensitivity",
+        "Accepted lanes include learning, work, relationships, money, health, operating_style",
+        "do_not_save is parsed but never persisted as memory content",
+        "Tests cover valid and invalid writeback payloads"
+      ]
+    },
+    {
+      "title": "V3.9.12 Portable Terminal: ingest candidate sparks",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Save terminal writeback into existing memory infrastructure. Store the session recap as an episodic receipt and structured sparks as candidate memory items where possible. Preserve writeback metadata from /api/ingest or the local import path, including surface/model/provider when supplied. Sensitive lanes default to candidate/staged handling, not pinned/canon.",
+      "acceptance": [
+        "Session summary is stored separately from spark candidates",
+        "Spark candidates include why_keep, lane, confidence, sensitivity, and worth reason in persisted metadata or summary",
+        "Raw transcript is not saved by default",
+        "Sensitive lanes do not auto-promote to pinned or canon",
+        "Tests cover metadata preservation and candidate ingest"
+      ]
+    },
+    {
+      "title": "V3.9.12 Portable Terminal: local CLI/script workflow",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add a simple local workflow for manual use: export Crowley packet, paste it into ChatGPT or another AI/model surface, paste or point the resulting writeback into an import command/script, and print saved candidate results. Keep it boring and scriptable; no UI required in this release.",
+      "acceptance": [
+        "User can export a portable Crowley packet from the local project",
+        "User can import terminal writeback from a local file or stdin",
+        "Import output reports saved session receipt, saved sparks, rejected sparks, and skipped do_not_save items",
+        "Workflow failures are clear and non-destructive",
+        "Tests or fixture command cover happy path import"
+      ]
+    },
+    {
+      "title": "V3.9.12 Portable Terminal: docs, fixtures, and version lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bump CROWLEY_VERSION to 3.9.12, release label Portable Context Terminal, and add docs/V3.9.12_PORTABLE_CONTEXT_TERMINAL.md. Update VERSIONS, PROJECT_STATE, TICKETS, WHERE_WE_ARE, ROADMAP, ARCHITECTURE, PRE_V4 ladder, and lock_in_state. Include fixtures for packet/writeback examples and clarify V4 lane boundary.",
+      "acceptance": [
+        "CROWLEY_VERSION=3.9.12",
+        "Release doc explains packet-in/writeback-out workflow",
+        "Docs explain trust rules and sensitive lane handling",
+        "Docs state V4.0 owns durable Spark Lanes architecture",
+        "Preflight and full test suite pass after bus restart"
+      ]
+    }
+  ]
+}

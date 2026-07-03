@@ -1,8 +1,8 @@
 # Crowley — Project State
 
-**As of:** V3.9.8 local · V3.9.9 in progress (#62/#63)
-**Planning:** V3.9.10 Task-Frame Context (#64–#69) · V3.9.11 Live Wire (#70–#75) minted — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-02 (session pause — resume at #62 QA)
+**As of:** V3.9.10 local · V3.9.11 next (#70–#75)
+**Planning:** V3.9.11 Live Wire (#70–#75) · V3.9.12 Portable Context Terminal (#76–#80) minted · V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
+**Last doc sync:** 2026-07-02 (V3.9.10 doc lock #69)
 **Git:** `origin/main` at V3.9.7; V3.9.8+ local uncommitted
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
@@ -12,7 +12,7 @@ Inferences marked **(inference)**.
 
 ## 1. What Crowley is today
 
-Crowley is a **local-first assistant** for a single developer/user, combining:
+Crowley is a **local-first persistent context layer** for a single developer/user, combining:
 
 - Streaming LLM chat (OpenAI primary in `auto` mode, Ollama fallback)
 - SQLite-backed message log, memories, typed `memory_items`, tasks
@@ -34,10 +34,13 @@ Crowley is a **local-first assistant** for a single developer/user, combining:
 - **V3.9.4 shipped on `main`** — Agent Feed, ticket detail, handoff↔ticket links, work-board clarity, V4 onboarding lock
 - **V3.9.5 shipped on `main`** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30)
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
-- **V3.9.8 shipped on `main`** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
+- **V3.9.8 shipped locally** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
+- **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
+- **V3.9.10 shipped locally** — task frame API, ticket-narrative retrieval, sync bundle task brief, Agent Feed brief UI, chat prompt task frame (#64–#69)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
+- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V3.9.12 Portable Context Terminal and V4 Spark Lanes follow the minted ladder.
 
-It is **not** a multi-user service and **not** a full agent framework with tool use.
+It is **not** a multi-user service and **not** a full agent framework with tool use. The browser UI is one cockpit, not the identity boundary.
 
 ---
 
@@ -68,7 +71,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**219** locally; 4 doc-lock failures until #63) |
+| `tests/` | **Active** | QA unit tests (**219** locally with `CROWLEY_TEST_MODE=1`) |
 | `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
 | `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
 | `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
@@ -99,6 +102,8 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.5 | Conversation + Model Behavior | Mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6 | Workspace Polish | Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
+| V3.9.12 | Portable Context Terminal | Minted #76–#80 — local/manual context packet + structured writeback |
+| V4.0 | Spark Lanes | Planned memory lanes, trust states, lane-aware retrieval |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 
@@ -113,6 +118,8 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Memory search API | ✅ V3.9.2 | `GET /api/retrieve` — includes per-result `explanation` (source, type, score, status, pinned, is_canon, provenance) |
 | Memory list API | ✅ V3.8 | `GET /api/memory-items` (filters + pagination) |
 | Handoff ingest API | ✅ V3.7 | `POST /api/ingest` |
+| portable context terminal | Planned V3.9.12 | Export compact Crowley packet; import episodic receipt + candidate sparks |
+| Spark lanes | Planned V4.0 | learning, work, relationships, money, health, operating_style |
 | Bus health API | ✅ V3.7 | `GET /api/bus/health` |
 | Inbox file ingest | ✅ V3.7 | `scripts/ingest_inbox.py` |
 | Handoff templates | ✅ V3.7 | `scripts/crowley_handoff.py` |
@@ -124,7 +131,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.8 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **171** tests |
+| Git + CI | ✅ V3.9.10 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **242** tests |
 | Test mode | ✅ V3.9.8 | `CROWLEY_TEST_MODE=1` — embed off + model stub |
 | Runtime health | ✅ V3.9.8 | `/api/health` `runtime` block; preflight validates |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
@@ -140,6 +147,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Task completion | ✅ V3.7.2 | `/task done`, `POST /api/tasks/{id}/done`, UI ✓ |
 | Web workspace UI | ✅ V3.5 | `app.py` + `static/` |
 | MCP / auth / cloud | ❌ | Out of scope |
+| Live terminal automation | ❌ | Out of V3.9.12 scope; local/manual first |
 
 ---
 
@@ -185,7 +193,7 @@ Bind: `127.0.0.1:8765`.
 | Canon re-synthesis | Manual — follow `docs/V3.9.2_CANON_SYNTHESIS_WORKFLOW.md` after major releases |
 | Git baseline | [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley) on `main`; handoffs use `--from-git` |
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
-| `metadata` on ingest | Accepted, not persisted |
+| `metadata` on ingest | Accepted, not persisted — planned V3.9.12 preserves writeback metadata |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
 | CI pipeline | ✅ V3.9.7 | GitHub Actions — `requirements-core.txt`; **157** tests with embed off |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
@@ -236,6 +244,8 @@ curl http://127.0.0.1:8765/api/bus/health
 - [V3.9.4_AGENT_VISIBILITY.md](./V3.9.4_AGENT_VISIBILITY.md)
 - [PRE_V4_QUALITY_PLAN.md](./PRE_V4_QUALITY_PLAN.md)
 - [V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md)
+- [V3.9.10_TASK_FRAME_CONTEXT.md](./V3.9.10_TASK_FRAME_CONTEXT.md)
+- [V3.9.9_CONTEXT_THAT_FEEDS.md](./V3.9.9_CONTEXT_THAT_FEEDS.md)
 - [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md)
 - [V3.9.6_WORKSPACE_POLISH.md](./V3.9.6_WORKSPACE_POLISH.md)
 - [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)

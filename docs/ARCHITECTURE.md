@@ -2,14 +2,14 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.8"` (`Crowley V3.9.8 Runtime Hardening`)
+**Code version:** `CROWLEY_VERSION = "3.9.10"` (`Crowley V3.9.10 Task-Frame Context`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
 
 ## 1. Executive summary
 
-Crowley is a **local-first AI operating system** for a single user (“Mr. Go” / “D”). It combines:
+Crowley is a **local-first persistent context layer** for a single user (“Mr. Go” / “D”). It is not one AI model and not only the browser UI; it carries identity, memory, and coordination across reasoning surfaces. It combines:
 
 1. **Conversation** — CLI REPL and web workspace; streaming LLM via OpenAI and/or Ollama.
 2. **Episodic memory** — passive sparks + typed `memory_items` with hybrid retrieval.
@@ -27,8 +27,12 @@ Crowley is a **local-first AI operating system** for a single user (“Mr. Go”
 14. **Pre-V4 quality (2026-07)** — V3.9.5 conversation/model behavior **shipped** (#25–#30); V3.9.6 workspace polish **shipped** (#31–#36).
 15. **V3.9.7 Experience & Reliability (2026-07)** — UI polish catch-up, embed/CI hardening, `diagnostics.py` + `tickets.py` extraction, operator metrics, preflight (#40–#49).
 16. **V3.9.8 Runtime Hardening (2026-07)** — `CROWLEY_TEST_MODE`, model probe, `/api/health` runtime block, sqlite-vec safe fallback, fragile-startup suite (#50–#55).
+17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
+18. **V3.9.10 Task-Frame Context (2026-07)** — task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69).
+18. **Planned V3.9.12 Portable Context Terminal** — local/manual Crowley packet export and structured terminal writeback import.
+19. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
-Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet).
+Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet). Portable terminal work starts local/manual; live connector automation is intentionally out of scope for V3.9.12.
 
 ---
 
@@ -244,8 +248,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.8"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.8 Runtime Hardening"` |
+| `CROWLEY_VERSION` | `"3.9.10"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.10 Task-Frame Context"` |
 
 ---
 

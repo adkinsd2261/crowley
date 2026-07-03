@@ -2,8 +2,10 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.8 (`Crowley V3.9.8 Runtime Hardening`) — local code; version bumps to 3.9.9 at ticket #63
-**Next planned:** V3.9.9 Context That Feeds → V3.9.10 Task-Frame Context → V3.9.11 Live Wire → V4 connectivity
+**Current:** V3.9.10 (`Crowley V3.9.10 Task-Frame Context`) — local code
+**Next planned:** V3.9.11 Live Wire → V3.9.12 Portable Context Terminal → V4 Spark Lanes
+
+**North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
 | Version | Status   | Date       | Summary                                      |
 |---------|----------|------------|----------------------------------------------|
@@ -30,9 +32,11 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.6  | shipped  | 2026-07-02 | Workspace Polish — panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | V3.9.7  | shipped  | 2026-07-02 | Workspace Experience & Reliability — UI polish, embed fallback, CI slim deps, module extraction, metrics |
 | V3.9.8  | shipped  | 2026-07-02 | Runtime Hardening — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite |
-| V3.9.9  | active   | 2026-07-02 | Context That Feeds — quality gate, slim sync, handoff upgrade, UI/hygiene (#56–#63) |
-| V3.9.10 | reserve  | TBD        | Task-Frame Context — minted #64–#69 |
+| V3.9.9  | shipped  | 2026-07-02 | Context That Feeds — quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene |
+| V3.9.10 | shipped  | 2026-07-02 | Task-Frame Context — task frame API, ticket-narrative retrieval, sync/UI/prompt brief |
 | V3.9.11 | reserve  | TBD        | Live Wire — minted #70–#75 |
+| V3.9.12 | reserve  | TBD        | Portable Context Terminal — minted #76–#80; local context packet + structured writeback |
+| V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
 ---
 
@@ -467,6 +471,22 @@ Plan: [docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./docs/V3.9.5_CONVERSATION_MO
 **Version:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
 
 Plan: [docs/V3.9.6_WORKSPACE_POLISH.md](./docs/V3.9.6_WORKSPACE_POLISH.md)
+
+---
+
+## V3.9.10 — Task-Frame Context
+
+**Version:** `CROWLEY_VERSION = "3.9.10"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.10 Task-Frame Context"`
+
+Plan: [docs/V3.9.10_TASK_FRAME_CONTEXT.md](./docs/V3.9.10_TASK_FRAME_CONTEXT.md)
+
+---
+
+## V3.9.9 — Context That Feeds
+
+**Version:** `CROWLEY_VERSION = "3.9.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.9 Context That Feeds"`
+
+Plan: [docs/V3.9.9_CONTEXT_THAT_FEEDS.md](./docs/V3.9.9_CONTEXT_THAT_FEEDS.md)
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.8 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.10 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.8"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.8 Runtime Hardening"
+CROWLEY_VERSION = "3.9.10"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.10 Task-Frame Context"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -841,6 +841,17 @@ def setup_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_system_metrics_type_time
                 ON system_metrics(metric_type, recorded_at);
+            CREATE TABLE IF NOT EXISTS activity_pulses (
+                id INTEGER PRIMARY KEY,
+                project_id INTEGER NOT NULL,
+                agent TEXT NOT NULL,
+                verb TEXT NOT NULL,
+                ticket_id INTEGER,
+                summary TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_activity_pulses_project_time
+                ON activity_pulses(project_id, created_at);
             """
         )
         _seed_default_project(conn)
@@ -1236,8 +1247,32 @@ AGENT_SYNC_OTHER_EVENTS_CAP = 5
 AGENT_SYNC_OWN_EVENTS_CAP = 3
 AGENT_SYNC_MEMORIES_MIN = 5
 AGENT_SYNC_MEMORIES_MAX = 8
-AGENT_SYNC_BUNDLE_SHAPE = "slim_v399"
+AGENT_SYNC_BUNDLE_SHAPE = "task_frame_v3910"
+AGENT_SYNC_BUNDLE_SHAPE_LEGACY = "slim_v399"
 WORLD_RELEVANT_MEMORIES_CAP = 6
+SUPPORTING_MEMORIES_CAP = 4
+TASK_FRAME_WORKING_ON_CAP = 6
+ACTIVITY_PULSE_VERBS = frozenset(
+    {"session_start", "claimed", "working", "note", "handoff", "minted", "closed"}
+)
+ACTIVITY_PULSE_AGENTS = frozenset({"cursor", "codex", "crowley", "mr_go"})
+ACTIVITY_PULSE_WINDOW_MINUTES = 45
+_SUPPORTING_MEMORY_PREFERRED_TYPES = frozenset({
+    "lesson",
+    "constraint",
+    "qa_result",
+    "decision",
+})
+_SUPPORTING_MEMORY_TYPE_BOOST: dict[str, float] = {
+    "lesson": 0.15,
+    "constraint": 0.14,
+    "qa_result": 0.13,
+    "decision": 0.12,
+    "preference": 0.10,
+    "project_update": -0.08,
+    "event": -0.10,
+    "summary": -0.05,
+}
 HYGIENE_SHIPPED_LOOP_MARKERS = (
     "shipped",
     "done",
@@ -2648,49 +2683,129 @@ def _retrieval_ticket_seeds(
     return seeds[:limit]
 
 
+def _parse_ticket_description(description: str) -> tuple[str, list[str]]:
+    """Split ticket description body from Acceptance bullets (matches UI parser)."""
+    text = str(description or "").strip()
+    if not text:
+        return "", []
+    match = re.search(r"\n\s*Acceptance:\s*\n", text, flags=re.IGNORECASE)
+    if not match:
+        return text, []
+    body = text[: match.start()].strip()
+    acceptance: list[str] = []
+    for line in text[match.end() :].splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            acceptance.append(stripped[2:].strip())
+    return body, [item for item in acceptance if item]
+
+
+def _initiative_keywords_for_ticket(ticket: dict[str, object]) -> list[str]:
+    """Pull parent initiative title tokens when ticket belongs to a parent."""
+    parent_id = ticket.get("parent_id")
+    if parent_id is None:
+        return []
+    parent = get_ticket_by_id(int(parent_id))
+    if parent is None:
+        return []
+    title = str(parent["title"] or "").strip()
+    if not title:
+        return []
+    return [title]
+
+
 def build_ticket_aware_retrieval_query(
     project_id: int | None,
     agent: str | None = None,
 ) -> tuple[str, list[dict[str, object]]]:
-    """Blend agent sync query with open ticket titles for work-scoped retrieval."""
+    """Build ticket-narrative retrieval query from current work (V3.9.10 #65)."""
     if project_id is None:
         return AGENT_SYNC_QUERY, []
     summary = build_tickets_summary(project_id, agent)
     seeds = _retrieval_ticket_seeds(summary, agent)
     if not seeds:
         return AGENT_SYNC_QUERY, []
-    ticket_bits: list[str] = []
+    narrative_bits: list[str] = ["current work context"]
     for ticket in seeds:
         ticket_id = int(ticket["id"])
         title = str(ticket.get("title") or "").strip()
         status = str(ticket.get("status") or "open")
-        ticket_bits.append(f"ticket #{ticket_id} [{status}] {title}")
-    query = f"{AGENT_SYNC_QUERY} open work board {' '.join(ticket_bits)}"
+        description = str(ticket.get("description") or "")
+        if not description:
+            ticket_row = get_ticket_by_id(ticket_id)
+            if ticket_row is not None:
+                description = str(ticket_row["description"] or "")
+        body, acceptance = _parse_ticket_description(description)
+        narrative_bits.append(f"ticket #{ticket_id} [{status}] {title}")
+        if body:
+            narrative_bits.append(_truncate(body, 220))
+        for criterion in acceptance[:6]:
+            narrative_bits.append(criterion)
+        for initiative in _initiative_keywords_for_ticket(ticket):
+            narrative_bits.append(initiative)
+    query = " ".join(bit for bit in narrative_bits if bit).strip()
     return query, seeds
+
+
+def _recent_handoff_memory_ids(project_id: int | None, *, limit: int = 20) -> set[int]:
+    """Handoff-timeline memory ids to dedupe from supporting retrieval."""
+    activity = _agent_activity_summary(project_id, limit=limit)
+    recent = activity.get("recent")
+    if not isinstance(recent, list):
+        return set()
+    handoff_types = frozenset({"project_update", "summary", "event"})
+    ids: set[int] = set()
+    for event in recent:
+        if not isinstance(event, dict) or event.get("id") is None:
+            continue
+        memory_type = str(event.get("memory_type") or "").lower()
+        if memory_type in handoff_types:
+            ids.add(int(event["id"]))
+    return ids
+
+
+def _supporting_memory_rank_key(item: dict[str, object]) -> tuple[float, int, str]:
+    memory_type = str(item.get("memory_type") or "")
+    boost = _SUPPORTING_MEMORY_TYPE_BOOST.get(memory_type, 0.0)
+    ranked_score = float(item.get("score") or 0.0) + boost
+    return (ranked_score, int(item.get("importance") or 0), str(item.get("created_at") or ""))
+
+
+def _rank_supporting_memories(memories: list[dict[str, object]]) -> list[dict[str, object]]:
+    return sorted(memories, key=_supporting_memory_rank_key, reverse=True)
 
 
 def retrieve_work_context_memories(
     project_id: int | None,
     agent: str | None = None,
     *,
-    limit: int = WORLD_RELEVANT_MEMORIES_CAP,
+    limit: int = SUPPORTING_MEMORIES_CAP,
 ) -> dict[str, object]:
-    """Ticket-scoped retrieval payload for dashboard and agent sync."""
+    """Ticket-narrative supporting retrieval for dashboard and agent sync (V3.9.10 #65)."""
     query, tickets = build_ticket_aware_retrieval_query(project_id, agent)
-    memories = retrieve_memories(query, limit=limit, project_id=project_id)
+    effective_limit = min(max(1, int(limit)), SUPPORTING_MEMORIES_CAP)
+    handoff_ids = _recent_handoff_memory_ids(project_id)
+    fetch_limit = max(effective_limit * 4, 16)
+    memories = retrieve_memories(query, limit=fetch_limit, project_id=project_id)
+    memories = [
+        item for item in memories if int(item["id"]) not in handoff_ids
+    ]
+    memories = _rank_supporting_memories(memories)
     anchors = _ticket_anchor_memories(project_id, tickets)
     if anchors:
         merged: list[dict[str, object]] = []
         seen: set[int] = set()
         for item in anchors + memories:
             memory_id = int(item["id"])
-            if memory_id in seen:
+            if memory_id in seen or memory_id in handoff_ids:
                 continue
             seen.add(memory_id)
             merged.append(item)
-            if len(merged) >= limit:
+            if len(merged) >= effective_limit:
                 break
-        memories = merged
+        memories = merged[:effective_limit]
+    else:
+        memories = memories[:effective_limit]
     return {
         "query": query,
         "tickets": [
@@ -2704,6 +2819,185 @@ def retrieve_work_context_memories(
         ],
         "memories": memories,
     }
+
+
+def _task_frame_ticket_payload(ticket: dict[str, object]) -> dict[str, object]:
+    """Ticket row with parsed description body and acceptance bullets."""
+    description = str(ticket.get("description") or "")
+    if not description and ticket.get("id") is not None:
+        ticket_row = get_ticket_by_id(int(ticket["id"]))
+        if ticket_row is not None:
+            description = str(ticket_row["description"] or "")
+    body, acceptance = _parse_ticket_description(description)
+    payload: dict[str, object] = {
+        "id": int(ticket["id"]),
+        "title": str(ticket.get("title") or ""),
+        "status": str(ticket.get("status") or "open"),
+        "assignee": str(ticket.get("assignee") or ""),
+        "priority": int(ticket.get("priority") or 4),
+        "description": body,
+        "acceptance": acceptance,
+    }
+    linked = ticket.get("linked_handoff")
+    if isinstance(linked, dict):
+        payload["linked_handoff"] = linked
+    parent_id = ticket.get("parent_id")
+    if parent_id is not None:
+        payload["parent_id"] = int(parent_id)
+    return payload
+
+
+def build_task_frame_context(
+    project_id: int | None,
+    agent: str | None = None,
+) -> dict[str, object]:
+    """Structured task brief: working tickets, handoff, guardrails (V3.9.10 #64)."""
+    normalized_agent = (
+        agent.strip().lower() if isinstance(agent, str) and agent.strip() else None
+    )
+    role = get_agent_role(normalized_agent) if normalized_agent else None
+    empty_guardrails = {"recent_decisions": [], "constraint_memories": []}
+    caps = {
+        "working_on": TASK_FRAME_WORKING_ON_CAP,
+        "recent_decisions": AGENT_SYNC_DECISIONS_CAP,
+        "constraint_memories": AGENT_SYNC_CONSTRAINTS_CAP,
+    }
+    if project_id is None:
+        return {
+            "agent": normalized_agent,
+            "role": role,
+            "working_on": [],
+            "blockers": [],
+            "last_handoff": None,
+            "guardrails": empty_guardrails,
+            "caps": caps,
+        }
+
+    summary = build_tickets_summary(project_id, normalized_agent)
+    working_on: list[dict[str, object]] = []
+    seen_work_ids: set[int] = set()
+
+    def add_work(ticket: object) -> None:
+        if not isinstance(ticket, dict) or ticket.get("id") is None:
+            return
+        ticket_id = int(ticket["id"])
+        if ticket_id in seen_work_ids:
+            return
+        status = str(ticket.get("status") or "")
+        if status not in {"in_progress", "open", "claimed"}:
+            return
+        seen_work_ids.add(ticket_id)
+        working_on.append(_task_frame_ticket_payload(ticket))
+
+    if normalized_agent:
+        assigned = summary.get("assigned_to_agent") or []
+        if isinstance(assigned, list):
+            for ticket in sorted(
+                assigned,
+                key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
+            ):
+                add_work(ticket)
+    else:
+        open_rows = summary.get("open") or []
+        if isinstance(open_rows, list):
+            for ticket in sorted(
+                [
+                    row
+                    for row in open_rows
+                    if isinstance(row, dict) and str(row.get("status")) == "in_progress"
+                ],
+                key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
+            ):
+                add_work(ticket)
+
+    blockers: list[dict[str, object]] = []
+    blocked_rows = summary.get("blocked") or []
+    if isinstance(blocked_rows, list):
+        for ticket in blocked_rows:
+            if not isinstance(ticket, dict):
+                continue
+            if normalized_agent and str(ticket.get("assignee", "")).lower() != normalized_agent:
+                continue
+            blockers.append(_task_frame_ticket_payload(ticket))
+
+    activity = _agent_activity_summary(project_id)
+    last_by_source = activity.get("last_by_source")
+    last_handoff: dict[str, object] | None = None
+    if normalized_agent and isinstance(last_by_source, dict):
+        entry = last_by_source.get(normalized_agent)
+        if isinstance(entry, dict):
+            last_handoff = dict(entry)
+
+    recent_decisions = [
+        row_to_dict(row)
+        for row in list_decisions(project_id, limit=AGENT_SYNC_DECISIONS_CAP)
+    ]
+    constraint_memories = _list_constraint_memories(
+        project_id, limit=AGENT_SYNC_CONSTRAINTS_CAP
+    )
+
+    return {
+        "agent": normalized_agent,
+        "role": role,
+        "working_on": working_on[:TASK_FRAME_WORKING_ON_CAP],
+        "blockers": blockers[:TASK_FRAME_WORKING_ON_CAP],
+        "last_handoff": last_handoff,
+        "guardrails": {
+            "recent_decisions": recent_decisions,
+            "constraint_memories": constraint_memories,
+        },
+        "caps": caps,
+    }
+
+
+def _cursor_in_progress_task_frame_tickets(
+    task_frame: dict[str, object],
+) -> list[dict[str, object]]:
+    working_on = task_frame.get("working_on")
+    if not isinstance(working_on, list):
+        return []
+    return [
+        ticket
+        for ticket in working_on
+        if isinstance(ticket, dict) and str(ticket.get("status")) == "in_progress"
+    ]
+
+
+def _format_task_frame_prompt_section(project_id: int | None) -> str:
+    """Compact Cursor task brief for operator chat prompts (V3.9.10 #68)."""
+    if project_id is None:
+        return ""
+    frame = build_task_frame_context(project_id, "cursor")
+    in_progress = _cursor_in_progress_task_frame_tickets(frame)
+    if not in_progress:
+        return ""
+
+    lines = [
+        "Task frame (current Cursor work — authoritative over hybrid retrieval for where-we-are):",
+    ]
+    for ticket in in_progress[:TASK_FRAME_WORKING_ON_CAP]:
+        ticket_id = ticket.get("id")
+        title = _truncate(str(ticket.get("title") or ""), 120)
+        lines.append(f"- Ticket #{ticket_id} [in_progress]: {title}")
+        acceptance = ticket.get("acceptance")
+        if isinstance(acceptance, list):
+            for item in acceptance[:4]:
+                text = str(item).strip()
+                if text:
+                    lines.append(f"  - acceptance: {_truncate(text, 140)}")
+
+    last_handoff = frame.get("last_handoff")
+    if isinstance(last_handoff, dict):
+        summary = str(last_handoff.get("summary") or "").strip()
+        if summary:
+            lines.append(f"- Last Cursor handoff: {_truncate(summary, 160)}")
+        next_action = last_handoff.get("next_action")
+        if isinstance(next_action, str) and next_action.strip():
+            lines.append(
+                f"- Next action from last handoff: {_truncate(next_action.strip(), 160)}"
+            )
+
+    return "\n".join(lines)
 
 
 def _ticket_anchor_memories(
@@ -4874,6 +5168,7 @@ def build_world_dashboard() -> dict[str, object]:
             "memory_items": [],
             "recent_changes": [],
             "agent_activity": {"last_by_source": {}, "recent": []},
+            "task_frame": build_task_frame_context(None),
             "operator_metrics": get_metrics_summary_24h(),
             "synced_at": _now_iso(),
         }
@@ -4897,6 +5192,7 @@ def build_world_dashboard() -> dict[str, object]:
     recent_changes = build_recent_changes_feed(project_id)
     recent_change_items = recent_changes.get("items") or []
     retrieval_context = retrieve_work_context_memories(project_id, agent=None)
+    task_frame = build_task_frame_context(project_id, agent=None)
 
     return {
         "project": row_to_dict(project),
@@ -4930,6 +5226,7 @@ def build_world_dashboard() -> dict[str, object]:
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
         "agent_activity": agent_activity,
+        "task_frame": task_frame,
         "relevant_memories": retrieval_context["memories"],
         "relevant_memories_query": retrieval_context["query"],
         "relevant_memories_tickets": retrieval_context["tickets"],
@@ -4984,6 +5281,93 @@ def record_system_metric(
             conn.close()
     except Exception:
         pass
+
+
+def record_activity_pulse(
+    agent: str,
+    verb: str,
+    *,
+    project_id: int | None = None,
+    ticket_id: int | None = None,
+    summary: str | None = None,
+) -> dict[str, object] | None:
+    """Append one live-wire pulse row. Never raises (V3.9.11 #70)."""
+    try:
+        agent_norm = str(agent).strip().lower()
+        verb_norm = str(verb).strip().lower()
+        if agent_norm not in ACTIVITY_PULSE_AGENTS or verb_norm not in ACTIVITY_PULSE_VERBS:
+            return None
+        pid = project_id
+        if pid is None:
+            project = get_active_project()
+            if project is None:
+                return None
+            pid = int(project["id"])
+        summary_text = str(summary).strip() if summary is not None else None
+        if summary_text == "":
+            summary_text = None
+        now = _now_iso()
+        conn = connect_db()
+        try:
+            cur = conn.execute(
+                """
+                INSERT INTO activity_pulses (
+                    project_id, agent, verb, ticket_id, summary, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (pid, agent_norm, verb_norm, ticket_id, summary_text, now),
+            )
+            conn.commit()
+            pulse_id = int(cur.lastrowid)
+        finally:
+            conn.close()
+        return {
+            "id": pulse_id,
+            "project_id": pid,
+            "agent": agent_norm,
+            "verb": verb_norm,
+            "ticket_id": ticket_id,
+            "summary": summary_text,
+            "created_at": now,
+        }
+    except Exception:
+        return None
+
+
+def list_activity_pulses(
+    project_id: int,
+    *,
+    window_minutes: int = ACTIVITY_PULSE_WINDOW_MINUTES,
+    limit: int = 100,
+) -> list[dict[str, object]]:
+    """Recent activity pulses within window for live wire (V3.9.11 #70)."""
+    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, project_id, agent, verb, ticket_id, summary, created_at
+            FROM activity_pulses
+            WHERE project_id = ? AND datetime(created_at) >= datetime(?)
+            ORDER BY datetime(created_at) DESC, id DESC
+            LIMIT ?
+            """,
+            (project_id, since, limit),
+        ).fetchall()
+        return [
+            {
+                "id": int(row["id"]),
+                "project_id": int(row["project_id"]),
+                "agent": str(row["agent"]),
+                "verb": str(row["verb"]),
+                "ticket_id": int(row["ticket_id"]) if row["ticket_id"] is not None else None,
+                "summary": row["summary"],
+                "created_at": str(row["created_at"]),
+            }
+            for row in rows
+        ]
+    finally:
+        conn.close()
 
 
 def get_metrics_summary_24h() -> dict[str, object]:
@@ -5202,8 +5586,10 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         limit=memory_limit,
     )
     relevant_memories = retrieval_context["memories"]
+    supporting_memories = relevant_memories
     recommended = _state_display(state["next_action"]) if state is not None else "(unset)"
     tickets = build_tickets_summary(project_id, normalized_agent)
+    task_frame = build_task_frame_context(project_id, normalized_agent)
 
     return {
         "agent": normalized_agent,
@@ -5221,12 +5607,14 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         "recommended_next_action": recommended,
         "agent_activity": _agent_activity_summary(project_id),
         "tickets": tickets,
+        "task_frame": task_frame,
         "recent_decisions": recent_decisions,
         "constraint_memories": constraint_memories,
         "events_from_this_agent": events_from_this_agent,
         "events_from_other_agents": events_from_other_agents,
         "relevant_memories_query": retrieval_context["query"],
         "relevant_memories": relevant_memories,
+        "supporting_memories": supporting_memories,
         "relevant_memories_tickets": retrieval_context["tickets"],
         "bundle_shape": AGENT_SYNC_BUNDLE_SHAPE,
         "bundle_caps": {
@@ -5234,7 +5622,9 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
             "constraint_memories": AGENT_SYNC_CONSTRAINTS_CAP,
             "events_from_other_agents": AGENT_SYNC_OTHER_EVENTS_CAP,
             "events_from_this_agent": AGENT_SYNC_OWN_EVENTS_CAP,
-            "relevant_memories": memory_limit,
+            "supporting_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
+            "relevant_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
+            "task_frame_working_on": TASK_FRAME_WORKING_ON_CAP,
         },
     }
 
@@ -5883,6 +6273,10 @@ def build_prompt(
     system_parts.append(_format_agent_activity_prompt_section(active_project_id))
 
     system_parts.append(_format_tickets_prompt_section(active_project_id))
+
+    task_frame_section = _format_task_frame_prompt_section(active_project_id)
+    if task_frame_section:
+        system_parts.append(task_frame_section)
 
     system_parts.append(_format_canon_prompt_section(canon_rows))
 

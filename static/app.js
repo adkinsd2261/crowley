@@ -14,9 +14,12 @@ const panelLoopsEl = document.getElementById("panel-loops");
 const panelDecisionsEl = document.getElementById("panel-decisions");
 const panelChangesEl = document.getElementById("panel-changes");
 const panelAgentFeedEl = document.getElementById("panel-agent-feed");
+const panelAgentBriefEl = document.getElementById("panel-agent-brief");
 const panelAgentMemoryListEl = document.getElementById("panel-agent-memory-list");
-const panelAgentMemoriesWrapEl = document.getElementById("panel-agent-memories");
-const agentContextCountEl = document.getElementById("agent-context-count");
+const taskBriefWorkingListEl = document.getElementById("task-brief-working-list");
+const taskBriefHandoffBodyEl = document.getElementById("task-brief-handoff-body");
+const taskBriefGuardrailsBodyEl = document.getElementById("task-brief-guardrails-body");
+const agentSupportingCountEl = document.getElementById("agent-supporting-count");
 const memoryHygieneCalloutEl = document.getElementById("memory-hygiene-callout");
 const panelMemoryEl = document.getElementById("panel-memory");
 const memorySearchEl = document.getElementById("memory-search");
@@ -899,28 +902,126 @@ function renderChangesPanel(items = []) {
   );
 }
 
-function formatTicketScopeLabel(tickets = []) {
+function formatWorkingOnScopeLabel(tickets = []) {
   if (!Array.isArray(tickets) || !tickets.length) return "";
   const ids = tickets.map((ticket) => `#${ticket.id}`).join(", ");
-  return ` · scoped to ${ids}`;
+  return ` · ${ids}`;
 }
 
-function renderAgentFeedMemories(memories = [], ticketScope = []) {
-  if (!panelAgentMemoryListEl || !panelAgentMemoriesWrapEl) return;
+function resolveTaskBriefHandoff(taskFrame = {}, agentActivity = {}) {
+  if (taskFrame && typeof taskFrame.last_handoff === "object" && taskFrame.last_handoff) {
+    return taskFrame.last_handoff;
+  }
+  const lastBySource =
+    agentActivity && typeof agentActivity.last_by_source === "object"
+      ? agentActivity.last_by_source
+      : {};
+  return lastBySource.cursor || lastBySource.codex || lastBySource.chatgpt || null;
+}
+
+function renderTaskBriefWorkingOn(tickets = []) {
+  if (!taskBriefWorkingListEl) return false;
+  const items = Array.isArray(tickets) ? tickets : [];
+  const fingerprint = fingerprintList(items, ["id", "status", "title", "acceptance"]);
+  renderPanelListIfChanged(
+    taskBriefWorkingListEl,
+    items,
+    (ticket) => {
+      const acceptance = Array.isArray(ticket.acceptance) ? ticket.acceptance : [];
+      const acceptanceHtml = acceptance.length
+        ? `<ul class="task-brief-acceptance">${acceptance
+            .slice(0, 4)
+            .map((line) => `<li>${escapeHtml(String(line))}</li>`)
+            .join("")}</ul>`
+        : "";
+      return (
+        `<span class="task-brief-ticket-card">` +
+        `<span class="task-brief-ticket-head">` +
+        `<span class="meta">#${escapeHtml(String(ticket.id))}</span> ` +
+        `<span class="meta ${ticketStatusClass(ticket.status)}">${escapeHtml(String(ticket.status || "open"))}</span> ` +
+        `<span class="task-brief-ticket-title">${escapeHtml(String(ticket.title || ""))}</span>` +
+        `</span>` +
+        acceptanceHtml +
+        `</span>`
+      );
+    },
+    "No in-progress tickets on the board.",
+    fingerprint
+  );
+  return items.length > 0;
+}
+
+function renderTaskBriefHandoff(handoff) {
+  if (!taskBriefHandoffBodyEl) return false;
+  if (!handoff || typeof handoff !== "object") {
+    taskBriefHandoffBodyEl.innerHTML = `<p class="task-brief-empty">No recent handoff ingested.</p>`;
+    return false;
+  }
+  const source = handoff.source ? String(handoff.source) : "agent";
+  const when = handoff.last_at ? formatRelativeTime(handoff.last_at) : "";
+  const summary = escapeHtml(String(handoff.summary || "(no summary)"));
+  const nextAction = handoff.next_action
+    ? `<p class="task-brief-handoff-next">Next: ${escapeHtml(String(handoff.next_action))}</p>`
+    : "";
+  taskBriefHandoffBodyEl.innerHTML =
+    `<div class="task-brief-handoff-card">` +
+    `<p class="task-brief-handoff-meta">` +
+    `<span class="meta ${agentSourceClass(source)}">${escapeHtml(source)}</span>` +
+    (when ? `<span class="meta"> · ${escapeHtml(when)}</span>` : "") +
+    `</p>` +
+    `<p class="task-brief-handoff-summary">${summary}</p>` +
+    nextAction +
+    `</div>`;
+  return true;
+}
+
+function renderTaskBriefGuardrails(guardrails = {}) {
+  if (!taskBriefGuardrailsBodyEl) return false;
+  const payload = guardrails && typeof guardrails === "object" ? guardrails : {};
+  const decisions = Array.isArray(payload.recent_decisions) ? payload.recent_decisions : [];
+  const constraints = Array.isArray(payload.constraint_memories)
+    ? payload.constraint_memories
+    : [];
+  if (!decisions.length && !constraints.length) {
+    taskBriefGuardrailsBodyEl.innerHTML = `<p class="task-brief-empty">No recent guardrails.</p>`;
+    return false;
+  }
+  const chips = [];
+  for (const item of decisions.slice(0, 5)) {
+    const text =
+      item && typeof item === "object"
+        ? item.summary || item.detail || item.decision || ""
+        : String(item);
+    if (text) {
+      chips.push(
+        `<span class="task-brief-guardrail-chip task-brief-guardrail-decision">${escapeHtml(String(text))}</span>`
+      );
+    }
+  }
+  for (const item of constraints.slice(0, 5)) {
+    const text =
+      item && typeof item === "object"
+        ? memoryDisplayLine(item) || item.summary || item.content || ""
+        : String(item);
+    if (text) {
+      chips.push(
+        `<span class="task-brief-guardrail-chip task-brief-guardrail-constraint">${escapeHtml(String(text))}</span>`
+      );
+    }
+  }
+  taskBriefGuardrailsBodyEl.innerHTML = chips.join("");
+  return chips.length > 0;
+}
+
+function renderAgentFeedMemories(memories = [], workingOn = []) {
+  if (!panelAgentMemoryListEl) return false;
   const items = Array.isArray(memories) ? memories : [];
-  if (agentContextCountEl) {
-    const scope = formatTicketScopeLabel(ticketScope);
-    agentContextCountEl.textContent = items.length
+  if (agentSupportingCountEl) {
+    const scope = formatWorkingOnScopeLabel(workingOn);
+    agentSupportingCountEl.textContent = items.length
       ? `${items.length} memor${items.length === 1 ? "y" : "ies"}${scope}`
       : "";
   }
-  if (!items.length) {
-    panelAgentMemoriesWrapEl.classList.add("hidden");
-    panelAgentMemoryListEl.innerHTML = "";
-    delete panelAgentMemoryListEl.dataset.panelFingerprint;
-    return;
-  }
-  panelAgentMemoriesWrapEl.classList.remove("hidden");
   const fingerprint = fingerprintList(items, ["id", "inclusion_reason", "content", "created_at"]);
   renderPanelListIfChanged(
     panelAgentMemoryListEl,
@@ -943,13 +1044,27 @@ function renderAgentFeedMemories(memories = [], ticketScope = []) {
         `</span>`
       );
     },
-    "No relevant memories retrieved.",
+    "No supporting memories for current work.",
     fingerprint
   );
+  return items.length > 0;
 }
 
-function renderAgentFeedPanel(events = [], relevantMemories = [], ticketScope = []) {
-  renderAgentFeedMemories(relevantMemories, ticketScope);
+function renderTaskFrameBrief(taskFrame = {}, supportingMemories = [], agentActivity = {}) {
+  if (!panelAgentBriefEl) return;
+  const frame = taskFrame && typeof taskFrame === "object" ? taskFrame : {};
+  const workingOn = Array.isArray(frame.working_on) ? frame.working_on : [];
+  const guardrails = frame.guardrails && typeof frame.guardrails === "object" ? frame.guardrails : {};
+  const hasWorking = renderTaskBriefWorkingOn(workingOn);
+  const hasHandoff = renderTaskBriefHandoff(resolveTaskBriefHandoff(frame, agentActivity));
+  const hasGuardrails = renderTaskBriefGuardrails(guardrails);
+  const hasSupporting = renderAgentFeedMemories(supportingMemories, workingOn);
+  const hasBrief = hasWorking || hasHandoff || hasGuardrails || hasSupporting;
+  panelAgentBriefEl.classList.toggle("hidden", !hasBrief);
+}
+
+function renderAgentFeedPanel(events = [], taskFrame = {}, supportingMemories = [], agentActivity = {}) {
+  renderTaskFrameBrief(taskFrame, supportingMemories, agentActivity);
   if (!panelAgentFeedEl) return;
   const fingerprint = fingerprintList(events, [
     "id",
@@ -1615,7 +1730,7 @@ function renderDashboard(data, { animate = false } = {}) {
     renderPanelList(panelDecisionsEl, [], () => "", PANEL_META.decisions.empty);
     renderPanelList(panelChangesEl, [], () => "", PANEL_META.changes.empty);
     renderPanelList(panelAgentFeedEl, [], () => "", PANEL_META.agent_feed.empty);
-    renderAgentFeedMemories([]);
+    renderTaskFrameBrief({}, [], {});
     renderPanelList(panelMemoryEl, [], () => "", PANEL_META.memory.empty);
     clearTicketDetail();
     selectedTicketId = null;
@@ -1673,8 +1788,9 @@ function renderDashboard(data, { animate = false } = {}) {
   const agentEvents = (data.agent_activity && data.agent_activity.recent) || [];
   renderAgentFeedPanel(
     agentEvents,
+    data.task_frame || {},
     data.relevant_memories || [],
-    data.relevant_memories_tickets || []
+    data.agent_activity || {}
   );
   renderChangesPanel(changesItemsForDashboard(data));
 

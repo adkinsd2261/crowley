@@ -1,0 +1,101 @@
+{
+  "objective": "V4.0 — Spark Lanes: make sparks the core memory unit and route memory through human-use lanes, trust states, and lane-aware retrieval.",
+  "context": "V3.9.12 proves the portable context terminal loop. V4.0 is the memory architecture release: raw logs are receipts, episodic summaries are anchors, sparks are future-use compression, patterns emerge from reused sparks, and canon remains manually reviewed high-trust truth.",
+  "decisions": [
+    "Sparks are the memory unit",
+    "Primary lanes are learning, work, relationships, money, health, operating_style",
+    "Every spark has one primary lane, optional domain/tags, why_keep, worth reason, confidence, sensitivity, and trust state",
+    "Retrieval chooses lane/scope before broad fallback",
+    "Sensitive lanes default to candidate/review and never auto-promote to canon",
+    "Existing memory_items remain readable through migration/backward compatibility",
+    "External collectors are later optional inputs, not the V4 core"
+  ],
+  "non_goals": [
+    "Cloud sync",
+    "Live terminal automation",
+    "Calendar/filesystem/git collectors as the core V4 deliverable",
+    "Auto-deleting memories",
+    "Auto-canonizing personal or sensitive memories"
+  ],
+  "risks": [
+    "Rigid lanes could misclassify domain drift",
+    "Loose lanes could become fake tags and fail to protect retrieval",
+    "Sensitive relationship, money, and health memories require careful trust defaults",
+    "Migration must not break existing retrieval or UI memory filters"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; focused tests for lane schema/migration, lane-aware retrieval, trust defaults, sensitive-lane staging, pattern proposals, and backward compatibility with existing memory_items.",
+  "next_action": "After V3.9.12 proves packet-in/writeback-out and Mr. Go approves, Codex mints with scripts/codex_sync.py --create-tickets tickets/v4.0_spark_lanes.json.",
+  "approval": {
+    "status": "pending",
+    "approved_by": null,
+    "approved_at": null,
+    "note": "Planned during 2026-07-02 direction pivot. Do not mint until V3.9.12 closes and Mr. Go explicitly approves."
+  },
+  "tickets": [
+    {
+      "title": "V4 Spark Lanes: schema and migration",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add durable lane/trust metadata for spark-like memory items while preserving existing memory_items compatibility. Support lane, domain, tags, why_keep, worth_reason, sensitivity, and trust_state. Backfill existing rows conservatively without pretending old rows have precise lane truth.",
+      "acceptance": [
+        "Existing memory_items remain readable and retrievable",
+        "New spark records can store lane and trust metadata",
+        "Allowed lanes are learning, work, relationships, money, health, operating_style",
+        "Backfill uses conservative defaults and does not auto-promote old rows",
+        "Migration tests cover old and new database shapes"
+      ]
+    },
+    {
+      "title": "V4 Spark Lanes: lane-aware retrieval",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Refactor retrieval so lane/scope is selected before broad memory search. Work/project retrieval should not mix with health, money, or relationship memories unless explicitly relevant or requested. Preserve inclusion reasons and authority order.",
+      "acceptance": [
+        "Retrieval accepts lane and optional domain/tag filters",
+        "Default retrieval avoids sensitive lane bleed-through",
+        "Broad fallback is explicit and explainable",
+        "Inclusion reasons cite lane/scope when used",
+        "Tests cover work, learning, health, money, and relationship lane separation"
+      ]
+    },
+    {
+      "title": "V4 Spark Lanes: trust and approval queue",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add review workflow for candidate sparks: activate, reject, pin, mark stale, or leave candidate. Sensitive lanes (relationships, money, health) default to candidate/review. Promotion to pinned/canon remains explicit.",
+      "acceptance": [
+        "Candidate sparks can be listed by lane, sensitivity, and trust_state",
+        "Candidate sparks can be activated or rejected without deletion",
+        "Sensitive lanes default to candidate/review",
+        "Pinned/canon promotion requires explicit action",
+        "Tests cover trust transitions and sensitive defaults"
+      ]
+    },
+    {
+      "title": "V4 Spark Lanes: pattern synthesis",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Synthesize repeated or reused sparks into pattern candidates, especially operating_style patterns. Pattern synthesis proposes memories; it does not auto-canonize. Reuse/access signals should help identify candidates over time.",
+      "acceptance": [
+        "Pattern candidates can be generated from repeated related sparks",
+        "Operating-style pattern candidates are supported",
+        "Pattern candidates include source spark ids and why_keep",
+        "Pattern synthesis does not auto-canonize",
+        "Tests cover repeated-spark pattern proposal"
+      ]
+    },
+    {
+      "title": "V4 Spark Lanes: docs and canon update",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Document the V4 memory hierarchy: raw logs -> episodic receipts -> sparks -> patterns -> canon. Update architecture, roadmap, memory hierarchy, onboarding docs, release log, and canon synthesis workflow. Make clear that canon remains manually reviewed high-trust truth.",
+      "acceptance": [
+        "Docs define sparks as the memory unit",
+        "Docs define all primary lanes and sensitive-lane rules",
+        "Docs describe trust states and promotion rules",
+        "Docs preserve raw log / receipt / spark / pattern / canon distinction",
+        "Preflight and full test suite pass after doc lock"
+      ]
+    }
+  ]
+}

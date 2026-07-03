@@ -135,13 +135,27 @@
             <ul class="panel-list" id="panel-changes"></ul>
           </div>
           <div class="context-panel" data-panel="agent_feed" role="tabpanel" hidden>
-            <p class="panel-role-note">Retrieval scoped to open tickets, then handoff timeline below.</p>
-            <div class="agent-feed-context hidden" id="panel-agent-memories">
-              <h4 class="agent-feed-subhead agent-feed-subhead-context">
-                <span class="agent-feed-subhead-label">Context pulled for agents</span>
-                <span class="agent-feed-subhead-count" id="agent-context-count"></span>
-              </h4>
-              <ul class="panel-list" id="panel-agent-memory-list"></ul>
+            <p class="panel-role-note">Task brief for current work, then handoff timeline below.</p>
+            <div class="agent-feed-brief hidden" id="panel-agent-brief">
+              <section class="task-brief-section" id="task-brief-working-on">
+                <h4 class="agent-feed-subhead">Working on</h4>
+                <ul class="panel-list task-brief-ticket-list" id="task-brief-working-list"></ul>
+              </section>
+              <section class="task-brief-section" id="task-brief-handoff">
+                <h4 class="agent-feed-subhead">Last handoff</h4>
+                <div class="task-brief-handoff-body" id="task-brief-handoff-body"></div>
+              </section>
+              <section class="task-brief-section" id="task-brief-guardrails">
+                <h4 class="agent-feed-subhead">Guardrails</h4>
+                <div class="task-brief-guardrails" id="task-brief-guardrails-body"></div>
+              </section>
+              <section class="task-brief-section" id="task-brief-supporting">
+                <h4 class="agent-feed-subhead agent-feed-subhead-supporting">
+                  <span class="agent-feed-subhead-label">Supporting</span>
+                  <span class="agent-feed-subhead-count" id="agent-supporting-count"></span>
+                </h4>
+                <ul class="panel-list" id="panel-agent-memory-list"></ul>
+              </section>
             </div>
             <h4 class="agent-feed-subhead agent-feed-subhead-timeline">Handoff timeline</h4>
             <ul class="panel-list" id="panel-agent-feed"></ul>
@@ -192,6 +206,6 @@
       </div>
     </section>
   </div>
-  <script src="/app.js?v=39965"></script>
+  <script src="/app.js?v=391067"></script>
 </body>
 </html>

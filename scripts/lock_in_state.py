@@ -75,19 +75,20 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.8 ship."""
+    """Current world-model fields after V3.9.10 ship."""
     return {
-        "phase": "V3.9.8 shipped — Runtime Hardening",
-        "focus": "V3.9.9 Memory Judgment + Work Intelligence planning; V4 after .9 gate",
+        "phase": "V3.9.10 shipped — Task-Frame Context",
+        "focus": "V3.9.11 Live Wire; V3.9.12 Portable Context Terminal and V4 Spark Lanes planned",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Mr. Go review V3.9.9 draft packet; Codex mint when approved."
+            "Claim V3.9.11 #70 one ticket at a time after Mr. Go review."
         ),
         "what_changed": (
-            "V3.9.8 Runtime Hardening: CROWLEY_TEST_MODE, model probe, runtime health, "
-            "sqlite-vec fallback, fragile-startup suite. Constants bumped to 3.9.8."
+            "V3.9.10 Task-Frame Context: build_task_frame_context API, ticket-narrative retrieval, "
+            "sync bundle task brief (task_frame_v3910), Agent Feed brief UI, chat prompt task frame "
+            "injection. Task frame authoritative over hybrid retrieval; MEMORY_HIERARCHY unchanged."
         ),
     }
 

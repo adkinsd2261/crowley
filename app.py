@@ -90,6 +90,21 @@ class CancelTicketRequest(BaseModel):
     comment: str = Field(min_length=1)
 
 
+class ActivityPulseRequest(BaseModel):
+    agent: Literal["cursor", "codex", "crowley", "mr_go"]
+    verb: Literal[
+        "session_start",
+        "claimed",
+        "working",
+        "note",
+        "handoff",
+        "minted",
+        "closed",
+    ]
+    summary: str | None = None
+    ticket_id: int | None = None
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     crowley.setup_db()
@@ -166,6 +181,23 @@ def api_agent_sync(
         return JSONResponse(crowley.build_agent_sync_bundle(agent=agent, limit=limit))
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/api/activity/pulse")
+def api_activity_pulse(body: ActivityPulseRequest) -> JSONResponse:
+    project = crowley.get_active_project()
+    if project is None:
+        return JSONResponse({"error": "no active project"}, status_code=400)
+    result = crowley.record_activity_pulse(
+        body.agent,
+        body.verb,
+        project_id=int(project["id"]),
+        ticket_id=body.ticket_id,
+        summary=body.summary,
+    )
+    if result is None:
+        return JSONResponse({"error": "pulse not recorded"}, status_code=400)
+    return JSONResponse({"ok": True, "pulse": result}, status_code=201)
 
 
 @app.post("/api/ingest")

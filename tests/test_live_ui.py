@@ -113,14 +113,19 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v397(self) -> None:
+    def test_onboarding_docs_locked_for_v3910_task_frame(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.7"', where)
-        self.assertIn("V3.9.7 Workspace Experience & Reliability", versions)
+        self.assertIn('CROWLEY_VERSION = "3.9.10"', where)
+        self.assertIn("persistent context layer", where)
+        self.assertIn("V3.9.10", versions)
+        self.assertIn("Task-Frame Context", versions)
         self.assertIn("shipped", versions.lower())
-        self.assertTrue((ROOT / "docs" / "V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md").is_file())
-        self.assertIn("Shipped", (ROOT / "docs" / "V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md").read_text(encoding="utf-8"))
+        self.assertTrue((ROOT / "docs" / "V3.9.10_TASK_FRAME_CONTEXT.md").is_file())
+        self.assertIn(
+            "Shipped",
+            (ROOT / "docs" / "V3.9.10_TASK_FRAME_CONTEXT.md").read_text(encoding="utf-8"),
+        )
 
     def test_onboarding_docs_locked_for_v395(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
@@ -196,7 +201,7 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("if (streaming) return;", js)
         self.assertIn("if (refreshBtn) refreshBtn.disabled = busy;", js)
         self.assertIn("Refresh context panels and chat history", html)
-        self.assertIn("Raw agent handoff timeline", html)
+        self.assertIn("Handoff timeline", html)
         for token in (
             "overflow-wrap: anywhere",
             "-webkit-line-clamp: 2",

@@ -382,6 +382,87 @@ def print_agent_activity(sync: dict[str, Any]) -> None:
     print("")
 
 
+def print_task_frame_brief(sync: dict[str, Any]) -> None:
+    """Task brief sections for V3.9.10 sync CLI (Working on / Last handoff / Guardrails)."""
+    task_frame = sync.get("task_frame")
+    if not isinstance(task_frame, dict):
+        return
+
+    working_on = as_list(task_frame.get("working_on"))
+    print("Working on:")
+    if not working_on:
+        print("  - (none)")
+    else:
+        for item in working_on[:6]:
+            if not isinstance(item, dict):
+                continue
+            acceptance = as_list(item.get("acceptance"))
+            ac_note = ""
+            if acceptance:
+                ac_note = f" · {clip(str(acceptance[0]), 80)}"
+            print(
+                f"  - #{item.get('id')} [{item.get('status')}] "
+                f"{clip(str(item.get('title', '')))}{ac_note}"
+            )
+    print("")
+
+    last_handoff = task_frame.get("last_handoff")
+    print("Last handoff:")
+    if not isinstance(last_handoff, dict):
+        print("  - (none)")
+    else:
+        print(
+            f"  - #{last_handoff.get('memory_id')} — "
+            f"{clip(str(last_handoff.get('summary', '')))}"
+        )
+        next_action = last_handoff.get("next_action")
+        if isinstance(next_action, str) and next_action.strip():
+            print(f"    next: {clip(next_action)}")
+    print("")
+
+    guardrails = task_frame.get("guardrails")
+    if not isinstance(guardrails, dict):
+        guardrails = {}
+    decisions = as_list(guardrails.get("recent_decisions"))
+    constraints = as_list(guardrails.get("constraint_memories"))
+    print("Guardrails:")
+    if not decisions and not constraints:
+        print("  - (none)")
+    else:
+        for item in decisions[:5]:
+            if isinstance(item, dict):
+                text = item.get("summary") or item.get("detail") or item.get("decision")
+                print(f"  - decision: {clip(str(text or item))}")
+            else:
+                print(f"  - decision: {clip(str(item))}")
+        for item in constraints[:5]:
+            print(f"  - constraint: {event_display_line(item)}")
+    print("")
+
+
+def supporting_memories_from_sync(sync: dict[str, Any]) -> list[Any]:
+    memories = as_list(sync.get("supporting_memories"))
+    if memories:
+        return memories
+    return as_list(sync.get("relevant_memories"))
+
+
+def print_supporting_memories(sync: dict[str, Any]) -> None:
+    """Supporting retrieval rows with inclusion reasons (V3.9.10 #66)."""
+    memories = supporting_memories_from_sync(sync)
+    print(f"Supporting ({len(memories)}):")
+    if not memories:
+        print("  - (none)")
+    else:
+        for item in memories[:8]:
+            line = event_display_line(item)
+            reason = item.get("inclusion_reason") if isinstance(item, dict) else None
+            if isinstance(reason, str) and reason.strip():
+                line = f"{line} [{clip(reason, 120)}]"
+            print(f"  - {line}")
+    print("")
+
+
 def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
     state = sync.get("state")
     if not isinstance(state, dict):
@@ -413,28 +494,32 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
 
     print_tickets_summary(sync, agent=agent)
 
-    decisions = as_list(sync.get("recent_decisions"))
-    print("recent decisions:")
-    if not decisions:
-        print("  - (none)")
+    has_task_frame = isinstance(sync.get("task_frame"), dict)
+    if has_task_frame:
+        print_task_frame_brief(sync)
     else:
-        for item in decisions[:5]:
-            if isinstance(item, dict):
-                text = item.get("summary") or item.get("detail") or item.get("decision")
-                print(f"  - {clip(str(text or item))}")
-            else:
-                print(f"  - {clip(str(item))}")
+        decisions = as_list(sync.get("recent_decisions"))
+        print("recent decisions:")
+        if not decisions:
+            print("  - (none)")
+        else:
+            for item in decisions[:5]:
+                if isinstance(item, dict):
+                    text = item.get("summary") or item.get("detail") or item.get("decision")
+                    print(f"  - {clip(str(text or item))}")
+                else:
+                    print(f"  - {clip(str(item))}")
 
-    print("")
-    constraints = as_list(sync.get("constraint_memories"))
-    print("constraint memories:")
-    if not constraints:
-        print("  - (none)")
-    else:
-        for item in constraints[:5]:
-            print(f"  - {event_display_line(item)}")
+        print("")
+        constraints = as_list(sync.get("constraint_memories"))
+        print("constraint memories:")
+        if not constraints:
+            print("  - (none)")
+        else:
+            for item in constraints[:5]:
+                print(f"  - {event_display_line(item)}")
+        print("")
 
-    print("")
     print("events from other agents:")
     other = as_list(sync.get("events_from_other_agents"))
     if not other:
@@ -453,18 +538,21 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
             print(f"  - {event_display_line(item)}")
 
     print("")
-    memories = as_list(sync.get("relevant_memories"))
-    print("top retrieved memories:")
-    if not memories:
-        print("  - (none)")
+    if has_task_frame:
+        print_supporting_memories(sync)
     else:
-        for item in memories[:8]:
-            line = event_display_line(item)
-            reason = item.get("inclusion_reason") if isinstance(item, dict) else None
-            if isinstance(reason, str) and reason.strip():
-                line = f"{line} [{clip(reason, 120)}]"
-            print(f"  - {line}")
-    print("")
+        memories = as_list(sync.get("relevant_memories"))
+        print("top retrieved memories:")
+        if not memories:
+            print("  - (none)")
+        else:
+            for item in memories[:8]:
+                line = event_display_line(item)
+                reason = item.get("inclusion_reason") if isinstance(item, dict) else None
+                if isinstance(reason, str) and reason.strip():
+                    line = f"{line} [{clip(reason, 120)}]"
+                print(f"  - {line}")
+        print("")
 
 
 def verify_agent_handoff(agent: str) -> tuple[bool, str]:
@@ -546,8 +634,9 @@ def handoff_since_session(agent: str) -> bool:
 
 
 def is_slim_sync_bundle(sync: dict[str, Any]) -> bool:
-    """True when /api/agent/sync returned the V3.9.9 slim bundle."""
-    if sync.get("bundle_shape") == "slim_v399":
+    """True when /api/agent/sync returned a slim or task-frame bundle."""
+    shape = sync.get("bundle_shape")
+    if shape in {"slim_v399", "task_frame_v3910"}:
         return True
     if isinstance(sync.get("bundle_caps"), dict):
         return True

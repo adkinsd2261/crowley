@@ -1,25 +1,27 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.8 local · V3.9.9 in progress · V3.9.10–V3.9.11 minted (2026-07-02)
+**As of:** V3.9.10 local · V3.9.11 next (#70–#75) · V3.9.12 minted · V4 planned (2026-07-02)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Active initiative — resume at #62
+## Active initiative — V3.9.11 next
 
-**Current:** V3.9.9 Context That Feeds — `#56–#61` closed locally; `**#62` in_progress** (implemented, awaiting Mr. Go QA); `**#63` open** (doc lock + version bump to 3.9.9).
+**Current:** V3.9.10 Task-Frame Context — `#64–#69` closed locally. **Next:** V3.9.11 Live Wire `#70–#75` (minted, do not claim until Mr. Go directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
 
 | Release                    | Tickets | Packet                                    | Status                          |
 | -------------------------- | ------- | ----------------------------------------- | ------------------------------- |
-| V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Active** — finish #62 → #63   |
-| V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | Minted · approved · not started |
-| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | Minted · approved · not started |
+| V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Shipped locally**             |
+| V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped locally**             |
+| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | Minted · approved · **next**  |
+| V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | Minted · approved · do not claim until V3.9.11 |
+| V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
 
 
-See [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+See [V3.9.10_TASK_FRAME_CONTEXT.md](./V3.9.10_TASK_FRAME_CONTEXT.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
 
 | Ticket theme                                   | Status                                       |
@@ -32,7 +34,12 @@ See [V3.9.8_RUNTIME_HARDENING.md](./V3.9.8_RUNTIME_HARDENING.md) · [WHERE_WE_AR
 | Pre-V4 QA hygiene (#37)                        | Shipped on `main`                            |
 | V3.9.7 Experience & Reliability (#40–#49)      | Shipped on `main`                            |
 | V3.9.8 Runtime Hardening (#50–#55)             | **Local only** — not pushed to `origin/main` |
-| V3.9.9 Context That Feeds (#56–#63)            | **Local only** — #62/#63 remain              |
+| V3.9.9 Context That Feeds (#56–#63)            | **Local only** — shipped at #63 doc lock     |
+| V3.9.10 Task-Frame Context (#64–#69)         | **Local only** — shipped at #69 doc lock     |
+| V3.9.12 Portable Context Terminal (#76–#80)             | Minted · start after V3.9.11                |
+| V4.0 Spark Lanes                               | Planned after V3.9.12                       |
+
+**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
 
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
@@ -88,4 +95,3 @@ Resolved: test DB isolation (#13, shipped).
 6. New session onboarding: read `docs/WHERE_WE_ARE.md` (loaded in every Crowley prompt).
 7. Re-run lock-in after major ships: `scripts/lock_in_state.py`.
 8. CI runs on every push/PR to `main` — keep tests green before merge.
-

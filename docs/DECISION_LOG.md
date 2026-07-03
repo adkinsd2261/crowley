@@ -18,6 +18,87 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-040 — V3.9.10 Task-Frame Context shipped
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.10`, `build_task_frame_context()`, ticket-narrative `retrieve_work_context_memories()`, `bundle_shape=task_frame_v3910`, Agent Feed task brief UI, `_format_task_frame_prompt_section()`, `docs/V3.9.10_TASK_FRAME_CONTEXT.md`, tickets `#64–#69`, **242 tests**
+
+### Context
+
+V3.9.9 improved memory quality and slim sync, but agents still received generic retrieval hits instead of a work brief tied to the ticket in flight. Live QA showed hybrid search surfaces handoff-shaped keyword matches, not “what do I need right now?”
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.10"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.10 Task-Frame Context"`
+- Structured task frame (working tickets, last handoff, guardrails) before supporting memories in sync, UI, and chat prompts
+- Ticket-narrative retrieval query from title/description/acceptance; cap supporting at 4; dedupe handoff timeline ids
+- Role-shaped frames for Cursor (builder) and Codex (architect) from the same engine
+- MEMORY_HIERARCHY authority order unchanged — filesystem and tickets outrank retrieval
+
+### Alternatives rejected
+
+- Replacing tickets tab or handoff timeline with retrieval — task frame supplements, does not replace
+- Duplicating full handoff bodies into prompts — summary + next_action only
+- Direct Codex-to-Cursor channel — Crowley remains the only hub
+
+---
+
+## ADR-039 — V3.9.9 Context That Feeds shipped
+
+**Date:** 2026-07-02
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.9`, `evaluate_memory_quality_gate()`, `_build_inclusion_reason()`, slim `build_agent_sync_bundle`, handoff section parsing, `docs/V3.9.9_CONTEXT_THAT_FEEDS.md`, tickets `#56–#63`, **219 tests**, Agent Feed inclusion badges, `GET /api/hygiene`
+
+### Context
+
+V3.9.8 hardened runtime boot. Agents still received oversized sync bundles, opaque retrieval hits, and noisy handoff-derived memories. V3.9.9 filters memory on ingest, explains inclusion on retrieval, and slims cross-agent sync without breaking filesystem/ticket authority.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.9 Context That Feeds"`
+- Gate `save_memory_item` paths with quality gate for high-value types
+- Human-readable `inclusion_reason` on retrieval and sync relevant memories
+- Slim agent sync bundle with documented caps (tickets/blockers before memory wall)
+- Upgrade handoff ingest to typed decision/constraint/lesson memories
+- Post-work feedback loop on Cursor and Codex `--after` paths
+- Light UI: inclusion badges, hygiene callout, read-only hygiene alias
+
+### Alternatives rejected
+
+- Schema migration for `why_it_matters` — use `summary` column initially
+- Auto-delete hygiene candidates — suggest only
+- Direct Codex-to-Cursor channel — Crowley remains the only hub
+
+---
+
+## ADR-038 — Crowley direction pivot: persistent context layer, portable context terminal, Spark Lanes
+
+**Date:** 2026-07-02
+**Status:** Accepted as planning direction
+**Evidence:** `docs/PRE_V4_FUTURE_RELEASE_LADDER.md`, `tickets/v3.9.12_portable_context_terminal.json`, `tickets/v4.0_spark_lanes.json`
+
+### Context
+
+V3.9.7–V3.9.11 improved workspace quality, runtime reliability, agent context, and live activity. Mr. Go clarified that Crowley should not be treated as a single AI model or only as the browser UI. The deeper product is portable continuity: context, memory, identity, and coordination that can travel across ChatGPT, Claude, Codex, Cursor, local models, and future reasoning surfaces.
+
+### Decision
+
+- Reframe Crowley as the persistent context layer that follows D across reasoning surfaces.
+- Keep the existing board order: V3.9.9, V3.9.10, V3.9.11.
+- Add V3.9.12 Portable Context Terminal as a local/manual packet-in/writeback-out proof.
+- Define V4.0 as Spark Lanes / Memory Architecture rather than generic external collectors.
+- Treat sparks as the memory unit and lanes as the retrieval/trust boundary.
+- Defer live terminal automation, OAuth, cloud sync, and external collectors until after the memory architecture is sound.
+
+### Rejected
+
+- Making the browser UI the identity boundary.
+- Jumping straight to V4 external collectors.
+- Mixing broad personal knowledge into project retrieval without lanes/trust states.
+
+---
+
 ## ADR-037 — V3.9.8 Runtime Hardening shipped
 
 **Date:** 2026-07-02
