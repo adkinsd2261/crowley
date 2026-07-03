@@ -487,7 +487,8 @@ Plan: [docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./docs/V3.9.13_SECURE_CHATGPT
 - Reuses portable context packet + writeback parse/ingest; does not expose full internal API
 - Localhost bind unchanged; `scripts/start_chatgpt_bridge.sh` — cloudflared quick/named or ngrok, HTTPS verify
 - `cloudflared/config.yml.example`, `docs/CHATGPT_SETUP.md` for Custom GPT operator path
-- **337 tests** with `CROWLEY_TEST_MODE=1`
+- **Patch (2026-07-03):** OpenAPI schema fix — `ContextBundle` explicit properties + `LooseObject` for ChatGPT Actions validator; bridge `--named`/`--ngrok` mode parse fix
+- **338 tests** with `CROWLEY_TEST_MODE=1`
 
 ---
 

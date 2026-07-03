@@ -22,7 +22,7 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 **Date:** 2026-07-03
 **Status:** Accepted
-**Evidence:** `crowley.py` version `3.9.13`, `chatgpt_actions.py`, `CROWLEY_ACTION_KEY` bearer gate, `openapi-chatgpt.json`, bridge scripts (`start_chatgpt_bridge.sh`, `patch_openapi_chatgpt.py`, `verify_chatgpt_actions_https.py`), `docs/CHATGPT_ACTIONS_API.md`, `docs/CHATGPT_SETUP.md`, `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`, **337 tests**
+**Evidence:** `crowley.py` version `3.9.13`, `chatgpt_actions.py`, `CROWLEY_ACTION_KEY` bearer gate, `openapi-chatgpt.json` (ContextBundle/`LooseObject` schema patch), bridge scripts (`start_chatgpt_bridge.sh`, `patch_openapi_chatgpt.py`, `verify_chatgpt_actions_https.py`), `docs/CHATGPT_ACTIONS_API.md`, `docs/CHATGPT_SETUP.md`, `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`, **338 tests**
 
 ### Context
 

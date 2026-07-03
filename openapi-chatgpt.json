@@ -327,6 +327,25 @@
       }
     },
     "schemas": {
+      "LooseObject": {
+        "type": "object",
+        "description": "JSON object; Crowley may include additional fields beyond those listed.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Optional record identifier"
+          },
+          "content": {
+            "type": "string",
+            "description": "Optional text payload"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Optional short summary"
+          }
+        },
+        "additionalProperties": true
+      },
       "ErrorResponse": {
         "type": "object",
         "properties": {
@@ -382,15 +401,89 @@
             "type": "string"
           },
           "runtime": {
-            "type": "object",
-            "additionalProperties": true
+            "$ref": "#/components/schemas/LooseObject"
           }
         }
       },
       "ContextBundle": {
         "type": "object",
         "description": "Crowley context bundle (world, tickets, memories, knowledge, canon)",
-        "additionalProperties": true
+        "properties": {
+          "project": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LooseObject"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LooseObject"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent_decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "open_loops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "open_tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "canon": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "relevant_memories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "agent_activity": {
+            "$ref": "#/components/schemas/LooseObject"
+          },
+          "tickets": {
+            "$ref": "#/components/schemas/LooseObject"
+          },
+          "system_health": {
+            "$ref": "#/components/schemas/LooseObject"
+          },
+          "project_files": {
+            "$ref": "#/components/schemas/LooseObject"
+          },
+          "knowledge_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LooseObject"
+            }
+          },
+          "recommended_next_action": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recommended_next_action"
+        ]
       },
       "RetrieveResponse": {
         "type": "object",
@@ -401,8 +494,7 @@
           "results": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": true
+              "$ref": "#/components/schemas/LooseObject"
             }
           }
         },
@@ -412,8 +504,7 @@
         "type": "object",
         "properties": {
           "packet": {
-            "type": "object",
-            "additionalProperties": true
+            "$ref": "#/components/schemas/LooseObject"
           },
           "markdown": {
             "type": "string"
@@ -438,14 +529,12 @@
             "description": "Structured writeback object",
             "properties": {
               "session": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/LooseObject"
               },
               "sparks": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/LooseObject"
                 }
               },
               "do_not_save": {
@@ -468,8 +557,7 @@
             ]
           },
           "writeback": {
-            "type": "object",
-            "additionalProperties": true
+            "$ref": "#/components/schemas/LooseObject"
           }
         }
       },
@@ -497,21 +585,18 @@
             "type": "string"
           },
           "session_receipt": {
-            "type": "object",
-            "additionalProperties": true
+            "$ref": "#/components/schemas/LooseObject"
           },
           "sparks_saved": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": true
+              "$ref": "#/components/schemas/LooseObject"
             }
           },
           "sparks_rejected": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": true
+              "$ref": "#/components/schemas/LooseObject"
             }
           }
         },

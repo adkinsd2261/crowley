@@ -208,4 +208,4 @@ curl -si -X POST -H "Authorization: Bearer $YOUR_KEY" -H "Content-Type: applicat
 | HTTP 401 | Bearer token in Custom GPT must exactly match `CROWLEY_ACTION_KEY` |
 | Tunnel URL not printed | Read `.crowley/chatgpt_bridge/tunnel.log` |
 | `cloudflared` not found | `brew install cloudflared` |
-| Custom GPT schema errors | Re-import `openapi-chatgpt.deployed.json` after each quick-tunnel restart |
+| Custom GPT schema errors | Re-import `openapi-chatgpt.deployed.json`; if `ContextBundle` errors persist, pull latest `openapi-chatgpt.json` (requires explicit `properties` on object schemas) |

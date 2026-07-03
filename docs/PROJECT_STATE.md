@@ -2,7 +2,7 @@
 
 **As of:** V3.9.13 on `main` · V4 planned
 **Planning:** V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-03 (V3.9.13 bridge + doc lock)
+**Last doc sync:** 2026-07-03 (V3.9.13 OpenAPI schema patch)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -79,7 +79,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**337** locally with `CROWLEY_TEST_MODE=1`) |
+| `tests/` | **Active** | QA unit tests (**338** locally with `CROWLEY_TEST_MODE=1`) |
 | `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
 | `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
 | `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
@@ -141,7 +141,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **337** tests |
+| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **338** tests |
 | Test mode | ✅ V3.9.8 | `CROWLEY_TEST_MODE=1` — embed off + model stub |
 | Runtime health | ✅ V3.9.8 | `/api/health` `runtime` block; preflight validates |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
@@ -215,7 +215,7 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | `POST /api/ingest` does not persist arbitrary metadata; portable writeback ingest (V3.9.12) persists `metadata_json` on session receipt and staged spark candidates |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **337** tests with `CROWLEY_TEST_MODE=1` |
+| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **338** tests with `CROWLEY_TEST_MODE=1` |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |

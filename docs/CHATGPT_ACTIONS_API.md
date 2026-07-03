@@ -150,7 +150,9 @@ Do not call routes outside /api/actions/*.
 | POST | `/api/actions/writeback/parse` | `parse_terminal_writeback()` |
 | POST | `/api/actions/writeback/ingest` | `ingest_terminal_writeback()` |
 
-OpenAPI: [`openapi-chatgpt.json`](../openapi-chatgpt.json)
+OpenAPI: [`openapi-chatgpt.json`](../openapi-chatgpt.json) (template) · import **`openapi-chatgpt.deployed.json`** into Custom GPT (patched URL at bridge start).
+
+Object schemas must declare explicit `properties` for ChatGPT’s validator — see `LooseObject` and `ContextBundle` in the template.
 
 ---
 

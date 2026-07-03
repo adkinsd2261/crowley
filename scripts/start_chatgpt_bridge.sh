@@ -174,7 +174,8 @@ restart_bus_if_actions_disabled() {
 main() {
   case "$MODE" in
     "" | --quick) MODE="quick" ;;
-    --named | --ngrok) ;;
+    --named) MODE="named" ;;
+    --ngrok) MODE="ngrok" ;;
     -h | --help)
       usage
       exit 0
