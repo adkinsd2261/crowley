@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.12 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.13 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.12"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.12 Portable Context Terminal"
+CROWLEY_VERSION = "3.9.13"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.13 Secure ChatGPT Actions API"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"

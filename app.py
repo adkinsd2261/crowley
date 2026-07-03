@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.12 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
+"""Crowley V3.9.13 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import crowley
+from chatgpt_actions import router as actions_router
 
 HOST = "127.0.0.1"
 PORT = 8765
@@ -40,6 +41,7 @@ def chat_error_message(error: str) -> str:
     return CHAT_USER_ERROR_MESSAGES.get(error, error)
 
 app = FastAPI(title="Crowley", docs_url=None, redoc_url=None)
+app.include_router(actions_router)
 
 
 class ChatRequest(BaseModel):

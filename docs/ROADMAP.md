@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.12 shipped · V4 direction pivot · **2026-07-03**
+**As of:** V3.9.13 shipped · V4 direction pivot · **2026-07-03**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -84,10 +84,13 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.12 Portable Context Terminal ✅
                               │
                               ▼
+                    V3.9.13 ChatGPT Actions API ✅
+                              │
+                              ▼
                     V4.0 Spark Lanes ◄── YOU ARE HERE
 ```
 
-**Shipped through V3.9.12:** … live wire (#70–#75); portable context terminal — packet export, writeback parse/ingest, CLI (#76–#80).
+**Shipped through V3.9.13:** … portable context terminal (#76–#80); ChatGPT Actions API — bearer `/api/actions/*`, OpenAPI (#V3.9.13).
 
 **Active initiative:** V4.0 Spark Lanes (planned). See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
@@ -204,6 +207,7 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped on `main`** (#64–#69) |
 | V3.9.11 Live Wire | Compose activity wire + brain switcher | Medium | **Shipped on `main`** (#70–#75) |
 | V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | **Shipped on `main`** (#76–#80) |
+| V3.9.13 Secure ChatGPT Actions API | Bearer-auth `/api/actions/*` for Custom GPT | Medium | **Shipped on `main`** |
 | V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | **Next** — planned |
 | External collectors | Optional future inputs into lanes | High | Deferred after V4 memory architecture |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
@@ -223,19 +227,23 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 Export a compact Crowley packet into any AI/model surface and import structured writeback. Session recap is an episodic receipt; useful residue becomes staged spark candidates. See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md).
 
-### 8.2 Spark lanes (V4.0)
+### 8.2 Secure ChatGPT Actions API (V3.9.13) — shipped
+
+Narrow bearer-authenticated `/api/actions/*` for Custom GPT over an operator tunnel. Reuses portable packet and writeback ingest; does not expose tickets, chat, or brain APIs. See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md).
+
+### 8.3 Spark lanes (V4.0)
 
 Primary lanes: learning, work, relationships, money, health, operating_style. Every spark gets one lane, optional domain/tags, why_keep, worth reason, confidence, sensitivity, and trust state.
 
-### 8.3 External collectors (opt-in)
+### 8.4 External collectors (opt-in)
 
 Git/calendar/filesystem collectors become later inputs into spark lanes, not the V4 core.
 
-### 8.4 Multi-project support
+### 8.5 Multi-project support
 
 `/project list`, `/project switch <slug>` — schema ready; extraction must never auto-switch.
 
-### 8.5 MCP / deeper IDE integration
+### 8.6 MCP / deeper IDE integration
 
 Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
@@ -248,8 +256,8 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | Cloud-hosted Crowley | Local-first identity |
 | Auto-delete / auto-archive | Safety rule from V3.2 |
 | Auto project switching | Safety rule |
-| Auth on localhost API | Trust model for single user |
-| Live terminal automation | V3.9.12 is local/manual packet + writeback |
+| Auth on localhost API | Trust model for single user; `/api/actions/*` uses bearer when exposed via tunnel |
+| Live terminal automation | V3.9.12 packet + writeback; V3.9.13 Actions API for Custom GPT (tunnel operator setup) |
 | Full agent tool loop (shell execution) | Out of scope |
 | WebSocket live push | Polling sufficient for local single-user |
 
@@ -289,6 +297,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | V3.9.9 | Context That Feeds | Shipped on `main` (#56–#63) |
 | V3.9.10 | Task-Frame Context | Shipped on `main` (#64–#69) |
 | V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
+| V3.9.13 | Secure ChatGPT Actions API | Shipped on `main` |
 | V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
 | **V4.0** | Spark Lanes | **Next** — memory lanes, trust states, lane-aware retrieval |
 

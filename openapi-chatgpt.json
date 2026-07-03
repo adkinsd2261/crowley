@@ -1,0 +1,511 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Crowley ChatGPT Actions API",
+    "version": "3.9.13",
+    "description": "Narrow authenticated surface for ChatGPT Custom GPT Actions. Use these routes to read Crowley context, retrieve memories, export a portable packet, and stage terminal writebacks. Do not call the full internal /api/* surface."
+  },
+  "servers": [
+    {
+      "url": "https://YOUR-CROWLEY-DOMAIN",
+      "description": "Public HTTPS endpoint (e.g. Cloudflare Tunnel) forwarding to local Crowley on 127.0.0.1:8765"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/actions/health": {
+      "get": {
+        "operationId": "actionsHealth",
+        "summary": "Verify Actions API auth and Crowley runtime",
+        "description": "Call first after setup to confirm bearer auth, version, and safe runtime health before using context or writeback routes.",
+        "responses": {
+          "200": {
+            "description": "Actions API enabled and authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionsHealthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CROWLEY_ACTION_KEY not configured on server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/context": {
+      "get": {
+        "operationId": "actionsContext",
+        "summary": "Read Crowley context bundle",
+        "description": "Use when you need current project state, tickets summary, knowledge excerpts, and canon — the same bundle local agents read via GET /api/context.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "current project state"
+            },
+            "description": "Query to score knowledge files and retrieval"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 8
+            },
+            "description": "Max memory items to include"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional project slug (defaults to active project)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Context bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextBundle"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Project not found"
+          },
+          "503": {
+            "$ref": "#/components/responses/ActionsDisabled"
+          }
+        }
+      }
+    },
+    "/api/actions/retrieve": {
+      "get": {
+        "operationId": "actionsRetrieve",
+        "summary": "Hybrid memory search",
+        "description": "Use for targeted memory lookup when the full context bundle is too broad. Returns scored memory items with explanations.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 8
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieval results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrieveResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ActionsDisabled"
+          }
+        }
+      }
+    },
+    "/api/actions/portable/packet": {
+      "get": {
+        "operationId": "actionsPortablePacket",
+        "summary": "Export paste-ready portable context packet",
+        "description": "Use at session start when you want the compact Crowley packet formatted for ChatGPT, including identity, world truth, work board, guardrails, and writeback contract.",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional project slug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portable packet JSON and markdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortablePacketResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Project not found"
+          },
+          "503": {
+            "$ref": "#/components/responses/ActionsDisabled"
+          }
+        }
+      }
+    },
+    "/api/actions/writeback/parse": {
+      "post": {
+        "operationId": "actionsWritebackParse",
+        "summary": "Validate terminal writeback JSON",
+        "description": "Use before ingest to validate structured session recap and spark candidates. Does not mutate memory.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WritebackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Writeback valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritebackParseOk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritebackParseError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ActionsDisabled"
+          }
+        }
+      }
+    },
+    "/api/actions/writeback/ingest": {
+      "post": {
+        "operationId": "actionsWritebackIngest",
+        "summary": "Stage session receipt and spark candidates",
+        "description": "Use at session end after parse succeeds. Saves an episodic session receipt and stages spark candidates — does not promote sparks to canon automatically.",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "crowley"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WritebackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Writeback ingested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritebackIngestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or ingest error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Project not found"
+          },
+          "503": {
+            "$ref": "#/components/responses/ActionsDisabled"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Set CROWLEY_ACTION_KEY on the Crowley host and paste the same value into the Custom GPT Action authentication settings."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid bearer token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ActionsDisabled": {
+        "description": "Actions API disabled — CROWLEY_ACTION_KEY not configured",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "ActionsHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "degraded"]
+          },
+          "version": {
+            "type": "string"
+          },
+          "release_label": {
+            "type": "string"
+          },
+          "actions_api": {
+            "type": "string",
+            "enum": ["enabled"]
+          },
+          "auth": {
+            "type": "string",
+            "enum": ["bearer"]
+          },
+          "db": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ContextBundle": {
+        "type": "object",
+        "description": "Crowley context bundle (world, tickets, memories, knowledge, canon)",
+        "additionalProperties": true
+      },
+      "RetrieveResponse": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "PortablePacketResponse": {
+        "type": "object",
+        "properties": {
+          "packet": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "char_count": {
+            "type": "integer"
+          },
+          "trimmed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WritebackRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Raw markdown or JSON text containing a writeback block"
+          },
+          "writeback": {
+            "type": "object",
+            "description": "Structured writeback object",
+            "properties": {
+              "session": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "sparks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "do_not_save": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "WritebackParseOk": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "writeback": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "WritebackParseError": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [false]
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "WritebackIngestResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "session_receipt": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sparks_saved": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "sparks_rejected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.12 on `main` · V4 planned (2026-07-03)
+**As of:** V3.9.13 on `main` · V4 planned (2026-07-03)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative — V4 planned
 
-**Current:** V3.9.12 Portable Context Terminal — `#76–#80` closed; **#81** sync parity closed. **Next:** V4.0 Spark Lanes (not minted until Mr. Go directs).
+**Current:** V3.9.13 Secure ChatGPT Actions API shipped. V3.9.12 Portable Context Terminal — `#76–#80` closed; **#81** sync parity closed. **Next:** V4.0 Spark Lanes (not minted until Mr. Go directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -18,10 +18,11 @@
 | V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped on `main`**             |
 | V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | **Shipped on `main`**             |
 | V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | **Shipped on `main`**  |
+| V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
 | V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
 
 
-See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
 
 | Ticket theme                                   | Status                                       |
@@ -39,7 +40,8 @@ See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.m
 | V3.9.11 Live Wire (#70–#75)                  | **Shipped on `main`** — shipped at #75 doc lock     |
 | V3.9.12 Portable Context Terminal (#76–#80)             | **Shipped on `main`** — shipped at #80 doc lock     |
 | #81 Sync parity (codex `--known-issue`)        | **Shipped on `main`** |
-| V4.0 Spark Lanes                               | Planned after V3.9.12                       |
+| V3.9.13 Secure ChatGPT Actions API               | **Shipped on `main`** — bearer `/api/actions/*`     |
+| V4.0 Spark Lanes                               | Planned after V3.9.13                       |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
 
@@ -66,6 +68,7 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
+- **V3.9.13 Secure ChatGPT Actions API** — bearer `/api/actions/*`, `CROWLEY_ACTION_KEY`, OpenAPI
 - **#81 Sync parity** — codex_sync `--known-issue` parity with cursor_sync
 - **V3.9.12 Portable Context Terminal** — packet export, writeback parse/ingest, CLI (#76–#80)
 - **V3.9.11 Live Wire** — activity pulses, compose wire UI, brain switcher (#70–#75)

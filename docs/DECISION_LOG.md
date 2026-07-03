@@ -18,6 +18,33 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-043 — V3.9.13 Secure ChatGPT Actions API shipped
+
+**Date:** 2026-07-03
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.13`, `chatgpt_actions.py`, `CROWLEY_ACTION_KEY` bearer gate, `openapi-chatgpt.json`, `docs/CHATGPT_ACTIONS_API.md`, `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`, **333 tests**
+
+### Context
+
+V3.9.12 proved portable packet export and writeback ingest locally. ChatGPT Custom GPT Actions need a **minimal authenticated** HTTP surface over a tunnel — not the full internal API.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.13"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.13 Secure ChatGPT Actions API"`
+- Add `/api/actions/*` with bearer auth via `CROWLEY_ACTION_KEY` (`hmac.compare_digest`)
+- 503 when key unset; 401 on missing/wrong bearer; never log or return the secret
+- Expose only: health, context, retrieve, portable packet, writeback parse/ingest
+- Keep `127.0.0.1` bind; tunnel and Custom GPT setup are operator-only
+- OpenAPI import file for Custom GPT Actions
+
+### Alternatives rejected
+
+- Expose full `/api/*` to Custom GPT — too broad (tickets, chat, brain, messages)
+- Bind `0.0.0.0` — violates localhost-first security model
+- OAuth for Actions — out of scope; single shared bearer for V3.9.13
+
+---
+
 ## ADR-042 — V3.9.12 Portable Context Terminal shipped
 
 **Date:** 2026-07-03

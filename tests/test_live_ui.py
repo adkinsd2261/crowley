@@ -113,10 +113,23 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
+    def test_onboarding_docs_locked_for_v3913_chatgpt_actions(self) -> None:
+        where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
+        versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
+        self.assertIn('CROWLEY_VERSION = "3.9.13"', where)
+        self.assertIn("V3.9.13", versions)
+        self.assertIn("ChatGPT Actions", versions)
+        self.assertTrue((ROOT / "docs" / "CHATGPT_ACTIONS_API.md").is_file())
+        self.assertTrue((ROOT / "docs" / "V3.9.13_SECURE_CHATGPT_ACTIONS_API.md").is_file())
+        self.assertTrue((ROOT / "openapi-chatgpt.json").is_file())
+        actions_doc = (ROOT / "docs" / "CHATGPT_ACTIONS_API.md").read_text(encoding="utf-8")
+        self.assertIn("CROWLEY_ACTION_KEY", actions_doc)
+        self.assertIn("/api/actions/", actions_doc)
+
     def test_onboarding_docs_locked_for_v3912_portable_terminal(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.12"', where)
+        self.assertIn("V3.9.12", where)
         self.assertIn("persistent context layer", where)
         self.assertIn("V3.9.12", versions)
         self.assertIn("Portable Context Terminal", versions)

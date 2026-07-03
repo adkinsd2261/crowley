@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.12 on `main` · V4 next · **2026-07-03**
+**As of:** V3.9.13 on `main` · V4 next · **2026-07-03**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.12 Portable Context Terminal and #81 sync parity are on `main`. Restart bus so `/api/health` reports `3.9.12`.
+**Git note:** V3.9.13 Secure ChatGPT Actions API is on `main`. Set `CROWLEY_ACTION_KEY` for `/api/actions/*`; restart bus so `/api/health` reports `3.9.13`.
 
 ---
 
@@ -47,13 +47,14 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
 | **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
+| **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, `openapi-chatgpt.json` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.12"` (`Crowley V3.9.12 Portable Context Terminal`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.13"` (`Crowley V3.9.13 Secure ChatGPT Actions API`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
-**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proves the portable context terminal loop; V4.0 gives sparks memory lanes.
+**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proves the portable context terminal loop; V3.9.13 adds bearer Actions for Custom GPT; V4.0 gives sparks memory lanes.
 
 ---
 
@@ -130,8 +131,9 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- Portable context terminal — `GET /api/portable/packet`, writeback parse/ingest, `scripts/export_portable_packet.py`, `scripts/import_portable_writeback.py`
-- **320 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` runs the same gate
+- Portable context terminal — `GET /api/portable/packet`, writeback parse/ingest, CLI scripts
+- ChatGPT Actions API — bearer `/api/actions/*` when `CROWLEY_ACTION_KEY` is set ([CHATGPT_ACTIONS_API.md](./CHATGPT_ACTIONS_API.md))
+- **333 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` runs the same gate
 - Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -145,7 +147,7 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 quality arc complete through **V3.9.12 on `main`**. See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
@@ -154,6 +156,7 @@ Pre-V4 quality arc complete through **V3.9.12 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.10 Task-Frame Context** | Cursor | **Shipped on `main`** · #64–#69 complete |
 | **V3.9.11 Live Wire** | Cursor | **Shipped on `main`** · #70–#75 complete |
 | **V3.9.12 Portable Context Terminal** | Cursor | **Shipped on `main`** · #76–#80 · packet-in/writeback-out |
+| **V3.9.13 ChatGPT Actions API** | Cursor | **Shipped on `main`** · bearer `/api/actions/*` |
 | **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
 | **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
@@ -171,6 +174,10 @@ Pre-V4 quality arc complete through **V3.9.12 on `main`**. See [PRE_V4_FUTURE_RE
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate (core deps) |
 | `scripts/preflight.py` | Release preflight |
+| `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md` | V3.9.13 release spec |
+| `docs/CHATGPT_ACTIONS_API.md` | V3.9.13 operator guide |
+| `openapi-chatgpt.json` | Custom GPT OpenAPI import |
+| `chatgpt_actions.py` | Actions router + bearer auth |
 | `docs/V3.9.12_PORTABLE_CONTEXT_TERMINAL.md` | V3.9.12 release spec |
 | `scripts/export_portable_packet.py` | Export paste-ready context packet |
 | `scripts/import_portable_writeback.py` | Import terminal writeback |

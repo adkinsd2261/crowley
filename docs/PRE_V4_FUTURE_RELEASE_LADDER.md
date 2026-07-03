@@ -1,6 +1,6 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** V3.9.12 shipped on `main` · V4 planned next · V4 after .10/.11/.12 gate complete.
+**Status:** V3.9.13 shipped on `main` · V4 planned next · V4 after .10/.11/.12/.13 gate complete.
 **Baseline:** V3.9.7 on `origin/main`; V3.9.8+ in local working tree.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
@@ -34,14 +34,21 @@ The target state before V4:
 | V3.9.10 | Task-Frame Context | **Shipped on `main`** (#64–#69) |
 | V3.9.11 | Live Wire | **Shipped** (#70–#75) |
 | V3.9.12 | Portable Context Terminal | **Shipped** (#76–#80) |
+| V3.9.13 | Secure ChatGPT Actions API | **Shipped** — bearer `/api/actions/*` |
 | V4.0 | Spark Lanes | **Next** — mint when Mr. Go directs |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-V4 memory-lane architecture starts when Mr. Go mints V4.0 (V3.9.12 terminal loop proven).
+V4 memory-lane architecture starts when Mr. Go mints V4.0 (V3.9.12 terminal loop and V3.9.13 Actions API proven).
 
 ---
 
 ## 3. Likely future versions
+
+### V3.9.13 — Secure ChatGPT Actions API (shipped)
+
+Bearer-authenticated `/api/actions/*` for ChatGPT Custom GPT. Operator sets `CROWLEY_ACTION_KEY` and optional Cloudflare tunnel. See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) and [CHATGPT_ACTIONS_API.md](./CHATGPT_ACTIONS_API.md).
+
+**Boundary:** Does not configure tunnel or Custom GPT automatically. Does not expose full internal API.
 
 ### V3.9.7 — Workspace Experience & Reliability (shipped)
 
@@ -87,7 +94,7 @@ Shipped — see [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEX
 
 **Goal:** Redesign memory around sparks as the memory unit and lanes as the retrieval/trust boundary.
 
-**Packet:** `tickets/v4.0_spark_lanes.json` — planned, not minted. Start after V3.9.12 proves packet-in/writeback-out.
+**Packet:** `tickets/v4.0_spark_lanes.json` — planned, not minted. Start after V3.9.12 packet-in/writeback-out and V3.9.13 Actions API are proven.
 
 **Primary lanes:** learning, work, relationships, money, health, operating_style.
 

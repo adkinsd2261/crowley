@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-03
-**Code version:** `CROWLEY_VERSION = "3.9.12"` (`Crowley V3.9.12 Portable Context Terminal`)
+**Code version:** `CROWLEY_VERSION = "3.9.13"` (`Crowley V3.9.13 Secure ChatGPT Actions API`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -30,9 +30,10 @@ Crowley is a **local-first persistent context layer** for a single user (“Mr. 
 17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
 19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
 20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
-21. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
+21. **V3.9.13 Secure ChatGPT Actions API (2026-07)** — bearer-auth `/api/actions/*` for Custom GPT; `CROWLEY_ACTION_KEY` gate; OpenAPI import file.
+22. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
-Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet). Portable terminal work starts local/manual; live connector automation is intentionally out of scope for V3.9.12.
+Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/actions/*` uses bearer auth when `CROWLEY_ACTION_KEY` is set; full internal API remains localhost-first.
 
 ---
 
@@ -43,6 +44,7 @@ Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet)
 | `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~5600 lines) |
 | `diagnostics.py` | Diagnostics domain — gather, prompt, stream tokens (re-exported by engine) |
 | `tickets.py` | Ticketing domain — CRUD, summaries, changes feed (re-exported by engine) |
+| `chatgpt_actions.py` | Actions router — bearer-auth `/api/actions/*` (V3.9.13) |
 | `app.py` | Web transport — FastAPI routes, SSE; no business logic |
 | `static/` | Browser workspace UI (V3.5+) |
 | `requirements-core.txt` | Core runtime deps (CI + slim installs) |
@@ -248,8 +250,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.12"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.12 Portable Context Terminal"` |
+| `CROWLEY_VERSION` | `"3.9.13"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.13 Secure ChatGPT Actions API"` |
 
 ---
 

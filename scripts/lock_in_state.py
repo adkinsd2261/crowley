@@ -87,9 +87,9 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.12 ship."""
+    """Current world-model fields after V3.9.13 ship."""
     return {
-        "phase": "V3.9.12 shipped — Portable Context Terminal",
+        "phase": "V3.9.13 shipped — Secure ChatGPT Actions API",
         "focus": "V4 Spark Lanes planned",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
@@ -98,10 +98,10 @@ def project_state_updates() -> dict[str, str]:
             "Mint or plan V4.0 Spark Lanes when Mr. Go directs."
         ),
         "what_changed": (
-            "V3.9.12 Portable Context Terminal on main: context packet export, writeback "
-            "parse/ingest, staged spark candidates with metadata_json, CLI "
-            "export/import scripts (#76–#80). Post-lock #81 adds codex_sync "
-            "--known-issue parity with cursor_sync."
+            "V3.9.13 Secure ChatGPT Actions API: bearer-auth /api/actions/* "
+            "for Custom GPT (context, retrieve, portable packet, writeback "
+            "parse/ingest). CROWLEY_ACTION_KEY gate. OpenAPI "
+            "openapi-chatgpt.json. V3.9.12 portable terminal unchanged on main."
         ),
     }
 
