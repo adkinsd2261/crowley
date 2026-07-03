@@ -13,3 +13,4 @@ crowley.db-shm
 .crowley/processed/*
 !.crowley/inbox/.gitkeep
 !.crowley/processed/.gitkeep
+.crowley/brain.json

@@ -2,7 +2,7 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.10"` (`Crowley V3.9.10 Task-Frame Context`)
+**Code version:** `CROWLEY_VERSION = "3.9.11"` (`Crowley V3.9.11 Live Wire`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -28,7 +28,7 @@ Crowley is a **local-first persistent context layer** for a single user (“Mr. 
 15. **V3.9.7 Experience & Reliability (2026-07)** — UI polish catch-up, embed/CI hardening, `diagnostics.py` + `tickets.py` extraction, operator metrics, preflight (#40–#49).
 16. **V3.9.8 Runtime Hardening (2026-07)** — `CROWLEY_TEST_MODE`, model probe, `/api/health` runtime block, sqlite-vec safe fallback, fragile-startup suite (#50–#55).
 17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
-18. **V3.9.10 Task-Frame Context (2026-07)** — task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69).
+19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
 18. **Planned V3.9.12 Portable Context Terminal** — local/manual Crowley packet export and structured terminal writeback import.
 19. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
@@ -248,8 +248,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.10"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.10 Task-Frame Context"` |
+| `CROWLEY_VERSION` | `"3.9.11"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.11 Live Wire"` |
 
 ---
 

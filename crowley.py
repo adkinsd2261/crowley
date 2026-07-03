@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.10 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.11 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.10"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.10 Task-Frame Context"
+CROWLEY_VERSION = "3.9.11"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.11 Live Wire"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -120,8 +120,19 @@ _PROJECT_STATE_QUERY_KEYWORDS = frozenset({
 })
 
 MODEL_PROVIDER = "auto"
+MODEL_PROVIDER_OPTIONS = frozenset({"auto", "openai", "ollama", "anthropic"})
 OPENAI_MODEL = "gpt-4.1-mini"
 OLLAMA_MODEL = "llama3.1:8b"
+ANTHROPIC_MODEL_OPTIONS = (
+    "claude-sonnet-4-20250514",
+    "claude-3-5-sonnet-latest",
+    "claude-3-5-haiku-latest",
+)
+
+_brain_setting_lock = threading.Lock()
+_brain_setting_loaded = False
+_brain_config_cache: dict[str, str | None] | None = None
+_brain_settings_path_override: Path | None = None
 
 SPARK_IMPORTANCE_TRIM = 1
 SPARK_IMPORTANCE_SUMMARY = 2
@@ -362,15 +373,174 @@ def _has_openai_key() -> bool:
     return bool(os.environ.get("OPENAI_API_KEY", "").strip())
 
 
-def get_model_provider() -> str:
-    """Return resolved provider: 'openai' or 'ollama'."""
-    if MODEL_PROVIDER == "openai":
-        return "openai"
-    if MODEL_PROVIDER == "ollama":
-        return "ollama"
+def _has_anthropic_key() -> bool:
+    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+
+def _default_anthropic_model() -> str:
+    raw = os.environ.get("ANTHROPIC_MODEL", "").strip()
+    if raw:
+        return raw
+    return ANTHROPIC_MODEL_OPTIONS[0]
+
+
+def get_brain_settings_path() -> Path:
+    """Path to persisted runtime brain preference (provider routing)."""
+    if _brain_settings_path_override is not None:
+        return _brain_settings_path_override
+    return PROJECT_ROOT / ".crowley" / "brain.json"
+
+
+def set_brain_settings_path(path: Path | str | None) -> Path | None:
+    """Point brain settings at a specific file (tests) or back to default."""
+    global _brain_settings_path_override, _brain_setting_loaded, _brain_config_cache
+    _brain_settings_path_override = Path(path) if path is not None else None
+    _brain_setting_loaded = False
+    _brain_config_cache = None
+    return _brain_settings_path_override
+
+
+def _normalize_brain_config(raw: dict[str, object] | None) -> dict[str, str | None]:
+    provider = MODEL_PROVIDER
+    model: str | None = None
+    if isinstance(raw, dict):
+        candidate = str(raw.get("provider", "")).strip().lower()
+        if candidate in MODEL_PROVIDER_OPTIONS:
+            provider = candidate
+        raw_model = raw.get("model")
+        if raw_model is not None:
+            cleaned = str(raw_model).strip()
+            model = cleaned or None
+    if provider == "auto":
+        model = None
+    return {"provider": provider, "model": model}
+
+
+def _load_brain_config_from_disk() -> dict[str, str | None] | None:
+    path = get_brain_settings_path()
+    if not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            return None
+        return _normalize_brain_config(raw)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
+def get_brain_config() -> dict[str, str | None]:
+    """Active brain routing config: provider + optional model override."""
+    global _brain_setting_loaded, _brain_config_cache
+    with _brain_setting_lock:
+        if not _brain_setting_loaded:
+            _brain_config_cache = _load_brain_config_from_disk()
+            _brain_setting_loaded = True
+        if _brain_config_cache is not None:
+            return dict(_brain_config_cache)
+        return {"provider": MODEL_PROVIDER, "model": None}
+
+
+def get_model_provider_setting() -> str:
+    """Configured provider mode (persisted when switched in UI)."""
+    return str(get_brain_config()["provider"])
+
+
+def set_brain_config(provider: str, model: str | None = None) -> dict[str, str | None]:
+    """Persist runtime brain preference and apply immediately."""
+    global _brain_setting_loaded, _brain_config_cache
+    normalized = provider.strip().lower()
+    if normalized not in MODEL_PROVIDER_OPTIONS:
+        allowed = ", ".join(sorted(MODEL_PROVIDER_OPTIONS))
+        raise ValueError(f"provider must be one of: {allowed}")
+    config = _normalize_brain_config({"provider": normalized, "model": model})
+    with _brain_setting_lock:
+        path = get_brain_settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+        _brain_config_cache = dict(config)
+        _brain_setting_loaded = True
+    return dict(config)
+
+
+def set_model_provider_setting(provider: str) -> str:
+    """Persist provider only (legacy API)."""
+    return set_brain_config(provider)["provider"] or MODEL_PROVIDER
+
+
+def reset_model_provider_setting() -> None:
+    """Clear in-memory and on-disk brain preference (tests)."""
+    global _brain_setting_loaded, _brain_config_cache
+    with _brain_setting_lock:
+        _brain_config_cache = None
+        _brain_setting_loaded = False
+        path = get_brain_settings_path()
+        if path.is_file():
+            path.unlink()
+
+
+def list_ollama_models(timeout: float = 3.0) -> list[str]:
+    """Return installed Ollama model names from the local daemon."""
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:11434/api/tags", timeout=timeout
+        ) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return []
+    names: list[str] = []
+    for entry in payload.get("models", []):
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name", "")).strip()
+        if name:
+            names.append(name)
+    return sorted(set(names))
+
+
+def _available_providers() -> list[str]:
+    available: list[str] = []
     if _has_openai_key():
-        return "openai"
-    return "ollama"
+        available.append("openai")
+    if _has_anthropic_key():
+        available.append("anthropic")
+    if _probe_ollama_reachable():
+        available.append("ollama")
+    return available
+
+
+def get_model_provider() -> str:
+    """Return resolved provider for inference."""
+    setting = get_model_provider_setting()
+    if setting != "auto":
+        return setting
+    available = _available_providers()
+    return available[0] if available else "ollama"
+
+
+def get_active_model_name() -> str:
+    """Return the model id used for the current brain selection."""
+    config = get_brain_config()
+    provider = config["provider"]
+    model_override = config.get("model")
+    if provider == "auto":
+        provider = get_model_provider()
+        model_override = None
+    if model_override:
+        return str(model_override)
+    if provider == "openai":
+        return OPENAI_MODEL
+    if provider == "anthropic":
+        return _default_anthropic_model()
+    if provider == "ollama":
+        models = list_ollama_models()
+        if OLLAMA_MODEL in models:
+            return OLLAMA_MODEL
+        return models[0] if models else OLLAMA_MODEL
+    return OPENAI_MODEL
 
 
 def _probe_ollama_reachable(timeout: float = 2.0) -> bool:
@@ -401,8 +571,10 @@ def probe_model_availability() -> dict[str, object]:
 
     openai_ok = _has_openai_key()
     ollama_ok = _probe_ollama_reachable()
+    anthropic_ok = _has_anthropic_key()
 
-    if MODEL_PROVIDER == "openai":
+    setting = get_model_provider_setting()
+    if setting == "openai":
         return {
             "status": "available" if openai_ok else "unavailable",
             "provider": "openai",
@@ -410,7 +582,15 @@ def probe_model_availability() -> dict[str, object]:
             if openai_ok
             else "OPENAI_API_KEY not set",
         }
-    if MODEL_PROVIDER == "ollama":
+    if setting == "anthropic":
+        return {
+            "status": "available" if anthropic_ok else "unavailable",
+            "provider": "anthropic",
+            "detail": "ANTHROPIC_API_KEY set"
+            if anthropic_ok
+            else "ANTHROPIC_API_KEY not set",
+        }
+    if setting == "ollama":
         return {
             "status": "available" if ollama_ok else "unavailable",
             "provider": "ollama",
@@ -424,6 +604,12 @@ def probe_model_availability() -> dict[str, object]:
             "status": "available",
             "provider": "openai",
             "detail": "OPENAI_API_KEY set",
+        }
+    if anthropic_ok:
+        return {
+            "status": "available",
+            "provider": "anthropic",
+            "detail": "ANTHROPIC_API_KEY set",
         }
     if ollama_ok:
         return {
@@ -471,15 +657,153 @@ def build_runtime_diagnostics() -> dict[str, object]:
     return runtime
 
 
-def _brain_banner_label() -> str:
-    if MODEL_PROVIDER == "auto":
+def _brain_provider_label(provider: str) -> str:
+    if provider == "auto":
         resolved = get_model_provider()
         if resolved == "openai":
-            return f"Auto (OpenAI) / {OPENAI_MODEL}"
-        return f"Auto (Ollama) / {OLLAMA_MODEL}"
-    if MODEL_PROVIDER == "openai":
-        return f"OpenAI / {OPENAI_MODEL}"
-    return f"Ollama / {OLLAMA_MODEL}"
+            return "Auto · OpenAI"
+        if resolved == "anthropic":
+            return "Auto · Claude"
+        return "Auto · Ollama"
+    if provider == "openai":
+        return "OpenAI"
+    if provider == "anthropic":
+        return "Claude"
+    return "Ollama"
+
+
+def _brain_banner_label() -> str:
+    config = get_brain_config()
+    provider = config["provider"]
+    model = get_active_model_name()
+    if provider == "auto":
+        resolved = get_model_provider()
+        resolved_name = {
+            "openai": "OpenAI",
+            "anthropic": "Claude",
+            "ollama": "Ollama",
+        }.get(resolved, resolved)
+        return f"Auto ({resolved_name}) / {model}"
+    return f"{_brain_provider_label(provider)} / {model}"
+
+
+def _brain_provider_models(provider: str) -> list[str]:
+    if provider == "openai":
+        return [OPENAI_MODEL]
+    if provider == "anthropic":
+        return list(ANTHROPIC_MODEL_OPTIONS)
+    if provider == "ollama":
+        return list_ollama_models()
+    return []
+
+
+def _brain_provider_available(provider: str) -> bool:
+    if provider == "auto":
+        return bool(_available_providers())
+    if provider == "openai":
+        return _has_openai_key()
+    if provider == "anthropic":
+        return _has_anthropic_key()
+    return _probe_ollama_reachable()
+
+
+def get_brain_snapshot() -> dict[str, object]:
+    """Runtime brain routing for UI switcher and health."""
+    config = get_brain_config()
+    provider = str(config["provider"])
+    resolved = get_model_provider()
+    active_model = get_active_model_name()
+
+    if is_test_mode():
+        test_models = ["test-stub"]
+        providers = [
+            {
+                "id": "auto",
+                "label": "Auto",
+                "hint": "Best available",
+                "available": True,
+                "active": provider == "auto",
+                "models": [],
+            },
+            {
+                "id": "openai",
+                "label": "OpenAI",
+                "hint": OPENAI_MODEL,
+                "available": True,
+                "active": provider == "openai",
+                "models": [{"id": OPENAI_MODEL, "label": OPENAI_MODEL, "active": provider == "openai"}],
+            },
+            {
+                "id": "anthropic",
+                "label": "Claude",
+                "hint": "ANTHROPIC_API_KEY",
+                "available": True,
+                "active": provider == "anthropic",
+                "models": [{"id": "test-claude", "label": "test-claude", "active": provider == "anthropic"}],
+            },
+            {
+                "id": "ollama",
+                "label": "Ollama",
+                "hint": "Local models",
+                "available": True,
+                "active": provider == "ollama",
+                "models": [{"id": m, "label": m, "active": provider == "ollama"} for m in test_models],
+            },
+        ]
+        return {
+            "provider": provider,
+            "model": active_model,
+            "resolved": "test",
+            "label": _brain_provider_label(provider),
+            "banner": _brain_banner_label(),
+            "providers": providers,
+        }
+
+    providers: list[dict[str, object]] = [
+        {
+            "id": "auto",
+            "label": "Auto",
+            "hint": "OpenAI → Claude → Ollama",
+            "available": _brain_provider_available("auto"),
+            "active": provider == "auto",
+            "models": [],
+        }
+    ]
+
+    for pid, label, hint in (
+        ("openai", "OpenAI", OPENAI_MODEL),
+        ("anthropic", "Claude", "ANTHROPIC_API_KEY in .env"),
+        ("ollama", "Ollama", "Local uncensored models"),
+    ):
+        model_ids = _brain_provider_models(pid)
+        if pid == "ollama" and provider == "ollama" and active_model not in model_ids:
+            model_ids = [active_model, *model_ids]
+        providers.append(
+            {
+                "id": pid,
+                "label": label,
+                "hint": hint,
+                "available": _brain_provider_available(pid),
+                "active": provider == pid,
+                "models": [
+                    {
+                        "id": mid,
+                        "label": mid,
+                        "active": provider == pid and active_model == mid,
+                    }
+                    for mid in model_ids
+                ],
+            }
+        )
+
+    return {
+        "provider": provider,
+        "model": active_model,
+        "resolved": resolved,
+        "label": _brain_provider_label(provider),
+        "banner": _brain_banner_label(),
+        "providers": providers,
+    }
 
 
 def _print_stream_token(token: str, started: bool) -> bool:
@@ -490,19 +814,45 @@ def _print_stream_token(token: str, started: bool) -> bool:
     return True
 
 
-def _iter_ollama_tokens(messages: list[dict[str, str]]) -> Iterator[str]:
-    for chunk in ollama.chat(model=OLLAMA_MODEL, messages=messages, stream=True):
-        token = chunk.get("message", {}).get("content", "")
+def _ollama_chunk_text(chunk: object) -> str:
+    """Extract streamable text from an Ollama chat chunk (content or thinking)."""
+    message = chunk.get("message") if isinstance(chunk, dict) else getattr(chunk, "message", None)
+    if message is None:
+        return ""
+    if isinstance(message, dict):
+        content = str(message.get("content") or "")
+        thinking = str(message.get("thinking") or "")
+    else:
+        content = str(getattr(message, "content", None) or "")
+        thinking = str(getattr(message, "thinking", None) or "")
+    return content or thinking
+
+
+def _iter_ollama_tokens(
+    messages: list[dict[str, str]], *, model: str | None = None, think: bool = False
+) -> Iterator[str]:
+    model_name = model or get_active_model_name()
+    stream = ollama.chat(
+        model=model_name,
+        messages=messages,
+        stream=True,
+        think=think,
+    )
+    for chunk in stream:
+        token = _ollama_chunk_text(chunk)
         if token:
             yield token
 
 
-def _iter_openai_tokens(messages: list[dict[str, str]]) -> Iterator[str]:
+def _iter_openai_tokens(
+    messages: list[dict[str, str]], *, model: str | None = None
+) -> Iterator[str]:
     from openai import OpenAI
 
+    model_name = model or get_active_model_name()
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     response = client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=model_name,
         messages=messages,
         stream=True,
     )
@@ -512,21 +862,148 @@ def _iter_openai_tokens(messages: list[dict[str, str]]) -> Iterator[str]:
             yield token
 
 
-def _call_ollama(messages: list[dict[str, str]], stream: bool) -> str:
-    if stream:
-        return "".join(_iter_ollama_tokens(messages)).strip()
-    response = ollama.chat(model=OLLAMA_MODEL, messages=messages)
-    return response["message"]["content"].strip()
+def _anthropic_payload(
+    messages: list[dict[str, str]], model: str, *, stream: bool
+) -> dict[str, object]:
+    system_parts: list[str] = []
+    api_messages: list[dict[str, str]] = []
+    for message in messages:
+        role = message.get("role", "user")
+        content = message.get("content", "")
+        if role == "system":
+            system_parts.append(content)
+        elif role in ("user", "assistant"):
+            api_messages.append({"role": role, "content": content})
+    body: dict[str, object] = {
+        "model": model,
+        "max_tokens": 4096,
+        "messages": api_messages,
+        "stream": stream,
+    }
+    if system_parts:
+        body["system"] = "\n\n".join(system_parts).strip()
+    return body
 
 
-def _call_openai(messages: list[dict[str, str]], stream: bool) -> str:
+def _iter_anthropic_tokens(
+    messages: list[dict[str, str]], *, model: str | None = None
+) -> Iterator[str]:
+    import urllib.error
+    import urllib.request
+
+    model_name = model or get_active_model_name()
+    body = _anthropic_payload(messages, model_name, stream=True)
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for raw_line in resp:
+            line = raw_line.decode("utf-8").strip()
+            if not line.startswith("data:"):
+                continue
+            payload_raw = line[5:].strip()
+            if not payload_raw or payload_raw == "[DONE]":
+                continue
+            payload = json.loads(payload_raw)
+            if payload.get("type") != "content_block_delta":
+                continue
+            token = payload.get("delta", {}).get("text", "")
+            if token:
+                yield token
+
+
+def _call_ollama(
+    messages: list[dict[str, str]],
+    stream: bool,
+    *,
+    model: str | None = None,
+    think: bool = False,
+) -> str:
+    model_name = model or get_active_model_name()
     if stream:
-        return "".join(_iter_openai_tokens(messages)).strip()
+        return "".join(_iter_ollama_tokens(messages, model=model_name, think=think)).strip()
+    response = ollama.chat(model=model_name, messages=messages, think=think)
+    message = response.get("message") if isinstance(response, dict) else response.message
+    if isinstance(message, dict):
+        text = str(message.get("content") or message.get("thinking") or "")
+    else:
+        text = str(getattr(message, "content", None) or getattr(message, "thinking", None) or "")
+    return text.strip()
+
+
+def _call_openai(
+    messages: list[dict[str, str]], stream: bool, *, model: str | None = None
+) -> str:
+    model_name = model or get_active_model_name()
+    if stream:
+        return "".join(_iter_openai_tokens(messages, model=model_name)).strip()
     from openai import OpenAI
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    response = client.chat.completions.create(model=OPENAI_MODEL, messages=messages)
+    response = client.chat.completions.create(model=model_name, messages=messages)
     return (response.choices[0].message.content or "").strip()
+
+
+def _call_anthropic(
+    messages: list[dict[str, str]], stream: bool, *, model: str | None = None
+) -> str:
+    model_name = model or get_active_model_name()
+    if stream:
+        return "".join(_iter_anthropic_tokens(messages, model=model_name)).strip()
+    import urllib.request
+
+    body = _anthropic_payload(messages, model_name, stream=False)
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        payload = json.loads(resp.read().decode("utf-8"))
+    parts: list[str] = []
+    for block in payload.get("content", []):
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(str(block.get("text", "")))
+    return "".join(parts).strip()
+
+
+def _iter_provider_tokens(
+    provider: str, messages: list[dict[str, str]]
+) -> Iterator[str]:
+    if provider == "openai":
+        yield from _iter_openai_tokens(messages)
+        return
+    if provider == "anthropic":
+        yield from _iter_anthropic_tokens(messages)
+        return
+    yield from _iter_ollama_tokens(messages)
+
+
+def _call_provider(
+    provider: str, messages: list[dict[str, str]], stream: bool
+) -> str:
+    if provider == "openai":
+        return _call_openai(messages, stream)
+    if provider == "anthropic":
+        return _call_anthropic(messages, stream)
+    return _call_ollama(messages, stream)
+
+
+def _auto_fallback_providers(primary: str) -> list[str]:
+    order = ["openai", "anthropic", "ollama"]
+    return [provider for provider in order if provider != primary]
 
 
 def iter_model_tokens(
@@ -534,46 +1011,49 @@ def iter_model_tokens(
 ) -> Iterator[str]:
     """
     Yield completion tokens from the resolved provider.
-    In auto mode, tries Ollama once if OpenAI is unavailable or fails.
+    In auto mode, falls through OpenAI → Claude → Ollama on failure.
     """
     if is_test_mode():
         yield TEST_MODE_STUB_REPLY
         return
 
     provider = get_model_provider()
-    allow_fallback = MODEL_PROVIDER == "auto"
+    allow_fallback = get_model_provider_setting() == "auto"
 
     def _err(msg: str) -> None:
         if not quiet:
             print(msg, flush=True)
 
-    if provider == "openai":
-        if not _has_openai_key():
-            _err("\rCrowley: OpenAI selected but OPENAI_API_KEY is not set.")
-            if allow_fallback:
-                try:
-                    yield from _iter_ollama_tokens(messages)
-                except Exception as exc:
-                    _err(f"\rCrowley: model error — {exc}")
+    if provider == "openai" and not _has_openai_key():
+        _err("\rCrowley: OpenAI selected but OPENAI_API_KEY is not set.")
+        if not allow_fallback:
             return
+    elif provider == "anthropic" and not _has_anthropic_key():
+        _err("\rCrowley: Claude selected but ANTHROPIC_API_KEY is not set.")
+        if not allow_fallback:
+            return
+    else:
         try:
-            yield from _iter_openai_tokens(messages)
+            yield from _iter_provider_tokens(provider, messages)
             return
         except Exception as exc:
-            if allow_fallback:
-                _err(f"\rCrowley: OpenAI failed ({exc}), trying Ollama...")
-                try:
-                    yield from _iter_ollama_tokens(messages)
-                except Exception as fallback_exc:
-                    _err(f"\rCrowley: model error — {fallback_exc}")
+            if not allow_fallback:
+                _err(f"\rCrowley: model error — {exc}")
                 return
-            _err(f"\rCrowley: model error — {exc}")
-            return
+            _err(f"\rCrowley: {provider} failed ({exc}), trying fallback...")
 
-    try:
-        yield from _iter_ollama_tokens(messages)
-    except Exception as exc:
-        _err(f"\rCrowley: model error — {exc}")
+    if not allow_fallback:
+        return
+
+    for fallback in _auto_fallback_providers(provider):
+        if fallback not in _available_providers():
+            continue
+        try:
+            yield from _iter_provider_tokens(fallback, messages)
+            return
+        except Exception as exc:
+            _err(f"\rCrowley: {fallback} failed ({exc})")
+    _err("\rCrowley: no model provider available")
 
 
 def call_model(
@@ -599,39 +1079,38 @@ def call_model(
 
     if not stream:
         provider = get_model_provider()
-        allow_fallback = MODEL_PROVIDER == "auto"
+        allow_fallback = get_model_provider_setting() == "auto"
 
         def _err(msg: str) -> None:
             if not quiet:
                 print(msg, flush=True)
 
-        if provider == "openai":
-            if not _has_openai_key():
-                _err("\rCrowley: OpenAI selected but OPENAI_API_KEY is not set.")
-                if allow_fallback:
-                    try:
-                        return _call_ollama(messages, stream=False)
-                    except Exception as exc:
-                        _err(f"\rCrowley: model error — {exc}")
-                        return None
+        if provider == "openai" and not _has_openai_key():
+            _err("\rCrowley: OpenAI selected but OPENAI_API_KEY is not set.")
+            if not allow_fallback:
                 return None
+        elif provider == "anthropic" and not _has_anthropic_key():
+            _err("\rCrowley: Claude selected but ANTHROPIC_API_KEY is not set.")
+            if not allow_fallback:
+                return None
+        else:
             try:
-                return _call_openai(messages, stream=False)
+                return _call_provider(provider, messages, stream=False)
             except Exception as exc:
-                if allow_fallback:
-                    _err(f"\rCrowley: OpenAI failed ({exc}), trying Ollama...")
-                    try:
-                        return _call_ollama(messages, stream=False)
-                    except Exception as fallback_exc:
-                        _err(f"\rCrowley: model error — {fallback_exc}")
-                        return None
-                _err(f"\rCrowley: model error — {exc}")
-                return None
-        try:
-            return _call_ollama(messages, stream=False)
-        except Exception as exc:
-            _err(f"\rCrowley: model error — {exc}")
-            return None
+                if not allow_fallback:
+                    _err(f"\rCrowley: model error — {exc}")
+                    return None
+                _err(f"\rCrowley: {provider} failed ({exc}), trying fallback...")
+
+        if allow_fallback:
+            for fallback in _auto_fallback_providers(provider):
+                if fallback not in _available_providers():
+                    continue
+                try:
+                    return _call_provider(fallback, messages, stream=False)
+                except Exception as exc:
+                    _err(f"\rCrowley: {fallback} failed ({exc})")
+        return None
 
     parts: list[str] = []
     started = False
@@ -1239,6 +1718,7 @@ AGENT_EVENT_TYPES = frozenset({
     "decision",
     "summary",
     "event",
+    "lesson",
 })
 AGENT_SYNC_QUERY = "recent work by other agents current project changes blockers next action"
 AGENT_SYNC_DECISIONS_CAP = 5
@@ -1257,6 +1737,12 @@ ACTIVITY_PULSE_VERBS = frozenset(
 )
 ACTIVITY_PULSE_AGENTS = frozenset({"cursor", "codex", "crowley", "mr_go"})
 ACTIVITY_PULSE_WINDOW_MINUTES = 45
+ACTIVITY_WIRE_DEDUPE_MINUTES = 2
+ACTIVITY_WIRE_STALE_MINUTES = 30
+ACTIVITY_WIRE_AMBIENT_MIN_REAL = 2
+ACTIVITY_WIRE_AGENT_STALE_HOURS = 6
+ACTIVITY_WIRE_WORLD_CAP = 15
+ACTIVITY_WIRE_SYNC_CAP = 5
 _SUPPORTING_MEMORY_PREFERRED_TYPES = frozenset({
     "lesson",
     "constraint",
@@ -1393,6 +1879,7 @@ def _agent_activity_summary(
         if source in last_by_source:
             continue
         last_by_source[source] = {
+            "source": source,
             "memory_id": int(row["id"]),
             "last_at": row["created_at"],
             "memory_type": row["memory_type"],
@@ -1402,6 +1889,7 @@ def _agent_activity_summary(
         }
     return {
         "last_by_source": last_by_source,
+        "latest_contact": _latest_agent_contact(last_by_source),
         "recent": [
             {
                 "id": int(row["id"]),
@@ -1415,6 +1903,22 @@ def _agent_activity_summary(
             for row in rows
         ],
     }
+
+
+def _latest_agent_contact(
+    last_by_source: dict[str, dict[str, object]],
+) -> dict[str, object] | None:
+    """Most recent agent contact across sources (for unscoped Agent Feed brief)."""
+    latest: dict[str, object] | None = None
+    latest_at = ""
+    for source, entry in last_by_source.items():
+        if not isinstance(entry, dict):
+            continue
+        at = str(entry.get("last_at") or "")
+        if at > latest_at:
+            latest_at = at
+            latest = {**entry, "source": entry.get("source") or source}
+    return latest
 
 
 def _format_agent_activity_prompt_section(project_id: int | None) -> str:
@@ -5167,7 +5671,13 @@ def build_world_dashboard() -> dict[str, object]:
             "decisions": [],
             "memory_items": [],
             "recent_changes": [],
-            "agent_activity": {"last_by_source": {}, "recent": []},
+            "agent_activity": {"last_by_source": {}, "latest_contact": None, "recent": []},
+            "activity_wire": {
+                "pinned_focus": None,
+                "active_agents": [],
+                "items": [],
+                "cap": ACTIVITY_WIRE_WORLD_CAP,
+            },
             "task_frame": build_task_frame_context(None),
             "operator_metrics": get_metrics_summary_24h(),
             "synced_at": _now_iso(),
@@ -5193,6 +5703,13 @@ def build_world_dashboard() -> dict[str, object]:
     recent_change_items = recent_changes.get("items") or []
     retrieval_context = retrieve_work_context_memories(project_id, agent=None)
     task_frame = build_task_frame_context(project_id, agent=None)
+    activity_wire_full = build_activity_wire(project_id, limit=ACTIVITY_WIRE_WORLD_CAP)
+    activity_wire = {
+        "pinned_focus": activity_wire_full.get("pinned_focus"),
+        "active_agents": activity_wire_full.get("active_agents") or [],
+        "items": (activity_wire_full.get("items") or [])[:ACTIVITY_WIRE_WORLD_CAP],
+        "cap": ACTIVITY_WIRE_WORLD_CAP,
+    }
 
     return {
         "project": row_to_dict(project),
@@ -5226,6 +5743,7 @@ def build_world_dashboard() -> dict[str, object]:
         "filesystem": build_filesystem_dashboard(),
         "project_files": get_project_files_context(),
         "agent_activity": agent_activity,
+        "activity_wire": activity_wire,
         "task_frame": task_frame,
         "relevant_memories": retrieval_context["memories"],
         "relevant_memories_query": retrieval_context["query"],
@@ -5368,6 +5886,382 @@ def list_activity_pulses(
         ]
     finally:
         conn.close()
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    return datetime.fromisoformat(text)
+
+
+def _activity_wire_agent_label(agent: str) -> str:
+    labels = {
+        "cursor": "Cursor",
+        "codex": "Codex",
+        "crowley": "Crowley",
+        "mr_go": "Mr. Go",
+    }
+    return labels.get(str(agent).lower(), str(agent).title())
+
+
+def _activity_wire_line(
+    agent: str,
+    verb: str,
+    *,
+    ticket_id: int | None = None,
+    summary: str | None = None,
+    ticket_title: str | None = None,
+) -> str:
+    """Narrative copy for live-wire rows (V3.9.11 #72)."""
+    who = _activity_wire_agent_label(agent)
+    verb_norm = str(verb).strip().lower()
+    ticket_ref = f"ticket #{ticket_id}" if ticket_id is not None else None
+    title_bit = f" — {_truncate(str(ticket_title), 80)}" if ticket_title else ""
+    summary_text = str(summary).strip() if summary else ""
+
+    if verb_norm == "session_start":
+        return f"{who} opened a session"
+    if verb_norm == "claimed" and ticket_ref:
+        return f"{who} claimed {ticket_ref}{title_bit}"
+    if verb_norm == "working" and ticket_ref:
+        return f"{who} is on {ticket_ref}{title_bit}"
+    if verb_norm == "note":
+        return summary_text or f"{who} posted a note"
+    if verb_norm == "handoff":
+        if summary_text:
+            return f"{who} handed off — {_truncate(summary_text, 140)}"
+        return f"{who} handed off"
+    if verb_norm == "minted":
+        return summary_text or f"{who} minted tickets"
+    if verb_norm == "closed" and ticket_ref:
+        return f"{who} closed {ticket_ref}{title_bit}"
+    if summary_text:
+        return _truncate(summary_text, 160)
+    if ticket_ref:
+        return f"{who} — {ticket_ref}{title_bit}"
+    return f"{who} — {verb_norm.replace('_', ' ')}"
+
+
+def _ticket_event_wire_verb(event_type: str, payload: dict[str, object]) -> str:
+    normalized = str(event_type or "event")
+    if normalized == "claimed":
+        return "claimed"
+    if normalized == "created":
+        return "minted"
+    if normalized == "cancelled":
+        return "closed"
+    if normalized == "status_change":
+        to_status = str(payload.get("to", "")).lower()
+        if to_status == "done":
+            return "closed"
+        if to_status in {"in_progress", "claimed"}:
+            return "claimed"
+        return "working"
+    if normalized == "handoff_linked":
+        return "handoff"
+    return "working"
+
+
+def _pulse_to_wire_item(pulse: dict[str, object]) -> dict[str, object]:
+    ticket_id = pulse.get("ticket_id")
+    ticket_title = None
+    if ticket_id is not None:
+        row = get_ticket_by_id(int(ticket_id))
+        if row is not None:
+            ticket_title = str(row["title"])
+    return {
+        "id": f"pulse:{pulse['id']}",
+        "kind": "pulse",
+        "agent": str(pulse["agent"]),
+        "verb": str(pulse["verb"]),
+        "ticket_id": int(ticket_id) if ticket_id is not None else None,
+        "line": _activity_wire_line(
+            str(pulse["agent"]),
+            str(pulse["verb"]),
+            ticket_id=int(ticket_id) if ticket_id is not None else None,
+            summary=str(pulse["summary"]) if pulse.get("summary") else None,
+            ticket_title=ticket_title,
+        ),
+        "created_at": str(pulse["created_at"]),
+        "is_ambient": False,
+    }
+
+
+def _changes_item_to_wire_item(item: dict[str, object]) -> dict[str, object]:
+    kind = str(item.get("kind") or "event")
+    if kind == "handoff":
+        agent = str(item.get("source") or "crowley")
+        linked = item.get("linked_ticket_ids")
+        ticket_id = int(linked[0]) if isinstance(linked, list) and linked else None
+        return {
+            "id": str(item.get("id") or f"handoff:{item.get('created_at')}"),
+            "kind": "handoff",
+            "agent": agent,
+            "verb": "handoff",
+            "ticket_id": ticket_id,
+            "line": _activity_wire_line(
+                agent,
+                "handoff",
+                ticket_id=ticket_id,
+                summary=str(item.get("summary") or ""),
+            ),
+            "created_at": str(item.get("created_at") or ""),
+            "is_ambient": False,
+        }
+
+    payload: dict[str, object] = {}
+    event_type = str(item.get("event_type") or "event")
+    ticket_id = int(item["ticket_id"]) if item.get("ticket_id") is not None else None
+    verb = _ticket_event_wire_verb(event_type, payload)
+    agent = str(item.get("source") or "system")
+    summary = str(item.get("summary") or "")
+    return {
+        "id": str(item.get("id") or f"ticket_event:{ticket_id}"),
+        "kind": "ticket",
+        "agent": agent,
+        "verb": verb,
+        "ticket_id": ticket_id,
+        "line": summary or _activity_wire_line(
+            agent,
+            verb,
+            ticket_id=ticket_id,
+            ticket_title=str(item.get("ticket_title") or ""),
+        ),
+        "created_at": str(item.get("created_at") or ""),
+        "is_ambient": False,
+    }
+
+
+def _dedupe_activity_wire_items(
+    items: list[dict[str, object]],
+    *,
+    window_minutes: int = ACTIVITY_WIRE_DEDUPE_MINUTES,
+) -> list[dict[str, object]]:
+    """Drop same agent/verb/ticket rows inside the dedupe window (newest wins)."""
+    kept: list[dict[str, object]] = []
+    clusters: list[tuple[tuple[object, ...], datetime]] = []
+    window = timedelta(minutes=max(1, int(window_minutes)))
+    for item in items:
+        if bool(item.get("is_ambient")):
+            kept.append(item)
+            continue
+        key = (
+            str(item.get("agent") or ""),
+            str(item.get("verb") or ""),
+            item.get("ticket_id"),
+        )
+        try:
+            created = _parse_iso_datetime(str(item.get("created_at") or ""))
+        except ValueError:
+            kept.append(item)
+            continue
+        duplicate = False
+        for seen_key, seen_at in clusters:
+            if seen_key != key:
+                continue
+            if abs(created - seen_at) <= window:
+                duplicate = True
+                break
+        if duplicate:
+            continue
+        clusters.append((key, created))
+        kept.append(item)
+    return kept
+
+
+def _ambient_activity_wire_items(project_id: int) -> list[dict[str, object]]:
+    """Fallback rows when the live feed is empty or stale (V3.9.11 #72)."""
+    now = datetime.now(timezone.utc)
+    now_iso = _now_iso()
+    items: list[dict[str, object]] = []
+
+    for row in list_tickets(
+        project_id=project_id,
+        status="in_progress",
+        limit=5,
+    ):
+        ticket_id = int(row["id"])
+        assignee = str(row["assignee"])
+        items.append(
+            {
+                "id": f"ambient:ticket:{ticket_id}",
+                "kind": "ambient",
+                "agent": assignee,
+                "verb": "working",
+                "ticket_id": ticket_id,
+                "line": _activity_wire_line(
+                    assignee,
+                    "working",
+                    ticket_id=ticket_id,
+                    ticket_title=str(row["title"]),
+                ),
+                "created_at": now_iso,
+                "is_ambient": True,
+            }
+        )
+
+    activity = _agent_activity_summary(project_id, limit=10)
+    last_by_source = activity.get("last_by_source")
+    if isinstance(last_by_source, dict):
+        for source in ("cursor", "codex"):
+            entry = last_by_source.get(source)
+            if not isinstance(entry, dict):
+                items.append(
+                    {
+                        "id": f"ambient:agent:{source}:missing",
+                        "kind": "ambient",
+                        "agent": source,
+                        "verb": "session_start",
+                        "ticket_id": None,
+                        "line": f"No recent { _activity_wire_agent_label(source) } handoff on record",
+                        "created_at": now_iso,
+                        "is_ambient": True,
+                    }
+                )
+                continue
+            try:
+                last_at = _parse_iso_datetime(str(entry.get("last_at") or ""))
+            except ValueError:
+                continue
+            age = now - last_at.astimezone(timezone.utc)
+            if age > timedelta(hours=ACTIVITY_WIRE_AGENT_STALE_HOURS):
+                hours = int(age.total_seconds() // 3600)
+                items.append(
+                    {
+                        "id": f"ambient:agent:{source}:stale",
+                        "kind": "ambient",
+                        "agent": source,
+                        "verb": "note",
+                        "ticket_id": None,
+                        "line": (
+                            f"{_activity_wire_agent_label(source)} last heard "
+                            f"{hours}h ago"
+                        ),
+                        "created_at": now_iso,
+                        "is_ambient": True,
+                    }
+                )
+
+    state = get_project_state(project_id)
+    if state is not None and state["focus"]:
+        focus = _truncate(str(state["focus"]), 140)
+        items.append(
+            {
+                "id": "ambient:focus",
+                "kind": "ambient",
+                "agent": "crowley",
+                "verb": "note",
+                "ticket_id": None,
+                "line": f"Focus — {focus}",
+                "created_at": now_iso,
+                "is_ambient": True,
+            }
+        )
+    return items
+
+
+def _wire_needs_ambient(real_items: list[dict[str, object]]) -> bool:
+    if len(real_items) < ACTIVITY_WIRE_AMBIENT_MIN_REAL:
+        return True
+    try:
+        newest = _parse_iso_datetime(str(real_items[0].get("created_at") or ""))
+    except ValueError:
+        return True
+    age = datetime.now(timezone.utc) - newest.astimezone(timezone.utc)
+    return age > timedelta(minutes=ACTIVITY_WIRE_STALE_MINUTES)
+
+
+def build_activity_wire(
+    project_id: int | None,
+    *,
+    limit: int = 30,
+    window_minutes: int = ACTIVITY_PULSE_WINDOW_MINUTES,
+) -> dict[str, object]:
+    """Compose live activity wire from pulses, changes feed, and ambient fallbacks (#72)."""
+    if project_id is None:
+        return {"items": [], "pinned_focus": None, "active_agents": []}
+
+    limit = max(1, min(int(limit), 50))
+    real_items: list[dict[str, object]] = []
+
+    for pulse in list_activity_pulses(project_id, window_minutes=window_minutes, limit=limit):
+        real_items.append(_pulse_to_wire_item(pulse))
+
+    changes = build_recent_changes_feed(project_id, limit=limit)
+    for raw in changes.get("items") or []:
+        if isinstance(raw, dict):
+            real_items.append(_changes_item_to_wire_item(raw))
+
+    real_items.sort(
+        key=lambda row: (str(row.get("created_at") or ""), str(row.get("id") or "")),
+        reverse=True,
+    )
+    real_items = _dedupe_activity_wire_items(real_items)
+
+    items = list(real_items)
+    if _wire_needs_ambient(real_items):
+        items.extend(_ambient_activity_wire_items(project_id))
+        items.sort(
+            key=lambda row: (
+                0 if row.get("is_ambient") else 1,
+                str(row.get("created_at") or ""),
+                str(row.get("id") or ""),
+            ),
+            reverse=True,
+        )
+
+    active_agents = sorted(
+        {
+            str(row["agent"])
+            for row in real_items
+            if not row.get("is_ambient") and str(row.get("agent") or "")
+        }
+    )
+    pinned_focus = None
+    state = get_project_state(project_id)
+    if state is not None and state["focus"]:
+        pinned_focus = str(state["focus"])
+
+    return {
+        "items": items[:limit],
+        "pinned_focus": pinned_focus,
+        "active_agents": active_agents,
+    }
+
+
+def _slim_activity_wire_for_agent(
+    wire: dict[str, object],
+    requester_agent: str,
+    *,
+    limit: int = ACTIVITY_WIRE_SYNC_CAP,
+) -> dict[str, object]:
+    """Slim wire for agent sync — other-agent motion first (V3.9.11 #73)."""
+    cap = max(1, min(int(limit), ACTIVITY_WIRE_SYNC_CAP))
+    items_raw = wire.get("items")
+    items = items_raw if isinstance(items_raw, list) else []
+    requester = requester_agent.strip().lower()
+    other: list[dict[str, object]] = []
+    own: list[dict[str, object]] = []
+    ambient: list[dict[str, object]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if item.get("is_ambient"):
+            ambient.append(item)
+        elif str(item.get("agent") or "").lower() == requester:
+            own.append(item)
+        else:
+            other.append(item)
+    slim_items = (other + own + ambient)[:cap]
+    active_raw = wire.get("active_agents")
+    active_agents = active_raw if isinstance(active_raw, list) else []
+    return {
+        "pinned_focus": wire.get("pinned_focus"),
+        "active_agents": active_agents,
+        "items": slim_items,
+        "cap": cap,
+    }
 
 
 def get_metrics_summary_24h() -> dict[str, object]:
@@ -5590,6 +6484,11 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
     recommended = _state_display(state["next_action"]) if state is not None else "(unset)"
     tickets = build_tickets_summary(project_id, normalized_agent)
     task_frame = build_task_frame_context(project_id, normalized_agent)
+    activity_wire = _slim_activity_wire_for_agent(
+        build_activity_wire(project_id, limit=ACTIVITY_WIRE_WORLD_CAP),
+        normalized_agent,
+        limit=ACTIVITY_WIRE_SYNC_CAP,
+    )
 
     return {
         "agent": normalized_agent,
@@ -5608,6 +6507,7 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         "agent_activity": _agent_activity_summary(project_id),
         "tickets": tickets,
         "task_frame": task_frame,
+        "activity_wire": activity_wire,
         "recent_decisions": recent_decisions,
         "constraint_memories": constraint_memories,
         "events_from_this_agent": events_from_this_agent,
@@ -5625,6 +6525,7 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
             "supporting_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
             "relevant_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
             "task_frame_working_on": TASK_FRAME_WORKING_ON_CAP,
+            "activity_wire": ACTIVITY_WIRE_SYNC_CAP,
         },
     }
 
@@ -6600,7 +7501,7 @@ def _debug_tasks() -> None:
 def _debug_brain() -> None:
     """Print model provider configuration (debug-only)."""
     print(f"[debug] Crowley version: {CROWLEY_VERSION}")
-    print(f"[debug] configured provider: {MODEL_PROVIDER}")
+    print(f"[debug] configured provider: {get_model_provider_setting()}")
     print(f"[debug] resolved provider: {get_model_provider()}")
     print(f"[debug] OpenAI key present: {'yes' if _has_openai_key() else 'no'}")
     print(f"[debug] OpenAI model: {OPENAI_MODEL}")

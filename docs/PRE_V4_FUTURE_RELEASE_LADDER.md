@@ -1,6 +1,6 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** V3.9.10 shipped locally · V3.9.11 active next · V3.9.12 minted · V4 planned · V4 after .10/.11/.12 gate.
+**Status:** V3.9.11 shipped locally · V3.9.12 active next · V4 planned · V4 after .10/.11/.12 gate.
 **Baseline:** V3.9.7 on `origin/main`; V3.9.8+ in local working tree.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
@@ -32,8 +32,8 @@ The target state before V4:
 | V3.9.8 | Runtime Hardening | Shipped locally (#50–#55) |
 | V3.9.9 | Context That Feeds | **Shipped locally** (#56–#63) |
 | V3.9.10 | Task-Frame Context | **Shipped locally** (#64–#69) |
-| V3.9.11 | Live Wire | Minted (#70–#75) — **next** |
-| V3.9.12 | Portable Context Terminal | Minted (#76–#80) — after V3.9.11 |
+| V3.9.11 | Live Wire | **Shipped** (#70–#75) |
+| V3.9.12 | Portable Context Terminal | Minted (#76–#80) — **next** |
 | V4.0 | Spark Lanes | Planned — after V3.9.12 proves the terminal loop |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 

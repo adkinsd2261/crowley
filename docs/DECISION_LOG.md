@@ -18,6 +18,31 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-041 — V3.9.11 Live Wire shipped
+
+**Date:** 2026-07-03
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.11`, `activity_pulses`, `build_activity_wire()`, compose live wire UI, `GET/POST /api/brain`, `docs/V3.9.11_LIVE_WIRE.md`, tickets `#70–#75`, **284 tests**
+
+### Context
+
+V3.9.10 gave agents a task frame but the compose footer and sync CLI lacked ambient awareness of who was moving on tickets. Mr. Go also wanted on-the-fly brain switching (Ollama uncensored models, Claude) without editing env files.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.11"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.11 Live Wire"`
+- Activity pulses + wire builder + compose ticker UI + sync/world exposure (#70–#74)
+- Runtime brain config in `.crowley/brain.json`; `GET/POST /api/brain`; Ollama `think=False` for chat streaming
+- Agent feed: include `lesson` notes; latest handoff by newest `last_at` across sources
+
+### Alternatives rejected
+
+- WebSocket push for wire — 5s poll sufficient for v1
+- File/git watcher daemon — out of scope
+- Thinking-mode Ollama stream in chat — too slow; disabled for operator chat
+
+---
+
 ## ADR-040 — V3.9.10 Task-Frame Context shipped
 
 **Date:** 2026-07-02

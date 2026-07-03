@@ -113,19 +113,25 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v3910_task_frame(self) -> None:
+    def test_onboarding_docs_locked_for_v3911_live_wire(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.10"', where)
+        self.assertIn('CROWLEY_VERSION = "3.9.11"', where)
         self.assertIn("persistent context layer", where)
-        self.assertIn("V3.9.10", versions)
-        self.assertIn("Task-Frame Context", versions)
+        self.assertIn("V3.9.11", versions)
+        self.assertIn("Live Wire", versions)
         self.assertIn("shipped", versions.lower())
-        self.assertTrue((ROOT / "docs" / "V3.9.10_TASK_FRAME_CONTEXT.md").is_file())
+        self.assertTrue((ROOT / "docs" / "V3.9.11_LIVE_WIRE.md").is_file())
         self.assertIn(
             "Shipped",
-            (ROOT / "docs" / "V3.9.10_TASK_FRAME_CONTEXT.md").read_text(encoding="utf-8"),
+            (ROOT / "docs" / "V3.9.11_LIVE_WIRE.md").read_text(encoding="utf-8"),
         )
+
+    def test_onboarding_docs_locked_for_v3910_task_frame(self) -> None:
+        versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
+        self.assertIn("V3.9.10", versions)
+        self.assertIn("Task-Frame Context", versions)
+        self.assertTrue((ROOT / "docs" / "V3.9.10_TASK_FRAME_CONTEXT.md").is_file())
 
     def test_onboarding_docs_locked_for_v395(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
@@ -327,7 +333,7 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn('content="width=device-width, initial-scale=1.0"', html)
         for token in (
             "overflow-x: clip",
-            "grid-template-columns: auto minmax(0, 1fr) auto",
+            "grid-template-columns: minmax(0, 1fr) auto",
             ".workspace-pane",
             "min-width: 0",
             ".workspace-pane",

@@ -110,6 +110,25 @@ def on_startup() -> None:
     crowley.setup_db()
 
 
+class BrainSettingRequest(BaseModel):
+    provider: Literal["auto", "openai", "ollama", "anthropic"]
+    model: str | None = None
+
+
+@app.get("/api/brain")
+def api_brain_get() -> JSONResponse:
+    return JSONResponse(crowley.get_brain_snapshot())
+
+
+@app.post("/api/brain")
+def api_brain_set(body: BrainSettingRequest) -> JSONResponse:
+    try:
+        crowley.set_brain_config(body.provider, body.model)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(crowley.get_brain_snapshot())
+
+
 @app.get("/api/health")
 def api_health() -> JSONResponse:
     db_status = _database_status()
@@ -123,6 +142,7 @@ def api_health() -> JSONResponse:
             "version": crowley.CROWLEY_VERSION,
             "release_label": crowley.CROWLEY_RELEASE_LABEL,
             "brain": crowley._brain_banner_label(),
+            "brain_config": crowley.get_brain_snapshot(),
             "provider": crowley.get_model_provider(),
             "db": db_status,
             "embed_provider": health.get("embed_provider"),

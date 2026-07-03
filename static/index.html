@@ -12,16 +12,38 @@
       <div class="header-brand">
         <div class="header-title-row">
           <h1>Crowley</h1>
+          <span class="header-version-badge" id="version-label" title="">—</span>
           <span class="health-dot" id="health-dot" title="Checking…"></span>
         </div>
       </div>
-      <div class="header-meta">
-        <p class="header-version" id="version-label" title="">—</p>
-        <p class="header-sub" id="brain-label">—</p>
+      <div class="header-actions">
+        <div class="brain-switcher" id="brain-switcher">
+          <button
+            type="button"
+            class="brain-switcher-trigger"
+            id="brain-switcher-trigger"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-label="Switch brain"
+          >
+            <span class="brain-switcher-orb" aria-hidden="true"></span>
+            <span class="brain-switcher-copy">
+              <span class="brain-switcher-label" id="brain-switcher-label">—</span>
+              <span class="brain-switcher-model" id="brain-switcher-model">—</span>
+            </span>
+            <svg class="brain-switcher-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <ul class="brain-switcher-menu hidden" id="brain-switcher-menu" role="listbox" aria-label="Brain options"></ul>
+        </div>
+        <button type="button" id="refresh-panels" class="refresh-btn icon-btn" title="Refresh context panels and chat history" aria-label="Refresh">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+            <path d="M21 3v6h-6"/>
+          </svg>
+        </button>
       </div>
-      <button type="button" id="refresh-panels" class="refresh-btn" title="Refresh context panels and chat history">
-        Refresh
-      </button>
     </header>
 
     <section class="workspace">
@@ -35,14 +57,24 @@
 
         <footer class="compose">
           <div class="compose-inner">
-            <div class="compose-objective">
-              <span class="compose-objective-label">
-                In the air
-                <span class="compose-phase hidden" id="compose-phase"></span>
-              </span>
-              <span class="compose-objective-text is-placeholder" id="current-objective">
-                Nothing pinned — just talk.
-              </span>
+            <div class="compose-live-panel" id="compose-live-panel">
+              <div class="live-wire-banner">
+                <span class="compose-objective-label">
+                  <span class="live-wire-beacon" id="live-wire-beacon" aria-hidden="true"></span>
+                  In the air
+                  <span class="compose-phase hidden" id="compose-phase"></span>
+                </span>
+                <div class="live-wire-ticker" id="activity-wire" aria-live="polite">
+                  <div class="live-wire-ticker-viewport" id="activity-wire-lines">
+                    <p
+                      class="live-wire-ticker-msg compose-objective-text is-placeholder"
+                      id="current-objective"
+                    >
+                      <span class="live-wire-ticker-text">Nothing pinned — just talk.</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="compose-field">
               <textarea
@@ -142,7 +174,7 @@
                 <ul class="panel-list task-brief-ticket-list" id="task-brief-working-list"></ul>
               </section>
               <section class="task-brief-section" id="task-brief-handoff">
-                <h4 class="agent-feed-subhead">Last handoff</h4>
+                <h4 class="agent-feed-subhead">Latest handoff</h4>
                 <div class="task-brief-handoff-body" id="task-brief-handoff-body"></div>
               </section>
               <section class="task-brief-section" id="task-brief-guardrails">

@@ -1,9 +1,9 @@
 # Crowley — Project State
 
-**As of:** V3.9.10 local · V3.9.11 next (#70–#75)
-**Planning:** V3.9.11 Live Wire (#70–#75) · V3.9.12 Portable Context Terminal (#76–#80) minted · V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-02 (V3.9.10 doc lock #69)
-**Git:** `origin/main` at V3.9.7; V3.9.8+ local uncommitted
+**As of:** V3.9.11 local · V3.9.12 next (#76–#80)
+**Planning:** V3.9.12 Portable Context Terminal (#76–#80) minted · V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
+**Last doc sync:** 2026-07-03 (V3.9.11 doc lock #75)
+**Git:** `origin/main` — push V3.9.11 patch after this lock
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -36,7 +36,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
 - **V3.9.8 shipped locally** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
-- **V3.9.10 shipped locally** — task frame API, ticket-narrative retrieval, sync bundle task brief, Agent Feed brief UI, chat prompt task frame (#64–#69)
+- **V3.9.11 shipped locally** — activity pulses, live wire builder/UI, brain switcher, agent feed fixes (#70–#75)
 - **Cursor memory sync rule** — `.cursor/rules/crowley-memory.mdc` + sessionStart / beforeSubmitPrompt / stop hooks
 - **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V3.9.12 Portable Context Terminal and V4 Spark Lanes follow the minted ladder.
 

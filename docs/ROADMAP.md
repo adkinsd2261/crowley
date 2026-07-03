@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.10 shipped · V3.9.11 next · V3.9.12/V4 direction pivot · **2026-07-02**
+**As of:** V3.9.11 shipped · V3.9.12 next · V4 direction pivot · **2026-07-03**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -78,18 +78,18 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.10 Task-Frame Context ✅
                               │
                               ▼
-                    V3.9.11 Live Wire ◄── YOU ARE HERE
-                              │
-                              ▼
-                    V3.9.12 Portable Context Terminal
+                    V3.9.11 Live Wire ✅
+                           │
+                           ▼
+                    V3.9.12 Portable Context Terminal ◄── YOU ARE HERE
                               │
                               ▼
                     V4.0 Spark Lanes
 ```
 
-**Shipped through V3.9.10:** … context that feeds (#56–#63); task-frame context — task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69).
+**Shipped through V3.9.11:** … task-frame context (#64–#69); live wire — pulses, compose ticker, brain switcher (#70–#75).
 
-**Active initiative:** V3.9.11 Live Wire (#70–#75). Existing minted ladder remains V3.9.12 Portable Context Terminal. V4.0 Spark Lanes planned after V3.9.12 — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V3.9.12 Portable Context Terminal (#76–#80). V4.0 Spark Lanes planned after V3.9.12 — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -202,8 +202,8 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | V3.9.8 Runtime Hardening | No fragile startup — test mode, runtime health | Medium | Local (#50–#55) — not on `origin/main` |
 | V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Shipped locally** (#56–#63) |
 | V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped locally** (#64–#69) |
-| V3.9.11 Live Wire | Compose activity wire + agent pulses | Medium | Minted #70–#75 · **next** |
-| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | Minted #76–#80; after V3.9.11 |
+| V3.9.11 Live Wire | Compose activity wire + brain switcher | Medium | **Shipped locally** (#70–#75) |
+| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | Minted #76–#80 · **next** |
 | V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | Planned after V3.9.12 |
 | External collectors | Optional future inputs into lanes | High | Deferred after V4 memory architecture |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
@@ -288,7 +288,8 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.8** | Runtime Hardening | ✅ test mode, model probe, runtime health, sqlite-vec fallback |
 | V3.9.9 | Context That Feeds | Shipped locally (#56–#63) |
 | V3.9.10 | Task-Frame Context | Shipped locally (#64–#69) |
-| V3.9.11 | Live Wire | Minted #70–#75 · next |
+| V3.9.11 | Live Wire | Shipped locally (#70–#75) |
+| V3.9.12 | Portable Context Terminal | Minted #76–#80 · next |
 | V3.9.12 | Portable Context Terminal | Minted #76–#80; packet-in/writeback-out |
 | **V4.0** | Spark Lanes | Memory lanes, trust states, lane-aware retrieval |
 

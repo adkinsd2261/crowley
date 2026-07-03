@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.10 local · V3.9.11 next (#70–#75) · **2026-07-02**
+**As of:** V3.9.11 local · V3.9.12 next (#76–#80) · **2026-07-03**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** `origin/main` is still at **V3.9.7** (`c5aa4de`). V3.9.8–V3.9.10 work lives in the **local working tree** (uncommitted). Bus reports `3.9.10` from local code.
+**Git note:** Pushing V3.9.11 patch to `origin/main` (includes V3.9.8–V3.9.11 ladder). Bus reports `3.9.11` from local code.
 
 ---
 
@@ -45,11 +45,11 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.8** | **Local** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55) |
 | **V3.9.9** | **Shipped locally** — Context That Feeds: quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene (#56–#63) |
 | **V3.9.10** | **Shipped locally** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
-| **V3.9.11** | **Minted** — Live Wire (#70–#75); start after V3.9.10 |
-| **V3.9.12** | **Minted** — Portable Context Terminal (#76–#80); local/manual context packet + structured writeback |
+| **V3.9.11** | **Shipped locally** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
+| **V3.9.12** | **Minted** — Portable Context Terminal (#76–#80); **next** |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.10"` (`Crowley V3.9.10 Task-Frame Context`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.11"` (`Crowley V3.9.11 Live Wire`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 

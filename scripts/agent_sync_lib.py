@@ -85,6 +85,25 @@ def send_json(
     return data, None
 
 
+def post_activity_pulse(
+    agent: str,
+    verb: str,
+    *,
+    ticket_id: int | None = None,
+    summary: str | None = None,
+) -> None:
+    """Post live-wire pulse via bus API. Never raises (V3.9.11 #71)."""
+    try:
+        payload: dict[str, Any] = {"agent": agent, "verb": verb}
+        if ticket_id is not None:
+            payload["ticket_id"] = ticket_id
+        if summary is not None and str(summary).strip():
+            payload["summary"] = clip(str(summary).strip(), 200)
+        send_json("/api/activity/pulse", payload)
+    except Exception:
+        pass
+
+
 def create_ticket_api(
     *,
     title: str,
@@ -463,6 +482,29 @@ def print_supporting_memories(sync: dict[str, Any]) -> None:
     print("")
 
 
+def print_activity_wire(sync: dict[str, Any]) -> None:
+    """Live-wire lines for CLI sync (V3.9.11 #73)."""
+    wire = sync.get("activity_wire")
+    if not isinstance(wire, dict):
+        return
+    print("In the air:")
+    focus = wire.get("pinned_focus")
+    if isinstance(focus, str) and focus.strip():
+        print(f"  focus: {clip(focus.strip(), 140)}")
+    items = as_list(wire.get("items"))
+    if not items:
+        print("  - (quiet)")
+    else:
+        for item in items[:8]:
+            if not isinstance(item, dict):
+                continue
+            prefix = "~ " if item.get("is_ambient") else "- "
+            line = str(item.get("line") or "").strip()
+            if line:
+                print(f"  {prefix}{clip(line, 160)}")
+    print("")
+
+
 def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
     state = sync.get("state")
     if not isinstance(state, dict):
@@ -493,6 +535,8 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
     print_agent_activity(sync)
 
     print_tickets_summary(sync, agent=agent)
+
+    print_activity_wire(sync)
 
     has_task_frame = isinstance(sync.get("task_frame"), dict)
     if has_task_frame:

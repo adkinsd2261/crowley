@@ -210,6 +210,7 @@ def before() -> int:
         return 0
 
     _print_agent_sync(sync)
+    asl.post_activity_pulse(AGENT, "session_start")
     return 0
 
 
@@ -609,6 +610,14 @@ def create_tickets_file(path: str) -> int:
         created.append(ticket_id)
         print(f"Created ticket #{ticket_id}: {title}")
     print(f"Minted {len(created)} ticket(s).")
+    if created:
+        objective = payload.get("objective") if isinstance(payload, dict) else None
+        theme = str(objective).strip() if objective else file_path.stem
+        asl.post_activity_pulse(
+            "codex",
+            "minted",
+            summary=f"Minted {len(created)} ticket(s): {asl.clip(theme, 120)}",
+        )
     return 0
 
 

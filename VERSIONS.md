@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.10 (`Crowley V3.9.10 Task-Frame Context`) — local code
-**Next planned:** V3.9.11 Live Wire → V3.9.12 Portable Context Terminal → V4 Spark Lanes
+**Current:** V3.9.11 (`Crowley V3.9.11 Live Wire`) — local code
+**Next planned:** V3.9.12 Portable Context Terminal → V4 Spark Lanes
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
@@ -34,7 +34,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.8  | shipped  | 2026-07-02 | Runtime Hardening — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite |
 | V3.9.9  | shipped  | 2026-07-02 | Context That Feeds — quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene |
 | V3.9.10 | shipped  | 2026-07-02 | Task-Frame Context — task frame API, ticket-narrative retrieval, sync/UI/prompt brief |
-| V3.9.11 | reserve  | TBD        | Live Wire — minted #70–#75 |
+| V3.9.11 | shipped  | 2026-07-03 | Live Wire — activity pulses, compose wire UI, brain switcher, agent feed fixes (#70–#75) |
 | V3.9.12 | reserve  | TBD        | Portable Context Terminal — minted #76–#80; local context packet + structured writeback |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
@@ -471,6 +471,14 @@ Plan: [docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./docs/V3.9.5_CONVERSATION_MO
 **Version:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
 
 Plan: [docs/V3.9.6_WORKSPACE_POLISH.md](./docs/V3.9.6_WORKSPACE_POLISH.md)
+
+---
+
+## V3.9.11 — Live Wire
+
+**Version:** `CROWLEY_VERSION = "3.9.11"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.11 Live Wire"`
+
+Plan: [docs/V3.9.11_LIVE_WIRE.md](./docs/V3.9.11_LIVE_WIRE.md)
 
 ---
 

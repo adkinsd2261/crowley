@@ -4,7 +4,11 @@ const sendBtn = document.getElementById("send");
 const thinkingEl = document.getElementById("thinking");
 const healthDot = document.getElementById("health-dot");
 const versionLabel = document.getElementById("version-label");
-const brainLabel = document.getElementById("brain-label");
+const brainSwitcherEl = document.getElementById("brain-switcher");
+const brainSwitcherTrigger = document.getElementById("brain-switcher-trigger");
+const brainSwitcherMenu = document.getElementById("brain-switcher-menu");
+const brainSwitcherLabel = document.getElementById("brain-switcher-label");
+const brainSwitcherModel = document.getElementById("brain-switcher-model");
 const refreshBtn = document.getElementById("refresh-panels");
 const panelProjectEl = document.getElementById("panel-project");
 const panelTicketsEl = document.getElementById("panel-tickets");
@@ -39,6 +43,9 @@ const liveSyncLabel = document.getElementById("live-sync-label");
 const composePhaseEl = document.getElementById("compose-phase");
 const contextTabs = document.querySelectorAll(".context-tab");
 const objectiveEl = document.getElementById("current-objective");
+const activityWireEl = document.getElementById("activity-wire");
+const activityWireLinesEl = document.getElementById("activity-wire-lines");
+const composeLivePanelEl = document.getElementById("compose-live-panel");
 
 let streaming = false;
 let pollTimer = null;
@@ -55,9 +62,17 @@ let lastTicketsFingerprint = "";
 let lastTicketDetailId = null;
 let lastTicketDetailFingerprint = "";
 let ticketDetailRequestId = 0;
+let activityWireItems = [];
+let activityWireRotateOffset = 0;
+let activityWireRotateTimer = null;
+let activityWireFingerprint = "";
+let activityWireLastRotateOffset = -1;
+let tickerTransitioning = false;
 const WORKSPACE_NAV_STORAGE_KEY = "crowley.workspace.nav";
 const EXTRACTION_REFRESH_MS = 2000;
 const LIVE_POLL_MS = 5000;
+const ACTIVITY_WIRE_ROTATE_MS = 10000;
+const TICKER_SLIDE_FALLBACK_MS = 720;
 const OBJECTIVE_FALLBACK = "Nothing pinned — just talk.";
 const INPUT_MAX_HEIGHT = 192;
 const CHAT_SCROLL_PIN_THRESHOLD = 96;
@@ -912,11 +927,27 @@ function resolveTaskBriefHandoff(taskFrame = {}, agentActivity = {}) {
   if (taskFrame && typeof taskFrame.last_handoff === "object" && taskFrame.last_handoff) {
     return taskFrame.last_handoff;
   }
+  const latest = agentActivity?.latest_contact;
+  if (latest && typeof latest === "object") {
+    return latest;
+  }
   const lastBySource =
     agentActivity && typeof agentActivity.last_by_source === "object"
       ? agentActivity.last_by_source
       : {};
-  return lastBySource.cursor || lastBySource.codex || lastBySource.chatgpt || null;
+  let newest = null;
+  for (const key of ["cursor", "codex", "chatgpt"]) {
+    const entry = lastBySource[key];
+    if (!entry || typeof entry !== "object") continue;
+    const candidate = { ...entry, source: entry.source || key };
+    if (
+      !newest ||
+      String(candidate.last_at || "").localeCompare(String(newest.last_at || "")) > 0
+    ) {
+      newest = candidate;
+    }
+  }
+  return newest;
 }
 
 function renderTaskBriefWorkingOn(tickets = []) {
@@ -1151,15 +1182,202 @@ function loopPriorityClass(priority) {
   return "priority-low";
 }
 
+function pulseLiveWirePanel() {
+  if (!composeLivePanelEl) return;
+  composeLivePanelEl.classList.remove("is-pulse");
+  void composeLivePanelEl.offsetWidth;
+  composeLivePanelEl.classList.add("is-pulse");
+  window.setTimeout(() => {
+    composeLivePanelEl.classList.remove("is-pulse");
+  }, 850);
+}
+
+function updateComposeLivePanelState({ focus = "", hasActivity = false } = {}) {
+  if (!composeLivePanelEl) return;
+  const hasFocus = Boolean(String(focus || "").trim());
+  composeLivePanelEl.classList.toggle("has-focus", hasFocus);
+  composeLivePanelEl.classList.toggle("is-placeholder-state", !hasFocus);
+  composeLivePanelEl.classList.toggle("has-activity", Boolean(hasActivity));
+}
+
+function buildTickerQueue(focus, items) {
+  const queue = [];
+  const focusTrim = String(focus || "").trim();
+  if (focusTrim) {
+    queue.push({
+      id: `focus:${focusTrim}`,
+      line: focusTrim,
+      agent: "crowley",
+      is_ambient: false,
+      kind: "focus",
+    });
+  }
+  for (const item of items) {
+    if (!item) continue;
+    const line = String(item.line || "").trim();
+    if (!line) continue;
+    if (focusTrim && line === focusTrim) continue;
+    queue.push({ ...item, line, kind: item.kind || "pulse" });
+  }
+  if (!queue.length) {
+    queue.push({
+      id: "placeholder",
+      line: OBJECTIVE_FALLBACK,
+      is_ambient: true,
+      kind: "placeholder",
+    });
+  }
+  return queue;
+}
+
+function tickerMessageHtml(item) {
+  const ambient = Boolean(item.is_ambient);
+  const line = String(item.line || "").trim();
+  const isPlaceholder = item.kind === "placeholder";
+  return (
+    `<p class="live-wire-ticker-msg compose-objective-text${isPlaceholder ? " is-placeholder" : ""}${ambient ? " is-ambient" : ""}"` +
+    ` id="current-objective">` +
+    `<span class="live-wire-ticker-text">${escapeHtml(line)}</span>` +
+    `</p>`
+  );
+}
+
+function currentTickerItem() {
+  if (!activityWireItems.length) return null;
+  const idx = activityWireRotateOffset % activityWireItems.length;
+  return activityWireItems[idx];
+}
+
+function bindTickerEnterCleanup(el) {
+  if (!el) return;
+  el.addEventListener(
+    "animationend",
+    (event) => {
+      if (event.target !== el) return;
+      el.classList.remove("is-entering");
+    },
+    { once: true }
+  );
+}
+
+function showTickerItem({ slide = false } = {}) {
+  if (!activityWireLinesEl) return;
+  const item = currentTickerItem();
+  if (!item) {
+    activityWireLinesEl.innerHTML = "";
+    return;
+  }
+
+  const html = tickerMessageHtml(item);
+  const outgoing = activityWireLinesEl.querySelector(
+    ".live-wire-ticker-msg:not(.is-exiting)"
+  );
+
+  if (!slide || !outgoing || tickerTransitioning) {
+    activityWireLinesEl.innerHTML = html;
+    bindTickerEnterCleanup(activityWireLinesEl.querySelector(".live-wire-ticker-msg"));
+    activityWireLastRotateOffset = activityWireRotateOffset;
+    return;
+  }
+
+  tickerTransitioning = true;
+  outgoing.classList.add("is-exiting");
+
+  let exitHandled = false;
+  const finishExit = () => {
+    if (exitHandled) return;
+    exitHandled = true;
+    if (!outgoing.isConnected) {
+      tickerTransitioning = false;
+      return;
+    }
+    outgoing.remove();
+    activityWireLinesEl.insertAdjacentHTML("beforeend", html);
+    const incoming = activityWireLinesEl.querySelector(
+      ".live-wire-ticker-msg:not(.is-exiting)"
+    );
+    incoming?.classList.add("is-entering");
+    const finishEnter = () => {
+      incoming?.classList.remove("is-entering");
+      tickerTransitioning = false;
+      activityWireLastRotateOffset = activityWireRotateOffset;
+    };
+    if (incoming) {
+      incoming.addEventListener("animationend", finishEnter, { once: true });
+      bindTickerEnterCleanup(incoming);
+    } else {
+      tickerTransitioning = false;
+    }
+  };
+
+  outgoing.addEventListener("animationend", finishExit, { once: true });
+  window.setTimeout(finishExit, TICKER_SLIDE_FALLBACK_MS);
+}
+
+function renderActivityWireLines({ animate = false } = {}) {
+  showTickerItem({ slide: animate });
+}
+
+function stopActivityWireRotation() {
+  if (activityWireRotateTimer) {
+    window.clearInterval(activityWireRotateTimer);
+    activityWireRotateTimer = null;
+  }
+}
+
+function ensureActivityWireRotation({ restart = false } = {}) {
+  if (activityWireItems.length <= 1) {
+    stopActivityWireRotation();
+    return;
+  }
+  if (restart) stopActivityWireRotation();
+  if (activityWireRotateTimer !== null) return;
+  if (document.hidden) return;
+  activityWireRotateTimer = window.setInterval(() => {
+    if (document.hidden || tickerTransitioning) return;
+    activityWireRotateOffset = (activityWireRotateOffset + 1) % activityWireItems.length;
+    showTickerItem({ slide: true });
+  }, ACTIVITY_WIRE_ROTATE_MS);
+}
+
+function startActivityWireRotation() {
+  ensureActivityWireRotation();
+}
+
+function renderActivityWire(data = {}) {
+  const wire = data.activity_wire || {};
+  const state = data.state || {};
+  const focus = String(wire.pinned_focus || state.focus || state.next_action || "").trim();
+  const items = Array.isArray(wire.items) ? wire.items : [];
+  const rawItems = items.filter((item) => item && String(item.line || "").trim());
+  const queue = buildTickerQueue(focus, rawItems);
+  const fingerprint = JSON.stringify(
+    queue.map((item) => [item?.id, item?.line, item?.is_ambient, item?.agent, item?.kind])
+  );
+  const itemsChanged = fingerprint !== activityWireFingerprint;
+  const hadTickerVisible = Boolean(
+    activityWireLinesEl?.querySelector(".live-wire-ticker-msg:not(.is-placeholder)")
+  );
+  activityWireFingerprint = fingerprint;
+  activityWireItems = queue;
+  if (itemsChanged) {
+    activityWireRotateOffset = 0;
+    activityWireLastRotateOffset = -1;
+    pulseLiveWirePanel();
+  }
+  const hasRealContent = queue.some((item) => item.kind !== "placeholder");
+  updateComposePhase(data.phase_progress);
+  updateComposeLivePanelState({
+    focus,
+    hasActivity: hasRealContent,
+  });
+  const shouldSlide = itemsChanged && hadTickerVisible && hasRealContent;
+  showTickerItem({ slide: shouldSlide });
+  ensureActivityWireRotation({ restart: itemsChanged });
+}
+
 function updateCurrentObjective(state = {}, progress = null) {
-  if (!objectiveEl) return;
-  const focus = (state.focus || "").trim();
-  const nextAction = (state.next_action || "").trim();
-  const text = focus || nextAction || OBJECTIVE_FALLBACK;
-  const isPlaceholder = !focus && !nextAction;
-  objectiveEl.textContent = text;
-  objectiveEl.classList.toggle("is-placeholder", isPlaceholder);
-  updateComposePhase(progress);
+  renderActivityWire({ state, phase_progress: progress });
 }
 
 function escapeHtml(text) {
@@ -1722,7 +1940,7 @@ function renderDashboard(data, { animate = false } = {}) {
   updateTabBadges(data.counts || {}, data);
 
   if (!data.project) {
-    updateCurrentObjective();
+    renderActivityWire(data);
     renderProjectPanel(data);
     renderPanelState(panelTicketsEl, "empty", PANEL_META.tickets.empty);
     renderPanelList(panelTasksEl, [], () => "", PANEL_META.tasks.empty);
@@ -1744,7 +1962,7 @@ function renderDashboard(data, { animate = false } = {}) {
   }
 
   const state = data.state || {};
-  updateCurrentObjective(state, data.phase_progress);
+  renderActivityWire(data);
   renderProjectPanel(data);
 
   renderTicketsPanel(data.ticket_groups || [], data.tickets || []);
@@ -1803,6 +2021,204 @@ function renderDashboard(data, { animate = false } = {}) {
   lastDashboardData = data;
 }
 
+let brainSwitcherOpen = false;
+let brainSwitchInFlight = false;
+
+function syncBrainMenuPosition() {
+  if (!brainSwitcherTrigger || !brainSwitcherMenu) return;
+  const rect = brainSwitcherTrigger.getBoundingClientRect();
+  brainSwitcherMenu.style.setProperty("--brain-menu-top", `${Math.round(rect.bottom + 6)}px`);
+  brainSwitcherMenu.style.setProperty(
+    "--brain-menu-right",
+    `${Math.round(window.innerWidth - rect.right)}px`
+  );
+}
+
+function closeBrainSwitcher() {
+  if (!brainSwitcherEl || !brainSwitcherTrigger || !brainSwitcherMenu) return;
+  brainSwitcherOpen = false;
+  brainSwitcherEl.classList.remove("is-open");
+  brainSwitcherTrigger.setAttribute("aria-expanded", "false");
+  brainSwitcherMenu.classList.add("hidden");
+}
+
+function openBrainSwitcher() {
+  if (!brainSwitcherEl || !brainSwitcherTrigger || !brainSwitcherMenu) return;
+  brainSwitcherOpen = true;
+  brainSwitcherEl.classList.add("is-open");
+  brainSwitcherTrigger.setAttribute("aria-expanded", "true");
+  brainSwitcherMenu.classList.remove("hidden");
+  syncBrainMenuPosition();
+  void loadBrainConfig();
+}
+
+function toggleBrainSwitcher() {
+  if (brainSwitcherOpen) closeBrainSwitcher();
+  else openBrainSwitcher();
+}
+
+function brainConfigFromLegacyHealth(data) {
+  if (data?.brain_config) return data.brain_config;
+  if (!data?.brain) return null;
+  const slash = data.brain.indexOf(" / ");
+  if (slash === -1) {
+    return {
+      provider: data.provider || "auto",
+      model: data.brain,
+      label: data.brain,
+      providers: [],
+    };
+  }
+  const label = data.brain.slice(0, slash).trim();
+  const model = data.brain.slice(slash + 3).trim();
+  let provider = data.provider || "auto";
+  if (/^auto/i.test(label)) provider = "auto";
+  else if (/openai/i.test(label)) provider = "openai";
+  else if (/claude|anthropic/i.test(label)) provider = "anthropic";
+  else if (/ollama/i.test(label)) provider = "ollama";
+  return {
+    provider,
+    model,
+    label: label.replace(/\s*\([^)]+\)\s*$/, "").trim() || label,
+    resolved: data.provider,
+    providers: [],
+  };
+}
+
+function renderBrainSwitcher(config) {
+  if (!config || !brainSwitcherEl) return;
+  const label = config.label || _brainProviderLabel(config) || "—";
+  const model = config.model || "—";
+  const activeProvider =
+    (config.providers || []).find((p) => p.active) ||
+    (config.providers || []).find((p) => p.id === config.provider);
+  const resolvedAvailable = activeProvider?.available !== false;
+
+  if (brainSwitcherLabel) brainSwitcherLabel.textContent = label;
+  if (brainSwitcherModel) brainSwitcherModel.textContent = model;
+  brainSwitcherEl.classList.toggle("is-unavailable", !resolvedAvailable);
+
+  if (!brainSwitcherMenu) return;
+  const providers = Array.isArray(config.providers) ? config.providers : [];
+  if (!providers.length) {
+    brainSwitcherMenu.innerHTML =
+      `<li class="brain-switcher-empty">Restart Crowley to enable model switching.</li>`;
+    if (brainSwitcherOpen) syncBrainMenuPosition();
+    return;
+  }
+
+  brainSwitcherMenu.innerHTML = providers
+    .map((section) => {
+      const sectionClasses = ["brain-switcher-section"];
+      if (!section.available) sectionClasses.push("is-unavailable");
+      const models = Array.isArray(section.models) ? section.models : [];
+      const rows = [];
+      if (section.id === "auto") {
+        const classes = ["brain-switcher-option"];
+        if (section.active) classes.push("is-active");
+        if (!section.available) classes.push("is-unavailable");
+        rows.push(
+          `<button type="button" class="${classes.join(" ")}" role="option" ` +
+            `aria-selected="${section.active ? "true" : "false"}" ` +
+            `data-brain-provider="auto">` +
+            `<span class="brain-switcher-option-dot" aria-hidden="true"></span>` +
+            `<span class="brain-switcher-option-copy">` +
+            `<span class="brain-switcher-option-label">${escapeHtml(section.label || "Auto")}</span>` +
+            `<span class="brain-switcher-option-model">${escapeHtml(section.hint || "Best available")}</span>` +
+            `</span>` +
+            `<span class="brain-switcher-option-check" aria-hidden="true">✓</span>` +
+            `</button>`
+        );
+      } else if (models.length) {
+        for (const modelRow of models) {
+          const classes = ["brain-switcher-option"];
+          if (modelRow.active) classes.push("is-active");
+          if (!section.available) classes.push("is-unavailable");
+          rows.push(
+            `<button type="button" class="${classes.join(" ")}" role="option" ` +
+              `aria-selected="${modelRow.active ? "true" : "false"}" ` +
+              `data-brain-provider="${escapeHtml(section.id)}" ` +
+              `data-brain-model="${escapeHtml(modelRow.id)}">` +
+              `<span class="brain-switcher-option-dot" aria-hidden="true"></span>` +
+              `<span class="brain-switcher-option-copy">` +
+              `<span class="brain-switcher-option-label">${escapeHtml(modelRow.label || modelRow.id)}</span>` +
+              `<span class="brain-switcher-option-model">${escapeHtml(section.label || "")}</span>` +
+              `</span>` +
+              `<span class="brain-switcher-option-check" aria-hidden="true">✓</span>` +
+              `</button>`
+          );
+        }
+      } else {
+        rows.push(
+          `<p class="brain-switcher-empty">` +
+            `${escapeHtml(section.hint || "No models found")}` +
+            `</p>`
+        );
+      }
+      return (
+        `<li class="${sectionClasses.join(" ")}" role="presentation">` +
+        `<span class="brain-switcher-section-label">${escapeHtml(section.label || section.id)}</span>` +
+        (section.hint && section.id !== "auto"
+          ? `<span class="brain-switcher-section-hint">${escapeHtml(section.hint)}</span>`
+          : "") +
+        rows.join("") +
+        `</li>`
+      );
+    })
+    .join("");
+  if (brainSwitcherOpen) syncBrainMenuPosition();
+}
+
+function _brainProviderLabel(config) {
+  const map = {
+    auto: "Auto",
+    openai: "OpenAI",
+    anthropic: "Claude",
+    ollama: "Ollama",
+  };
+  return map[config.provider] || config.provider || "—";
+}
+
+async function setBrainSelection(provider, model) {
+  if (!provider || brainSwitchInFlight) return;
+  brainSwitchInFlight = true;
+  try {
+    const body = { provider };
+    if (model) body.model = model;
+    const res = await fetch("/api/brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return;
+    renderBrainSwitcher(await res.json());
+    closeBrainSwitcher();
+  } catch {
+    /* ignore */
+  } finally {
+    brainSwitchInFlight = false;
+  }
+}
+
+async function loadBrainConfig(healthData) {
+  if (healthData?.brain_config) {
+    renderBrainSwitcher(healthData.brain_config);
+    return;
+  }
+  const fallback = brainConfigFromLegacyHealth(healthData);
+  try {
+    const res = await fetch("/api/brain");
+    if (res.ok) {
+      renderBrainSwitcher(await res.json());
+      return;
+    }
+  } catch {
+    /* try fallback below */
+  }
+  if (fallback) renderBrainSwitcher(fallback);
+  if (brainSwitcherOpen) syncBrainMenuPosition();
+}
+
 async function loadHealth() {
   try {
     const res = await fetch("/api/health");
@@ -1814,9 +2230,7 @@ async function loadHealth() {
       versionLabel.textContent = `v${data.version}`;
       versionLabel.title = data.release_label || "";
     }
-    if (data.brain) {
-      brainLabel.textContent = data.brain;
-    }
+    void loadBrainConfig(data);
   } catch {
     healthDot.classList.add("error");
     healthDot.title = "Offline";
@@ -2217,6 +2631,45 @@ refreshBtn.addEventListener("click", () => {
   loadMessages();
 });
 
+if (brainSwitcherTrigger) {
+  brainSwitcherTrigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleBrainSwitcher();
+  });
+}
+
+if (brainSwitcherMenu) {
+  brainSwitcherMenu.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-brain-provider]");
+    if (!btn || brainSwitchInFlight) return;
+    const provider = btn.dataset.brainProvider;
+    const model = btn.dataset.brainModel || null;
+    if (provider) void setBrainSelection(provider, model);
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (!brainSwitcherOpen || !brainSwitcherEl) return;
+  if (brainSwitcherEl.contains(e.target)) return;
+  closeBrainSwitcher();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeBrainSwitcher();
+});
+
+window.addEventListener("resize", () => {
+  if (brainSwitcherOpen) syncBrainMenuPosition();
+});
+
+window.addEventListener(
+  "scroll",
+  () => {
+    if (brainSwitcherOpen) syncBrainMenuPosition();
+  },
+  true
+);
+
 if (panelTicketsEl) {
   panelTicketsEl.addEventListener("click", (e) => {
     const btn = e.target.closest(".ticket-done-btn");
@@ -2273,6 +2726,14 @@ if (chatEl) {
     }
   });
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopActivityWireRotation();
+    return;
+  }
+  ensureActivityWireRotation();
+});
 
 autoGrowInput();
 restoreWorkspaceNav();

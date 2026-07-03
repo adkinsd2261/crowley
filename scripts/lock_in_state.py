@@ -75,20 +75,20 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.10 ship."""
+    """Current world-model fields after V3.9.11 ship."""
     return {
-        "phase": "V3.9.10 shipped — Task-Frame Context",
-        "focus": "V3.9.11 Live Wire; V3.9.12 Portable Context Terminal and V4 Spark Lanes planned",
+        "phase": "V3.9.11 shipped — Live Wire",
+        "focus": "V3.9.12 Portable Context Terminal; V4 Spark Lanes planned",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Claim V3.9.11 #70 one ticket at a time after Mr. Go review."
+            "Claim V3.9.12 #76 one ticket at a time after Mr. Go review."
         ),
         "what_changed": (
-            "V3.9.10 Task-Frame Context: build_task_frame_context API, ticket-narrative retrieval, "
-            "sync bundle task brief (task_frame_v3910), Agent Feed brief UI, chat prompt task frame "
-            "injection. Task frame authoritative over hybrid retrieval; MEMORY_HIERARCHY unchanged."
+            "V3.9.11 Live Wire: activity_pulses + build_activity_wire, compose In the air "
+            "ticker UI, sync/world exposure, runtime brain switcher (OpenAI/Claude/Ollama), "
+            "agent feed lesson notes + latest handoff fix. Task frame (V3.9.10) unchanged."
         ),
     }
 

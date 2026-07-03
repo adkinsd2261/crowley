@@ -214,6 +214,38 @@ class MemoryTrailTests(IsolatedDbTestCase):
         self.assertIn("cursor", summary["last_by_source"])
         self.assertIn("last contact probe alpha", str(summary["last_by_source"]["cursor"]["summary"]))
 
+    def test_agent_activity_includes_lesson_notes(self) -> None:
+        self._insert_memory(
+            content="Mid-session cursor note probe beta",
+            source="cursor",
+            memory_type="lesson",
+        )
+        summary = crowley._agent_activity_summary(self.project_id)
+        recent = summary.get("recent")
+        assert isinstance(recent, list)
+        self.assertGreaterEqual(len(recent), 1)
+        self.assertEqual(recent[0]["memory_type"], "lesson")
+        self.assertIn("cursor", summary["last_by_source"])
+        self.assertIn("probe beta", str(summary["last_by_source"]["cursor"]["summary"]))
+
+    def test_latest_agent_contact_picks_newest_source(self) -> None:
+        self._insert_memory(
+            content="older cursor ship",
+            source="cursor",
+            memory_type="project_update",
+        )
+        self._insert_memory(
+            content="newer codex QA approval probe gamma",
+            source="codex",
+            memory_type="project_update",
+        )
+        summary = crowley._agent_activity_summary(self.project_id)
+        latest = summary.get("latest_contact")
+        self.assertIsInstance(latest, dict)
+        assert isinstance(latest, dict)
+        self.assertEqual(latest.get("source"), "codex")
+        self.assertIn("gamma", str(latest.get("summary")))
+
     def test_agent_activity_includes_next_action(self) -> None:
         self._insert_memory(
             content=(

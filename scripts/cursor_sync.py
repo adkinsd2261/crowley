@@ -91,6 +91,7 @@ def before() -> int:
         print("WARNING: Crowley agent sync returned no context.", file=sys.stderr)
         return 0
     _print_agent_sync(sync)
+    asl.post_activity_pulse(AGENT, "session_start")
     return 0
 
 
@@ -372,6 +373,14 @@ def after(args: argparse.Namespace) -> int:
 
     if _ingest_and_verify():
         asl.clear_session_marker()
+        summary = args.summary.strip() if args.summary else "Builder handoff"
+        ticket_id = int(args.ticket) if getattr(args, "ticket", None) else None
+        asl.post_activity_pulse(
+            AGENT,
+            "handoff",
+            ticket_id=ticket_id,
+            summary=summary,
+        )
         if getattr(args, "ticket", None):
             mem_id = asl.last_handoff_memory_id(AGENT)
             ok, err = asl.complete_ticket_api(
@@ -399,6 +408,12 @@ def claim_ticket_cmd(ticket_id: int) -> int:
     )
     if ok:
         print(f"Claimed ticket #{ticket_id} (in_progress).")
+        asl.post_activity_pulse(
+            AGENT,
+            "claimed",
+            ticket_id=ticket_id,
+            summary=f"Claimed ticket #{ticket_id}",
+        )
     else:
         print(f"WARNING: claim failed: {error}")
     return 0
@@ -448,6 +463,7 @@ def note(text: str) -> int:
     print(f"Note ready: {handoff.relative_to(ROOT)}")
     if _ingest_and_verify():
         asl.clear_session_marker()
+        asl.post_activity_pulse(AGENT, "note", summary=text)
     return 0
 
 

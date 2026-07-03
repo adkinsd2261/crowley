@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.10 local · V3.9.11 next (#70–#75) · V3.9.12 minted · V4 planned (2026-07-02)
+**As of:** V3.9.11 local · V3.9.12 next (#76–#80) · V4 planned (2026-07-03)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Active initiative — V3.9.11 next
+## Active initiative — V3.9.12 next
 
-**Current:** V3.9.10 Task-Frame Context — `#64–#69` closed locally. **Next:** V3.9.11 Live Wire `#70–#75` (minted, do not claim until Mr. Go directs).
+**Current:** V3.9.11 Live Wire — `#70–#75` closed locally. **Next:** V3.9.12 Portable Context Terminal `#76–#80` (minted, do not claim until Mr. Go directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -16,12 +16,12 @@
 | -------------------------- | ------- | ----------------------------------------- | ------------------------------- |
 | V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Shipped locally**             |
 | V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped locally**             |
-| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | Minted · approved · **next**  |
-| V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | Minted · approved · do not claim until V3.9.11 |
+| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | **Shipped locally**             |
+| V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | Minted · approved · **next**  |
 | V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
 
 
-See [V3.9.10_TASK_FRAME_CONTEXT.md](./V3.9.10_TASK_FRAME_CONTEXT.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+See [V3.9.11_LIVE_WIRE.md](./V3.9.11_LIVE_WIRE.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
 
 | Ticket theme                                   | Status                                       |
@@ -35,8 +35,9 @@ See [V3.9.10_TASK_FRAME_CONTEXT.md](./V3.9.10_TASK_FRAME_CONTEXT.md) · [WHERE_W
 | V3.9.7 Experience & Reliability (#40–#49)      | Shipped on `main`                            |
 | V3.9.8 Runtime Hardening (#50–#55)             | **Local only** — not pushed to `origin/main` |
 | V3.9.9 Context That Feeds (#56–#63)            | **Local only** — shipped at #63 doc lock     |
-| V3.9.10 Task-Frame Context (#64–#69)         | **Local only** — shipped at #69 doc lock     |
-| V3.9.12 Portable Context Terminal (#76–#80)             | Minted · start after V3.9.11                |
+| V3.9.10 Task-Frame Context (#64–#69)         | **Shipped locally** — shipped at #69 doc lock     |
+| V3.9.11 Live Wire (#70–#75)                  | **Shipped locally** — shipped at #75 doc lock     |
+| V3.9.12 Portable Context Terminal (#76–#80)             | Minted · **next**                |
 | V4.0 Spark Lanes                               | Planned after V3.9.12                       |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
