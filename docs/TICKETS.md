@@ -40,7 +40,7 @@ See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API
 | V3.9.11 Live Wire (#70–#75)                  | **Shipped on `main`** — shipped at #75 doc lock     |
 | V3.9.12 Portable Context Terminal (#76–#80)             | **Shipped on `main`** — shipped at #80 doc lock     |
 | #81 Sync parity (codex `--known-issue`)        | **Shipped on `main`** |
-| V3.9.13 Secure ChatGPT Actions API               | **Shipped on `main`** — bearer `/api/actions/*`     |
+| V3.9.13 Secure ChatGPT Actions API               | **Shipped on `main`** — bearer `/api/actions/*` + bridge |
 | V4.0 Spark Lanes                               | Planned after V3.9.13                       |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
@@ -68,7 +68,7 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
-- **V3.9.13 Secure ChatGPT Actions API** — bearer `/api/actions/*`, `CROWLEY_ACTION_KEY`, OpenAPI
+- **V3.9.13 Secure ChatGPT Actions API** — bearer `/api/actions/*`, `CROWLEY_ACTION_KEY`, OpenAPI, bridge (`start_chatgpt_bridge.sh`)
 - **#81 Sync parity** — codex_sync `--known-issue` parity with cursor_sync
 - **V3.9.12 Portable Context Terminal** — packet export, writeback parse/ingest, CLI (#76–#80)
 - **V3.9.11 Live Wire** — activity pulses, compose wire UI, brain switcher (#70–#75)

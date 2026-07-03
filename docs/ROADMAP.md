@@ -90,7 +90,7 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V4.0 Spark Lanes ◄── YOU ARE HERE
 ```
 
-**Shipped through V3.9.13:** … portable context terminal (#76–#80); ChatGPT Actions API — bearer `/api/actions/*`, OpenAPI (#V3.9.13).
+**Shipped through V3.9.13:** … portable context terminal (#76–#80); ChatGPT Actions API — bearer `/api/actions/*`, OpenAPI, bridge scripts (#V3.9.13).
 
 **Active initiative:** V4.0 Spark Lanes (planned). See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
@@ -229,7 +229,7 @@ Export a compact Crowley packet into any AI/model surface and import structured 
 
 ### 8.2 Secure ChatGPT Actions API (V3.9.13) — shipped
 
-Narrow bearer-authenticated `/api/actions/*` for Custom GPT over an operator tunnel. Reuses portable packet and writeback ingest; does not expose tickets, chat, or brain APIs. See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md).
+Narrow bearer-authenticated `/api/actions/*` for Custom GPT over an operator tunnel. Reuses portable packet and writeback ingest; does not expose tickets, chat, or brain APIs. Bridge: `scripts/start_chatgpt_bridge.sh`, setup: [CHATGPT_SETUP.md](./CHATGPT_SETUP.md). See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md).
 
 ### 8.3 Spark lanes (V4.0)
 

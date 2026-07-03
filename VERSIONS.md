@@ -36,7 +36,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.10 | shipped  | 2026-07-02 | Task-Frame Context — task frame API, ticket-narrative retrieval, sync/UI/prompt brief |
 | V3.9.11 | shipped  | 2026-07-03 | Live Wire — activity pulses, compose wire UI, brain switcher, agent feed fixes (#70–#75) |
 | V3.9.12 | shipped  | 2026-07-03 | Portable Context Terminal — packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
-| V3.9.13 | shipped  | 2026-07-03 | Secure ChatGPT Actions API — bearer-auth `/api/actions/*`, OpenAPI for Custom GPT |
+| V3.9.13 | shipped  | 2026-07-03 | Secure ChatGPT Actions API — bearer `/api/actions/*`, bridge scripts, Custom GPT setup |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
 ---
@@ -479,14 +479,15 @@ Plan: [docs/V3.9.6_WORKSPACE_POLISH.md](./docs/V3.9.6_WORKSPACE_POLISH.md)
 
 **Version:** `CROWLEY_VERSION = "3.9.13"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.13 Secure ChatGPT Actions API"`
 
-Plan: [docs/CHATGPT_ACTIONS_API.md](./docs/CHATGPT_ACTIONS_API.md)
+Plan: [docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [docs/CHATGPT_SETUP.md](./docs/CHATGPT_SETUP.md)
 
 - Narrow bearer-authenticated `/api/actions/*` for Custom GPT Actions
 - `CROWLEY_ACTION_KEY` env gate — 503 when unset, 401 on bad bearer
-- OpenAPI: `openapi-chatgpt.json`
+- OpenAPI: `openapi-chatgpt.json` (template); `openapi-chatgpt.deployed.json` at bridge start
 - Reuses portable context packet + writeback parse/ingest; does not expose full internal API
-- Localhost bind unchanged; tunnel/Custom GPT setup is operator-only
-- **333 tests** with `CROWLEY_TEST_MODE=1`
+- Localhost bind unchanged; `scripts/start_chatgpt_bridge.sh` — cloudflared quick/named or ngrok, HTTPS verify
+- `cloudflared/config.yml.example`, `docs/CHATGPT_SETUP.md` for Custom GPT operator path
+- **337 tests** with `CROWLEY_TEST_MODE=1`
 
 ---
 

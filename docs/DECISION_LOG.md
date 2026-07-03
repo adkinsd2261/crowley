@@ -22,7 +22,7 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 **Date:** 2026-07-03
 **Status:** Accepted
-**Evidence:** `crowley.py` version `3.9.13`, `chatgpt_actions.py`, `CROWLEY_ACTION_KEY` bearer gate, `openapi-chatgpt.json`, `docs/CHATGPT_ACTIONS_API.md`, `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`, **333 tests**
+**Evidence:** `crowley.py` version `3.9.13`, `chatgpt_actions.py`, `CROWLEY_ACTION_KEY` bearer gate, `openapi-chatgpt.json`, bridge scripts (`start_chatgpt_bridge.sh`, `patch_openapi_chatgpt.py`, `verify_chatgpt_actions_https.py`), `docs/CHATGPT_ACTIONS_API.md`, `docs/CHATGPT_SETUP.md`, `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`, **337 tests**
 
 ### Context
 
@@ -36,6 +36,7 @@ V3.9.12 proved portable packet export and writeback ingest locally. ChatGPT Cust
 - Expose only: health, context, retrieve, portable packet, writeback parse/ingest
 - Keep `127.0.0.1` bind; tunnel and Custom GPT setup are operator-only
 - OpenAPI import file for Custom GPT Actions
+- Operator bridge: one-command tunnel + HTTPS verify; `CHATGPT_SETUP.md` for Custom GPT configuration
 
 ### Alternatives rejected
 

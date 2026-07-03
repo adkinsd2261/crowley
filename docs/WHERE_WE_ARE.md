@@ -47,7 +47,7 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
 | **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
-| **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, `openapi-chatgpt.json` |
+| **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
 **Current constants (local code):** `CROWLEY_VERSION = "3.9.13"` (`Crowley V3.9.13 Secure ChatGPT Actions API`)
@@ -156,7 +156,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.10 Task-Frame Context** | Cursor | **Shipped on `main`** · #64–#69 complete |
 | **V3.9.11 Live Wire** | Cursor | **Shipped on `main`** · #70–#75 complete |
 | **V3.9.12 Portable Context Terminal** | Cursor | **Shipped on `main`** · #76–#80 · packet-in/writeback-out |
-| **V3.9.13 ChatGPT Actions API** | Cursor | **Shipped on `main`** · bearer `/api/actions/*` |
+| **V3.9.13 ChatGPT Actions API** | Cursor | **Shipped on `main`** · bearer `/api/actions/*` + bridge tooling |
 | **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
 | **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
@@ -176,7 +176,9 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `scripts/preflight.py` | Release preflight |
 | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md` | V3.9.13 release spec |
 | `docs/CHATGPT_ACTIONS_API.md` | V3.9.13 operator guide |
-| `openapi-chatgpt.json` | Custom GPT OpenAPI import |
+| `docs/CHATGPT_SETUP.md` | Custom GPT + tunnel bridge setup |
+| `scripts/start_chatgpt_bridge.sh` | Start bus + tunnel + verify Actions API |
+| `openapi-chatgpt.json` | Custom GPT OpenAPI template |
 | `chatgpt_actions.py` | Actions router + bearer auth |
 | `docs/V3.9.12_PORTABLE_CONTEXT_TERMINAL.md` | V3.9.12 release spec |
 | `scripts/export_portable_packet.py` | Export paste-ready context packet |

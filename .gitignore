@@ -14,3 +14,7 @@ crowley.db-shm
 !.crowley/inbox/.gitkeep
 !.crowley/processed/.gitkeep
 .crowley/brain.json
+.crowley/chatgpt_bridge/
+.crowley/cloudflared/
+cloudflared/config.yml
+openapi-chatgpt.deployed.json

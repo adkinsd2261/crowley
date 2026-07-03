@@ -30,7 +30,7 @@ Crowley is a **local-first persistent context layer** for a single user (“Mr. 
 17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
 19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
 20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
-21. **V3.9.13 Secure ChatGPT Actions API (2026-07)** — bearer-auth `/api/actions/*` for Custom GPT; `CROWLEY_ACTION_KEY` gate; OpenAPI import file.
+21. **V3.9.13 Secure ChatGPT Actions API (2026-07)** — bearer-auth `/api/actions/*` for Custom GPT; `CROWLEY_ACTION_KEY` gate; OpenAPI import; bridge scripts + `CHATGPT_SETUP.md`.
 22. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/actions/*` uses bearer auth when `CROWLEY_ACTION_KEY` is set; full internal API remains localhost-first.

@@ -2,7 +2,7 @@
 
 **As of:** V3.9.13 on `main` · V4 planned
 **Planning:** V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-03 (V3.9.13 doc lock)
+**Last doc sync:** 2026-07-03 (V3.9.13 bridge + doc lock)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -35,7 +35,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
 - **V3.9.8 shipped locally** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
-- **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, `openapi-chatgpt.json`
+- **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
 - **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 Spark Lanes is next on the minted ladder.
 
@@ -53,7 +53,12 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `app.py` | **Active** | Web transport (FastAPI, SSE, context bridge routes) |
 | `static/` | **Active** | Workspace UI (HTML, CSS, JS) |
 | `chatgpt_actions.py` | **Active** | Bearer-auth `/api/actions/*` for Custom GPT (V3.9.13) |
-| `openapi-chatgpt.json` | **Active** | OpenAPI schema for Custom GPT Actions import (V3.9.13) |
+| `openapi-chatgpt.json` | **Active** | OpenAPI template for Custom GPT Actions import (V3.9.13) |
+| `scripts/start_chatgpt_bridge.sh` | **Active** | Start bus + HTTPS tunnel + verify Actions API (V3.9.13) |
+| `scripts/patch_openapi_chatgpt.py` | **Active** | Patch deployed OpenAPI with tunnel URL (V3.9.13) |
+| `scripts/verify_chatgpt_actions_https.py` | **Active** | HTTPS smoke test for `/api/actions/*` (V3.9.13) |
+| `cloudflared/config.yml.example` | **Active** | Named Cloudflare tunnel template (V3.9.13) |
+| `docs/CHATGPT_SETUP.md` | **Active** | Custom GPT + tunnel operator guide (V3.9.13) |
 | `scripts/export_portable_packet.py` | **Active** | Export paste-ready portable context packet (V3.9.12) |
 | `scripts/import_portable_writeback.py` | **Active** | Import terminal writeback from file/stdin (V3.9.12) |
 | `scripts/ingest_inbox.py` | **Active** | Ingest `.crowley/inbox/` handoffs |
@@ -74,7 +79,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**333** locally with `CROWLEY_TEST_MODE=1`) |
+| `tests/` | **Active** | QA unit tests (**337** locally with `CROWLEY_TEST_MODE=1`) |
 | `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
 | `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
 | `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
@@ -105,7 +110,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.5 | Conversation + Model Behavior | Mode classifier, depth controller, co-founder voice, diagnostics separation, chat UX |
 | V3.9.6 | Workspace Polish | Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
-| V3.9.13 | Secure ChatGPT Actions API | Bearer `/api/actions/*`, OpenAPI, env key gate |
+| V3.9.13 | Secure ChatGPT Actions API | Bearer `/api/actions/*`, OpenAPI, bridge scripts, tunnel verify |
 | V3.9.12 | Portable Context Terminal | Packet export, writeback parse/ingest, CLI (#76–#80) |
 | V4.0 | Spark Lanes | Planned memory lanes, trust states, lane-aware retrieval |
 
@@ -136,7 +141,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **333** tests |
+| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **337** tests |
 | Test mode | ✅ V3.9.8 | `CROWLEY_TEST_MODE=1` — embed off + model stub |
 | Runtime health | ✅ V3.9.8 | `/api/health` `runtime` block; preflight validates |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
@@ -153,7 +158,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Web workspace UI | ✅ V3.5 | `app.py` + `static/` |
 | MCP / auth / cloud | ❌ | Out of scope |
 | ChatGPT Actions auth | ✅ V3.9.13 | `CROWLEY_ACTION_KEY` — Actions routes 503 when unset |
-| Live terminal automation | ❌ | Out of V3.9.12 scope; local/manual first; tunnel is operator setup |
+| ChatGPT bridge | ✅ V3.9.13 | `start_chatgpt_bridge.sh` — cloudflared/ngrok tunnel, OpenAPI patch, HTTPS verify |
 
 ---
 
@@ -210,7 +215,7 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | `POST /api/ingest` does not persist arbitrary metadata; portable writeback ingest (V3.9.12) persists `metadata_json` on session receipt and staged spark candidates |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **333** tests with `CROWLEY_TEST_MODE=1` |
+| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **337** tests with `CROWLEY_TEST_MODE=1` |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |

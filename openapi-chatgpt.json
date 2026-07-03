@@ -60,7 +60,7 @@
       "get": {
         "operationId": "actionsContext",
         "summary": "Read Crowley context bundle",
-        "description": "Use when you need current project state, tickets summary, knowledge excerpts, and canon — the same bundle local agents read via GET /api/context.",
+        "description": "Use when you need current project state, tickets summary, knowledge excerpts, and canon \u2014 the same bundle local agents read via GET /api/context.",
         "parameters": [
           {
             "name": "q",
@@ -248,7 +248,7 @@
       "post": {
         "operationId": "actionsWritebackIngest",
         "summary": "Stage session receipt and spark candidates",
-        "description": "Use at session end after parse succeeds. Saves an episodic session receipt and stages spark candidates — does not promote sparks to canon automatically.",
+        "description": "Use at session end after parse succeeds. Saves an episodic session receipt and stages spark candidates \u2014 does not promote sparks to canon automatically.",
         "parameters": [
           {
             "name": "project",
@@ -316,7 +316,7 @@
         }
       },
       "ActionsDisabled": {
-        "description": "Actions API disabled — CROWLEY_ACTION_KEY not configured",
+        "description": "Actions API disabled \u2014 CROWLEY_ACTION_KEY not configured",
         "content": {
           "application/json": {
             "schema": {
@@ -355,7 +355,10 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ok", "degraded"]
+            "enum": [
+              "ok",
+              "degraded"
+            ]
           },
           "version": {
             "type": "string"
@@ -365,11 +368,15 @@
           },
           "actions_api": {
             "type": "string",
-            "enum": ["enabled"]
+            "enum": [
+              "enabled"
+            ]
           },
           "auth": {
             "type": "string",
-            "enum": ["bearer"]
+            "enum": [
+              "bearer"
+            ]
           },
           "db": {
             "type": "string"
@@ -456,7 +463,9 @@
         "properties": {
           "ok": {
             "type": "boolean",
-            "enum": [true]
+            "enum": [
+              true
+            ]
           },
           "writeback": {
             "type": "object",
@@ -469,7 +478,9 @@
         "properties": {
           "ok": {
             "type": "boolean",
-            "enum": [false]
+            "enum": [
+              false
+            ]
           },
           "errors": {
             "type": "array",

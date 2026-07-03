@@ -46,7 +46,7 @@ V4 memory-lane architecture starts when Mr. Go mints V4.0 (V3.9.12 terminal loop
 
 ### V3.9.13 — Secure ChatGPT Actions API (shipped)
 
-Bearer-authenticated `/api/actions/*` for ChatGPT Custom GPT. Operator sets `CROWLEY_ACTION_KEY` and optional Cloudflare tunnel. See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) and [CHATGPT_ACTIONS_API.md](./CHATGPT_ACTIONS_API.md).
+Bearer-authenticated `/api/actions/*` for ChatGPT Custom GPT. Operator sets `CROWLEY_ACTION_KEY`; `./scripts/start_chatgpt_bridge.sh` for tunnel + verify. See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md), [CHATGPT_ACTIONS_API.md](./CHATGPT_ACTIONS_API.md), [CHATGPT_SETUP.md](./CHATGPT_SETUP.md).
 
 **Boundary:** Does not configure tunnel or Custom GPT automatically. Does not expose full internal API.
 

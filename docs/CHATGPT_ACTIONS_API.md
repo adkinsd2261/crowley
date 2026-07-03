@@ -103,21 +103,29 @@ curl -i http://127.0.0.1:8765/api/health
 
 Crowley should remain bound to localhost. Expose it with a tunnel, not `0.0.0.0`.
 
-1. Install `cloudflared` and authenticate to your Cloudflare account.
-2. Run Crowley locally with `CROWLEY_ACTION_KEY` set.
-3. Create a tunnel forwarding `https://your-subdomain.example.com` → `http://127.0.0.1:8765`.
-4. Use the public HTTPS URL as the Custom GPT server base (replace `https://YOUR-CROWLEY-DOMAIN` in `openapi-chatgpt.json`).
-5. Restrict tunnel access if possible (Cloudflare Access, IP allowlists) — bearer auth is necessary but not sufficient alone for production hardening.
+**Operator setup:** see [CHATGPT_SETUP.md](./CHATGPT_SETUP.md) and run:
 
-**Not configured in-repo** — operator setup only.
+```bash
+./scripts/start_chatgpt_bridge.sh
+```
+
+Named tunnel template: `cloudflared/config.yml.example`
+
+**Not auto-configured in-repo** — you start the bridge when ready.
 
 ---
 
 ## Custom GPT setup
 
-1. Import `openapi-chatgpt.json` into a Custom GPT → **Actions** → **Create new action** → paste schema (update server URL).
-2. Authentication: **API Key** → Auth type **Bearer** → paste the same value as `CROWLEY_ACTION_KEY`.
-3. Enable only the `/api/actions/*` operations from the schema.
+Full walkthrough: **[CHATGPT_SETUP.md](./CHATGPT_SETUP.md)**
+
+Quick start:
+
+```bash
+./scripts/start_chatgpt_bridge.sh
+```
+
+Then import **`openapi-chatgpt.deployed.json`** into the Custom GPT Action editor.
 
 ### Recommended Custom GPT instructions (snippet)
 
