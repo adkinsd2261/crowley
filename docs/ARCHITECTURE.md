@@ -1,8 +1,8 @@
 # Crowley — System Architecture
 
 **Document status:** Reverse-engineered from codebase  
-**Last reviewed against code:** 2026-07-02
-**Code version:** `CROWLEY_VERSION = "3.9.11"` (`Crowley V3.9.11 Live Wire`)
+**Last reviewed against code:** 2026-07-03
+**Code version:** `CROWLEY_VERSION = "3.9.12"` (`Crowley V3.9.12 Portable Context Terminal`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -29,8 +29,8 @@ Crowley is a **local-first persistent context layer** for a single user (“Mr. 
 16. **V3.9.8 Runtime Hardening (2026-07)** — `CROWLEY_TEST_MODE`, model probe, `/api/health` runtime block, sqlite-vec safe fallback, fragile-startup suite (#50–#55).
 17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
 19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
-18. **Planned V3.9.12 Portable Context Terminal** — local/manual Crowley packet export and structured terminal writeback import.
-19. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
+20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
+21. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no auth, no MCP (yet). Portable terminal work starts local/manual; live connector automation is intentionally out of scope for V3.9.12.
 
@@ -248,8 +248,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.11"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.11 Live Wire"` |
+| `CROWLEY_VERSION` | `"3.9.12"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.12 Portable Context Terminal"` |
 
 ---
 

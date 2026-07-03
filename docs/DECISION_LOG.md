@@ -18,6 +18,33 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-042 — V3.9.12 Portable Context Terminal shipped
+
+**Date:** 2026-07-03
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.12`, `build_portable_context_packet()`, `parse_terminal_writeback()`, `ingest_terminal_writeback()`, `scripts/export_portable_packet.py`, `scripts/import_portable_writeback.py`, `docs/V3.9.12_PORTABLE_CONTEXT_TERMINAL.md`, tickets `#76–#80`, **320 tests** (includes post-lock **#81** codex_sync `--known-issue` parity)
+
+### Context
+
+V3.9.11 improved live activity and brain switching inside the browser cockpit. The direction pivot requires proving that Crowley context can travel to any reasoning surface and return as structured writeback — without OAuth, extensions, or live automation.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "3.9.12"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.12 Portable Context Terminal"`
+- Medium packet export + structured writeback parse/ingest (#76–#78)
+- Session recap as episodic receipt; sparks as `staged` candidates with `metadata_json`
+- `do_not_save` parsed but never persisted; raw transcripts not saved by default
+- Boring CLI: export + import scripts (#79)
+- V4.0 owns durable Spark Lanes — V3.9.12 only proves packet-in/writeback-out
+
+### Alternatives rejected
+
+- Browser extension or OAuth for ChatGPT — out of scope for V3.9.12
+- Auto-promote imported sparks to active/canon — violates trust rules
+- New memory table for terminal sessions — reuse `memory_items` with staged status
+
+---
+
 ## ADR-041 — V3.9.11 Live Wire shipped
 
 **Date:** 2026-07-03

@@ -113,19 +113,27 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v3911_live_wire(self) -> None:
+    def test_onboarding_docs_locked_for_v3912_portable_terminal(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.11"', where)
+        self.assertIn('CROWLEY_VERSION = "3.9.12"', where)
         self.assertIn("persistent context layer", where)
+        self.assertIn("V3.9.12", versions)
+        self.assertIn("Portable Context Terminal", versions)
+        self.assertIn("shipped", versions.lower())
+        self.assertTrue((ROOT / "docs" / "V3.9.12_PORTABLE_CONTEXT_TERMINAL.md").is_file())
+        release_doc = (ROOT / "docs" / "V3.9.12_PORTABLE_CONTEXT_TERMINAL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Shipped", release_doc)
+        self.assertIn("V4.0 owns Spark Lanes", release_doc)
+        self.assertIn("staged", release_doc.lower())
+
+    def test_onboarding_docs_locked_for_v3911_live_wire(self) -> None:
+        versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
         self.assertIn("V3.9.11", versions)
         self.assertIn("Live Wire", versions)
-        self.assertIn("shipped", versions.lower())
         self.assertTrue((ROOT / "docs" / "V3.9.11_LIVE_WIRE.md").is_file())
-        self.assertIn(
-            "Shipped",
-            (ROOT / "docs" / "V3.9.11_LIVE_WIRE.md").read_text(encoding="utf-8"),
-        )
 
     def test_onboarding_docs_locked_for_v3910_task_frame(self) -> None:
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")

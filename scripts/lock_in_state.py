@@ -69,26 +69,39 @@ SHIPPED_LOOP_SNIPPETS = (
     "proceed to ticket #34",
     "ticket #34 to implement",
     "workspace polish in progress",
-    # V3.9.5 conversation shipped (#25–#30)
-    "v3.9.5 conversation",
+    # V3.9.12 portable context terminal shipped (#76–#80)
+    "portable context terminal",
+    "context packet exporter",
+    "writeback schema",
+    "ingest candidate sparks",
+    "claim v3.9.12 #76",
+    "ticket #76",
+    "ticket #77",
+    "ticket #78",
+    "ticket #79",
+    "ticket #80",
+    "sync parity",
+    "known-issue",
+    "ticket #81",
 )
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.11 ship."""
+    """Current world-model fields after V3.9.12 ship."""
     return {
-        "phase": "V3.9.11 shipped — Live Wire",
-        "focus": "V3.9.12 Portable Context Terminal; V4 Spark Lanes planned",
+        "phase": "V3.9.12 shipped — Portable Context Terminal",
+        "focus": "V4 Spark Lanes planned",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Claim V3.9.12 #76 one ticket at a time after Mr. Go review."
+            "Mint or plan V4.0 Spark Lanes when Mr. Go directs."
         ),
         "what_changed": (
-            "V3.9.11 Live Wire: activity_pulses + build_activity_wire, compose In the air "
-            "ticker UI, sync/world exposure, runtime brain switcher (OpenAI/Claude/Ollama), "
-            "agent feed lesson notes + latest handoff fix. Task frame (V3.9.10) unchanged."
+            "V3.9.12 Portable Context Terminal on main: context packet export, writeback "
+            "parse/ingest, staged spark candidates with metadata_json, CLI "
+            "export/import scripts (#76–#80). Post-lock #81 adds codex_sync "
+            "--known-issue parity with cursor_sync."
         ),
     }
 

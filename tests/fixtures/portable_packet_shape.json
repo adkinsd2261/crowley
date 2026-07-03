@@ -1,0 +1,30 @@
+{
+  "packet_version": "portable_v1",
+  "crowley_version": "3.9.12",
+  "release_label": "Crowley V3.9.12 Portable Context Terminal",
+  "surface": "chatgpt",
+  "identity": {
+    "crowley_role": "Crowley is the persistent context layer that follows D across reasoning surfaces."
+  },
+  "world": {
+    "phase": "example",
+    "focus": "example focus"
+  },
+  "work": {
+    "open_tickets": []
+  },
+  "guardrails": [],
+  "memories": [],
+  "writeback_contract": {
+    "format": "crowley_terminal_writeback_v1",
+    "allowed_lanes": [
+      "learning",
+      "work",
+      "relationships",
+      "money",
+      "health",
+      "operating_style"
+    ]
+  },
+  "context_pull_guidance": "Suggest context_pull_candidates when the external session needs more Crowley state."
+}

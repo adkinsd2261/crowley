@@ -240,6 +240,7 @@ def _section_content(
     do_not_build: list[str],
     open_loops: list[str],
     qa_results: list[str],
+    known_issues: list[str],
 ) -> str:
     status_text = status or "Git status unavailable or clean."
     changed_lines = [line.strip() for line in changed.splitlines() if line.strip()]
@@ -247,6 +248,7 @@ def _section_content(
     decisions_text = _bullets(decisions) or "- No new product decisions recorded."
     do_not_build_text = _bullets(do_not_build) or f"- {DEFAULT_DO_NOT_BUILD}"
     open_loops_text = _bullets(open_loops) or "- None recorded."
+    known_issues_text = _bullets(known_issues) or "- None recorded."
     qa_default = "- Not run; planning-only handoff." if handoff_type == "architect_handoff" else "- Not recorded."
     qa_text = _bullets(qa_results) or qa_default
     files_section = (
@@ -277,7 +279,7 @@ def _section_content(
         "## QA Results\n\n"
         f"{qa_text}\n\n"
         "## Known Issues\n\n"
-        "- None recorded.\n\n"
+        f"{known_issues_text}\n\n"
         "## Open Loops\n\n"
         f"{open_loops_text}\n\n"
         "## Next Action\n\n"
@@ -304,6 +306,7 @@ def _autofill_handoff(
     do_not_build: list[str],
     open_loops: list[str],
     qa_results: list[str],
+    known_issues: list[str],
 ) -> None:
     status = _git(["status", "--short"])
     changed = _git(["diff", "--name-only"])
@@ -322,6 +325,7 @@ def _autofill_handoff(
             do_not_build=do_not_build,
             open_loops=open_loops,
             qa_results=qa_results,
+            known_issues=known_issues,
         ),
         encoding="utf-8",
     )
@@ -452,6 +456,7 @@ def after(args: argparse.Namespace) -> int:
             do_not_build=args.do_not_build,
             open_loops=args.open_loop,
             qa_results=args.qa_result,
+            known_issues=args.known_issue,
         )
     print(f"Handoff ready: {handoff.relative_to(ROOT)}")
 
@@ -687,6 +692,9 @@ def main() -> None:
     parser.add_argument("--do-not-build", action="append", default=[], help="Do Not Build bullet for --after; repeatable.")
     parser.add_argument("--open-loop", action="append", default=[], help="Open Loop bullet for --after; repeatable.")
     parser.add_argument("--qa-result", action="append", default=[], help="QA Result bullet for --after; repeatable.")
+    parser.add_argument(
+        "--known-issue", action="append", default=[], help="Known Issue bullet for --after; repeatable."
+    )
     args = parser.parse_args()
 
     if args.before:

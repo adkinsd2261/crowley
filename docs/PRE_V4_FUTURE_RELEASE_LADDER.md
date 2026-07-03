@@ -1,6 +1,6 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** V3.9.11 shipped locally · V3.9.12 active next · V4 planned · V4 after .10/.11/.12 gate.
+**Status:** V3.9.12 shipped on `main` · V4 planned next · V4 after .10/.11/.12 gate complete.
 **Baseline:** V3.9.7 on `origin/main`; V3.9.8+ in local working tree.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
@@ -29,15 +29,15 @@ The target state before V4:
 | V3.9.5 | Conversation + Model Behavior | Shipped (#25–#30) |
 | V3.9.6 | Workspace Polish | Shipped (#31–#36) |
 | V3.9.7 | Workspace Experience & Reliability | Shipped (#40–#49) |
-| V3.9.8 | Runtime Hardening | Shipped locally (#50–#55) |
-| V3.9.9 | Context That Feeds | **Shipped locally** (#56–#63) |
-| V3.9.10 | Task-Frame Context | **Shipped locally** (#64–#69) |
+| V3.9.8 | Runtime Hardening | Shipped on `main` (#50–#55) |
+| V3.9.9 | Context That Feeds | **Shipped on `main`** (#56–#63) |
+| V3.9.10 | Task-Frame Context | **Shipped on `main`** (#64–#69) |
 | V3.9.11 | Live Wire | **Shipped** (#70–#75) |
-| V3.9.12 | Portable Context Terminal | Minted (#76–#80) — **next** |
-| V4.0 | Spark Lanes | Planned — after V3.9.12 proves the terminal loop |
+| V3.9.12 | Portable Context Terminal | **Shipped** (#76–#80) |
+| V4.0 | Spark Lanes | **Next** — mint when Mr. Go directs |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-V4 memory-lane architecture starts after V3.9.12 doc lock (or Mr. Go reprioritizes).
+V4 memory-lane architecture starts when Mr. Go mints V4.0 (V3.9.12 terminal loop proven).
 
 ---
 
@@ -73,11 +73,13 @@ Shipped — see [V3.9.10_TASK_FRAME_CONTEXT.md](./V3.9.10_TASK_FRAME_CONTEXT.md)
 
 **Packet:** `tickets/v3.9.11_live_wire.json` — approved 2026-07-02, minted #70–#75. **Next** after V3.9.10 lock.
 
-### V3.9.12 — Portable Context Terminal (planned)
+### V3.9.12 — Portable Context Terminal (shipped)
 
 **Goal:** Make any AI/model surface usable as a local/manual Crowley terminal: export a compact Crowley packet into that surface, then import a structured writeback containing an episodic receipt and candidate sparks. ChatGPT is the first tested surface, not the architecture.
 
-**Packet:** `tickets/v3.9.12_portable_context_terminal.json` — approved and minted #76–#80. Do not claim until V3.9.11 #75 closes.
+**Packet:** `tickets/v3.9.12_portable_context_terminal.json` — approved and minted #76–#80.
+
+Shipped — see [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md).
 
 **Boundary:** V3.9.12 proves the workflow only. It does not build OAuth, a browser extension, live terminal automation, cloud sync, or durable lane architecture.
 

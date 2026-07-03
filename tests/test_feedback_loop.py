@@ -84,6 +84,7 @@ class CodexSyncFeedbackTests(unittest.TestCase):
             do_not_build=[],
             open_loops=[],
             qa_results=[],
+            known_issues=[],
         )
         self.assertIn("## Lessons", content)
         self.assertIn("slim sync bundle", content)
@@ -139,6 +140,7 @@ class FeedbackLoopIngestTests(IsolatedDbTestCase):
             do_not_build=[],
             open_loops=[],
             qa_results=["unittest codex feedback"],
+            known_issues=[],
         )
         result = crowley.ingest_handoff(
             "codex",

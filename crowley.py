@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.11 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.12 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.11"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.11 Live Wire"
+CROWLEY_VERSION = "3.9.12"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.12 Portable Context Terminal"
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -215,6 +215,7 @@ MEMORY_GATE_BYPASS_SOURCES = frozenset({
     "daily_summary",
     "consolidation",
     "canon",
+    "portable_terminal",
 })
 MEMORY_GATE_CONFIDENCE_MIN = 0.5
 MEMORY_GATE_WHY_MIN_LEN = 8
@@ -1262,7 +1263,8 @@ def setup_db() -> None:
                 embed_dim INTEGER,
                 embedding_blob BLOB,
                 confidence REAL NOT NULL DEFAULT 1.0,
-                legacy_memory_id INTEGER UNIQUE
+                legacy_memory_id INTEGER UNIQUE,
+                metadata_json TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_memory_items_status
                 ON memory_items(status);
@@ -1743,6 +1745,25 @@ ACTIVITY_WIRE_AMBIENT_MIN_REAL = 2
 ACTIVITY_WIRE_AGENT_STALE_HOURS = 6
 ACTIVITY_WIRE_WORLD_CAP = 15
 ACTIVITY_WIRE_SYNC_CAP = 5
+PORTABLE_PACKET_VERSION = "1"
+PORTABLE_PACKET_MAX_CHARS = 12_000
+PORTABLE_PACKET_MEMORY_CAP = 4
+PORTABLE_PACKET_WORKING_CAP = 5
+PORTABLE_PACKET_WIRE_CAP = 3
+PORTABLE_PACKET_DECISIONS_CAP = 5
+PORTABLE_PACKET_CONSTRAINTS_CAP = 5
+PORTABLE_WRITEBACK_LANES = (
+    "learning",
+    "work",
+    "relationships",
+    "money",
+    "health",
+    "operating_style",
+)
+PORTABLE_WRITEBACK_FORMAT = "crowley_terminal_writeback_v1"
+PORTABLE_WRITEBACK_SENSITIVITIES = frozenset({"normal", "sensitive", "high"})
+PORTABLE_TERMINAL_SOURCE = "portable_terminal"
+PORTABLE_SPARK_STATUS = "staged"
 _SUPPORTING_MEMORY_PREFERRED_TYPES = frozenset({
     "lesson",
     "constraint",
@@ -3850,6 +3871,8 @@ def _ensure_memory_items_columns(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE memory_items ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0"
         )
+    if "metadata_json" not in cols:
+        conn.execute("ALTER TABLE memory_items ADD COLUMN metadata_json TEXT")
 
 
 def _normalize_memory_dedupe_key(content: str) -> str:
@@ -4182,6 +4205,7 @@ def save_memory_item(
     pinned: bool = False,
     status: str = "active",
     *,
+    metadata: dict[str, object] | None = None,
     conn: sqlite3.Connection | None = None,
     legacy_memory_id: int | None = None,
 ) -> int | None:
@@ -4221,13 +4245,18 @@ def save_memory_item(
             return existing_id
 
         now = _now_iso()
+        metadata_json = (
+            json.dumps(metadata, sort_keys=True, ensure_ascii=False)
+            if metadata
+            else None
+        )
         cur = conn.execute(
             """
             INSERT INTO memory_items (
                 created_at, updated_at, project_id, memory_type, content, summary,
                 importance, source, message_id, decision_id, pinned, status,
-                confidence, legacy_memory_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                confidence, legacy_memory_id, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 now,
@@ -4244,6 +4273,7 @@ def save_memory_item(
                 status,
                 confidence,
                 legacy_memory_id,
+                metadata_json,
             ),
         )
         item_id = int(cur.lastrowid)
@@ -4266,6 +4296,47 @@ def save_memory_item(
         return item_id
     except Exception:
         return None
+    finally:
+        if own_conn and conn is not None:
+            conn.close()
+
+
+def attach_memory_item_metadata(
+    memory_item_id: int,
+    metadata: dict[str, object],
+    *,
+    conn: sqlite3.Connection | None = None,
+) -> bool:
+    """Merge metadata onto an existing memory_items row."""
+    if not metadata:
+        return False
+    own_conn = conn is None
+    if own_conn:
+        conn = connect_db()
+    try:
+        row = conn.execute(
+            "SELECT metadata_json FROM memory_items WHERE id = ?",
+            (memory_item_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        existing = _memory_item_metadata(row) if row else {}
+        merged = {**existing, **metadata}
+        conn.execute(
+            """
+            UPDATE memory_items
+            SET metadata_json = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                json.dumps(merged, sort_keys=True, ensure_ascii=False),
+                _now_iso(),
+                memory_item_id,
+            ),
+        )
+        if own_conn:
+            conn.commit()
+        return True
     finally:
         if own_conn and conn is not None:
             conn.close()
@@ -6412,6 +6483,707 @@ def list_recent_agent_events_api(limit: int = 20) -> dict[str, object]:
     }
 
 
+def portable_writeback_contract() -> dict[str, object]:
+    """Structured writeback shape for portable terminal sessions (V3.9.12 #76)."""
+    return {
+        "format": "crowley_terminal_writeback_v1",
+        "description": (
+            "End the external session with a fenced JSON block matching this shape. "
+            "Crowley imports it locally — raw chat transcripts are not saved by default."
+        ),
+        "required_top_level": ["session"],
+        "session_fields": ["summary", "surface", "model"],
+        "spark_fields": ["content", "lane", "why_keep", "confidence", "sensitivity"],
+        "allowed_lanes": list(PORTABLE_WRITEBACK_LANES),
+        "allowed_sensitivities": sorted(PORTABLE_WRITEBACK_SENSITIVITIES),
+        "optional_arrays": [
+            "sparks",
+            "decisions",
+            "lessons",
+            "open_loops",
+            "corrections",
+            "context_pull_candidates",
+            "do_not_save",
+        ],
+        "example": {
+            "session": {
+                "summary": "Discussed V3.9.12 packet export scope with D.",
+                "surface": "chatgpt",
+                "model": "gpt-4.1",
+            },
+            "sparks": [
+                {
+                    "content": "D wants paste-ready packets under 12k chars.",
+                    "lane": "work",
+                    "why_keep": "Shapes portable terminal size discipline.",
+                    "confidence": 0.85,
+                    "sensitivity": "normal",
+                }
+            ],
+            "context_pull_candidates": [
+                "Latest Codex architect handoff on V3.9.12",
+            ],
+            "do_not_save": ["full chat transcript"],
+        },
+    }
+
+
+def _portable_clip(text: object, limit: int = 240) -> str:
+    cleaned = " ".join(str(text or "").split())
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def _portable_memory_rows(
+    memories: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for item in memories[:PORTABLE_PACKET_MEMORY_CAP]:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary") or "").strip()
+        content = str(item.get("content") or "").strip()
+        body = summary or content
+        rows.append(
+            {
+                "id": item.get("id"),
+                "memory_type": item.get("memory_type"),
+                "source": item.get("source"),
+                "text": _portable_clip(body, 220),
+                "inclusion_reason": _portable_clip(item.get("inclusion_reason"), 160),
+            }
+        )
+    return rows
+
+
+def build_portable_context_packet(
+    surface: str = "chatgpt",
+    *,
+    project_slug: str | None = None,
+) -> dict[str, object]:
+    """Medium Crowley packet for manual paste into any AI surface (V3.9.12 #76)."""
+    normalized_surface = (surface or "chatgpt").strip().lower() or "chatgpt"
+    setup_db()
+    project = (
+        get_project_by_slug(project_slug)
+        if project_slug
+        else get_active_project()
+    )
+    project_id = int(project["id"]) if project is not None else None
+    state = get_project_state(project_id) if project_id is not None else None
+    state_payload = _state_payload_for_api(state)
+
+    task_frame = build_task_frame_context(project_id, agent=None)
+    working_on = task_frame.get("working_on")
+    if isinstance(working_on, list):
+        working_on = working_on[:PORTABLE_PACKET_WORKING_CAP]
+    else:
+        working_on = []
+
+    tickets = build_tickets_summary(project_id, agent=None) if project_id else {}
+    retrieval = retrieve_work_context_memories(
+        project_id,
+        agent=None,
+        limit=PORTABLE_PACKET_MEMORY_CAP,
+    )
+    memories = _portable_memory_rows(
+        retrieval["memories"] if isinstance(retrieval.get("memories"), list) else []
+    )
+
+    guardrails = task_frame.get("guardrails")
+    recent_decisions: list[dict[str, object]] = []
+    constraint_memories: list[dict[str, object]] = []
+    if isinstance(guardrails, dict):
+        for row in guardrails.get("recent_decisions") or []:
+            if isinstance(row, dict):
+                recent_decisions.append(
+                    {
+                        "summary": _portable_clip(row.get("summary"), 180),
+                        "detail": _portable_clip(row.get("detail"), 180),
+                    }
+                )
+        for row in guardrails.get("constraint_memories") or []:
+            if isinstance(row, dict):
+                constraint_memories.append(
+                    {
+                        "summary": _portable_clip(
+                            row.get("summary") or row.get("content"), 200
+                        ),
+                        "memory_type": row.get("memory_type"),
+                    }
+                )
+    recent_decisions = recent_decisions[:PORTABLE_PACKET_DECISIONS_CAP]
+    constraint_memories = constraint_memories[:PORTABLE_PACKET_CONSTRAINTS_CAP]
+
+    activity = _agent_activity_summary(project_id) if project_id else {}
+    latest_contact = activity.get("latest_contact") if isinstance(activity, dict) else None
+    wire = build_activity_wire(project_id, limit=PORTABLE_PACKET_WIRE_CAP)
+    wire_lines: list[str] = []
+    for item in wire.get("items") or []:
+        if isinstance(item, dict) and item.get("line"):
+            wire_lines.append(_portable_clip(item.get("line"), 160))
+
+    open_initiatives: list[str] = []
+    open_rows = tickets.get("open") if isinstance(tickets, dict) else []
+    if isinstance(open_rows, list):
+        for ticket in open_rows[:8]:
+            if not isinstance(ticket, dict):
+                continue
+            open_initiatives.append(
+                f"#{ticket.get('id')} [{ticket.get('status')}] "
+                f"{_portable_clip(ticket.get('title'), 120)}"
+            )
+
+    return {
+        "packet_version": PORTABLE_PACKET_VERSION,
+        "crowley_version": CROWLEY_VERSION,
+        "release_label": CROWLEY_RELEASE_LABEL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "surface": normalized_surface,
+        "identity": {
+            "crowley_role": (
+                "Crowley is the persistent context layer for D (Mr. Go). "
+                "It holds memory, tickets, project truth, and agent handoffs."
+            ),
+            "terminal_role": (
+                f"You are a temporary reasoning surface ({normalized_surface}). "
+                "You are not Crowley. Use this packet for context; end with structured "
+                "writeback JSON — never invent project facts beyond what is included."
+            ),
+            "authority_order": (
+                "filesystem docs → tickets → agent activity → project_state → "
+                "canon → supporting memories in this packet"
+            ),
+        },
+        "world": {
+            "project": row_to_dict(project) if project is not None else None,
+            "state": state_payload,
+            "brain": get_brain_snapshot() if not is_test_mode() else None,
+        },
+        "work": {
+            "focus": state_payload.get("focus") if state_payload else None,
+            "phase": state_payload.get("phase") if state_payload else None,
+            "next_action": state_payload.get("next_action") if state_payload else None,
+            "working_on": working_on,
+            "open_initiatives": open_initiatives,
+            "latest_agent_contact": latest_contact,
+            "in_the_air": wire_lines,
+        },
+        "guardrails": {
+            "recent_decisions": recent_decisions,
+            "constraints": constraint_memories,
+        },
+        "memories": memories,
+        "retrieval_query": _portable_clip(retrieval.get("query"), 300),
+        "writeback_contract": portable_writeback_contract(),
+        "context_pull_guidance": (
+            "If you needed context Crowley did not include, list concrete pull "
+            "candidates in context_pull_candidates (file paths, ticket ids, handoff "
+            "topics). Do not paste secrets. Put sensitive personal content only in "
+            "sparks with appropriate lane and sensitivity — it stays candidate until reviewed."
+        ),
+        "caps": {
+            "max_chars": PORTABLE_PACKET_MAX_CHARS,
+            "memories": PORTABLE_PACKET_MEMORY_CAP,
+            "working_on": PORTABLE_PACKET_WORKING_CAP,
+        },
+    }
+
+
+def render_portable_context_packet_markdown(packet: dict[str, object]) -> str:
+    """Paste-ready markdown rendering of a portable context packet."""
+    sections: list[str] = []
+
+    def add(title: str, body: str) -> None:
+        body = body.strip()
+        if body:
+            sections.append(f"## {title}\n\n{body}")
+
+    identity = packet.get("identity")
+    if isinstance(identity, dict):
+        add(
+            "Crowley identity",
+            "\n".join(
+                line
+                for line in (
+                    str(identity.get("crowley_role") or ""),
+                    str(identity.get("terminal_role") or ""),
+                    f"Authority: {identity.get('authority_order')}",
+                )
+                if line
+            ),
+        )
+
+    world = packet.get("world")
+    if isinstance(world, dict):
+        state = world.get("state")
+        lines: list[str] = []
+        project = world.get("project")
+        if isinstance(project, dict):
+            lines.append(
+                f"Project: {project.get('name')} ({project.get('slug')}) — "
+                f"{project.get('status')}"
+            )
+        if isinstance(state, dict):
+            for key, label in (
+                ("phase", "Phase"),
+                ("focus", "Focus"),
+                ("current_risk", "Risk"),
+                ("next_action", "Next action"),
+                ("what_changed", "What changed"),
+            ):
+                value = state.get(key)
+                if value:
+                    lines.append(f"{label}: {value}")
+        add("Current world", "\n".join(lines))
+
+    work = packet.get("work")
+    if isinstance(work, dict):
+        lines = []
+        contact = work.get("latest_agent_contact")
+        if isinstance(contact, dict):
+            lines.append(
+                f"Latest agent contact: {contact.get('source')} "
+                f"#{contact.get('memory_id')} — "
+                f"{_portable_clip(contact.get('summary'), 140)}"
+            )
+        for ticket in work.get("working_on") or []:
+            if not isinstance(ticket, dict):
+                continue
+            acceptance = ticket.get("acceptance") or []
+            acc = ""
+            if isinstance(acceptance, list) and acceptance:
+                acc = f" · acceptance: {_portable_clip(acceptance[0], 100)}"
+            lines.append(
+                f"- #{ticket.get('id')} [{ticket.get('status')}] "
+                f"{ticket.get('title')}{acc}"
+            )
+        for line in work.get("open_initiatives") or []:
+            lines.append(f"- {line}")
+        for line in work.get("in_the_air") or []:
+            lines.append(f"- In the air: {line}")
+        add("Active work", "\n".join(lines))
+
+    guardrails = packet.get("guardrails")
+    if isinstance(guardrails, dict):
+        lines = []
+        for decision in guardrails.get("recent_decisions") or []:
+            if isinstance(decision, dict) and decision.get("summary"):
+                detail = decision.get("detail")
+                suffix = f" — {detail}" if detail else ""
+                lines.append(f"- Decision: {decision['summary']}{suffix}")
+        for constraint in guardrails.get("constraints") or []:
+            if isinstance(constraint, dict) and constraint.get("summary"):
+                lines.append(f"- Constraint: {constraint['summary']}")
+        add("Guardrails", "\n".join(lines))
+
+    memories = packet.get("memories")
+    if isinstance(memories, list) and memories:
+        lines = []
+        for mem in memories:
+            if not isinstance(mem, dict):
+                continue
+            reason = mem.get("inclusion_reason")
+            suffix = f" ({reason})" if reason else ""
+            lines.append(
+                f"- [{mem.get('memory_type')}] {mem.get('text')}{suffix}"
+            )
+        query = packet.get("retrieval_query")
+        if query:
+            lines.insert(0, f"_Retrieval query: {query}_\n")
+        add("Supporting memories", "\n".join(lines))
+
+    contract = packet.get("writeback_contract")
+    if isinstance(contract, dict):
+        example = contract.get("example")
+        example_json = json.dumps(example, indent=2) if example else "{}"
+        add(
+            "Writeback contract",
+            "\n".join(
+                [
+                    str(contract.get("description") or ""),
+                    "",
+                    "Reply with a single fenced JSON block:",
+                    "",
+                    "```json",
+                    example_json,
+                    "```",
+                ]
+            ),
+        )
+
+    guidance = packet.get("context_pull_guidance")
+    if guidance:
+        add("Context pull guidance", str(guidance))
+
+    header = (
+        f"# Crowley portable context packet\n\n"
+        f"_v{packet.get('packet_version')} · Crowley {packet.get('crowley_version')} · "
+        f"surface: {packet.get('surface')} · generated: {packet.get('generated_at')}_\n"
+    )
+    markdown = header + "\n\n".join(sections) + "\n"
+    max_chars = int(
+        (packet.get("caps") or {}).get("max_chars") or PORTABLE_PACKET_MAX_CHARS
+    )
+    trimmed = False
+    if len(markdown) > max_chars:
+        markdown = (
+            markdown[: max_chars - 64].rstrip()
+            + "\n\n… _[packet trimmed to char budget]_\n"
+        )
+        trimmed = True
+    packet["rendered_chars"] = len(markdown)
+    packet["trimmed"] = trimmed
+    return markdown
+
+
+@dataclass
+class TerminalWritebackParseResult:
+    """Validation outcome for portable terminal writeback (#77)."""
+
+    ok: bool
+    errors: list[str]
+    writeback: dict[str, object] | None = None
+
+
+def extract_terminal_writeback_json(raw: str) -> dict[str, object]:
+    """Parse JSON from raw text or a markdown fenced code block."""
+    text = raw.strip()
+    if not text:
+        raise ValueError("writeback text is empty")
+    if text.startswith("{"):
+        payload = json.loads(text)
+    else:
+        match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text, flags=re.IGNORECASE)
+        if not match:
+            raise ValueError("no JSON object or fenced ```json block found")
+        payload = json.loads(match.group(1).strip())
+    if not isinstance(payload, dict):
+        raise ValueError("writeback payload must be a JSON object")
+    return payload
+
+
+def _writeback_string_items(
+    value: object,
+    field: str,
+    errors: list[str],
+) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        errors.append(f"{field} must be an array")
+        return []
+    items: list[str] = []
+    for index, entry in enumerate(value):
+        if isinstance(entry, str):
+            cleaned = entry.strip()
+        elif isinstance(entry, dict):
+            cleaned = str(
+                entry.get("summary") or entry.get("content") or entry.get("text") or ""
+            ).strip()
+        else:
+            cleaned = str(entry).strip()
+        if not cleaned:
+            errors.append(f"{field}[{index}] must be a non-empty string")
+            continue
+        items.append(cleaned)
+    return items
+
+
+def _normalize_terminal_spark(
+    raw: object,
+    index: int,
+    errors: list[str],
+) -> dict[str, object] | None:
+    spark_errors: list[str] = []
+    if not isinstance(raw, dict):
+        errors.append(f"sparks[{index}] must be an object")
+        return None
+    content = str(raw.get("content") or "").strip()
+    lane = str(raw.get("lane") or "").strip().lower()
+    why_keep = str(raw.get("why_keep") or "").strip()
+    sensitivity = str(raw.get("sensitivity") or "").strip().lower()
+    confidence_raw = raw.get("confidence")
+
+    if not content:
+        spark_errors.append(f"sparks[{index}].content is required")
+    if not lane:
+        spark_errors.append(f"sparks[{index}].lane is required")
+    elif lane not in PORTABLE_WRITEBACK_LANES:
+        spark_errors.append(
+            f"sparks[{index}].lane must be one of: {', '.join(PORTABLE_WRITEBACK_LANES)}"
+        )
+    if not why_keep:
+        spark_errors.append(f"sparks[{index}].why_keep is required")
+    if not sensitivity:
+        spark_errors.append(f"sparks[{index}].sensitivity is required")
+    elif sensitivity not in PORTABLE_WRITEBACK_SENSITIVITIES:
+        spark_errors.append(
+            f"sparks[{index}].sensitivity must be one of: "
+            + ", ".join(sorted(PORTABLE_WRITEBACK_SENSITIVITIES))
+        )
+    confidence: float | None = None
+    if confidence_raw is None or confidence_raw == "":
+        spark_errors.append(f"sparks[{index}].confidence is required")
+    else:
+        try:
+            confidence = float(confidence_raw)
+        except (TypeError, ValueError):
+            spark_errors.append(f"sparks[{index}].confidence must be a number")
+        else:
+            if confidence < 0.0 or confidence > 1.0:
+                spark_errors.append(
+                    f"sparks[{index}].confidence must be between 0 and 1"
+                )
+
+    if spark_errors:
+        errors.extend(spark_errors)
+        return None
+
+    return {
+        "content": content,
+        "lane": lane,
+        "why_keep": why_keep,
+        "confidence": confidence if confidence is not None else 0.0,
+        "sensitivity": sensitivity,
+    }
+
+
+def parse_terminal_writeback(raw: str | dict[str, object]) -> TerminalWritebackParseResult:
+    """
+    Validate structured terminal writeback without mutating memory (V3.9.12 #77).
+    do_not_save entries are parsed but flagged for discard — never persisted here.
+    """
+    errors: list[str] = []
+    try:
+        payload = (
+            extract_terminal_writeback_json(raw)
+            if isinstance(raw, str)
+            else raw
+        )
+    except (json.JSONDecodeError, ValueError) as exc:
+        return TerminalWritebackParseResult(ok=False, errors=[str(exc)])
+
+    if not isinstance(payload, dict):
+        return TerminalWritebackParseResult(
+            ok=False, errors=["writeback payload must be a JSON object"]
+        )
+
+    session_raw = payload.get("session")
+    if not isinstance(session_raw, dict):
+        errors.append("session is required and must be an object")
+        session: dict[str, object] = {}
+    else:
+        session = session_raw
+
+    summary = str(session.get("summary") or "").strip()
+    if not summary:
+        errors.append("session.summary is required")
+
+    surface = str(session.get("surface") or "").strip().lower()
+    model = str(session.get("model") or "").strip() or None
+    provider = str(session.get("provider") or "").strip().lower() or None
+
+    sparks_raw = payload.get("sparks")
+    sparks: list[dict[str, object]] = []
+    if sparks_raw is None:
+        sparks_raw = []
+    if not isinstance(sparks_raw, list):
+        errors.append("sparks must be an array when present")
+    else:
+        for index, entry in enumerate(sparks_raw):
+            normalized = _normalize_terminal_spark(entry, index, errors)
+            if normalized is not None:
+                sparks.append(normalized)
+
+    decisions = _writeback_string_items(payload.get("decisions"), "decisions", errors)
+    lessons = _writeback_string_items(payload.get("lessons"), "lessons", errors)
+    open_loops = _writeback_string_items(payload.get("open_loops"), "open_loops", errors)
+    corrections = _writeback_string_items(
+        payload.get("corrections"), "corrections", errors
+    )
+    context_pull_candidates = _writeback_string_items(
+        payload.get("context_pull_candidates"),
+        "context_pull_candidates",
+        errors,
+    )
+    do_not_save = _writeback_string_items(
+        payload.get("do_not_save"), "do_not_save", errors
+    )
+
+    if errors:
+        return TerminalWritebackParseResult(ok=False, errors=errors)
+
+    normalized: dict[str, object] = {
+        "format": PORTABLE_WRITEBACK_FORMAT,
+        "session": {
+            "summary": summary,
+            "surface": surface or None,
+            "model": model,
+            "provider": provider,
+        },
+        "sparks": sparks,
+        "decisions": decisions,
+        "lessons": lessons,
+        "open_loops": open_loops,
+        "corrections": corrections,
+        "context_pull_candidates": context_pull_candidates,
+        "do_not_save": do_not_save,
+        "do_not_save_persist": False,
+    }
+    return TerminalWritebackParseResult(ok=True, errors=[], writeback=normalized)
+
+
+def _memory_item_metadata(row: sqlite3.Row) -> dict[str, object]:
+    raw = row["metadata_json"] if "metadata_json" in row.keys() else None
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(str(raw))
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _portable_session_receipt_metadata(
+    writeback: dict[str, object],
+) -> dict[str, object]:
+    session = writeback.get("session")
+    assert isinstance(session, dict)
+    return {
+        "writeback_format": writeback.get("format"),
+        "surface": session.get("surface"),
+        "model": session.get("model"),
+        "provider": session.get("provider"),
+        "decisions": writeback.get("decisions") or [],
+        "lessons": writeback.get("lessons") or [],
+        "open_loops": writeback.get("open_loops") or [],
+        "corrections": writeback.get("corrections") or [],
+        "context_pull_candidates": writeback.get("context_pull_candidates") or [],
+        "spark_count": len(writeback.get("sparks") or []),
+    }
+
+
+def _portable_spark_metadata(
+    spark: dict[str, object],
+    *,
+    session: dict[str, object],
+    session_receipt_id: int | None,
+) -> dict[str, object]:
+    return {
+        "candidate": True,
+        "lane": spark.get("lane"),
+        "why_keep": spark.get("why_keep"),
+        "worth_reason": spark.get("why_keep"),
+        "sensitivity": spark.get("sensitivity"),
+        "surface": session.get("surface"),
+        "model": session.get("model"),
+        "provider": session.get("provider"),
+        "session_receipt_id": session_receipt_id,
+        "writeback_format": PORTABLE_WRITEBACK_FORMAT,
+    }
+
+
+def ingest_terminal_writeback(
+    raw: str | dict[str, object],
+    *,
+    project: str = DEFAULT_PROJECT_SLUG,
+) -> dict[str, object]:
+    """
+    Persist validated portable terminal writeback (V3.9.12 #78).
+    Session recap is an episodic receipt; sparks are staged candidates.
+    do_not_save entries are skipped; raw transcripts are never saved here.
+    """
+    parsed = parse_terminal_writeback(raw)
+    if not parsed.ok:
+        return {"status": "error", "errors": parsed.errors}
+
+    writeback = parsed.writeback
+    assert writeback is not None
+    session_raw = writeback.get("session")
+    if not isinstance(session_raw, dict):
+        return {"status": "error", "errors": ["session object missing after parse"]}
+
+    project_row = get_project_by_slug(project) if project else get_active_project()
+    if project_row is None:
+        raise ValueError(f"project not found: {project}")
+    project_id = int(project_row["id"])
+
+    session_summary = str(session_raw.get("summary") or "").strip()
+    surface = str(session_raw.get("surface") or "manual").strip().lower() or "manual"
+    session_metadata = _portable_session_receipt_metadata(writeback)
+
+    session_receipt_id = save_memory_item(
+        "summary",
+        session_summary,
+        summary=f"Portable terminal session ({surface})",
+        source=PORTABLE_TERMINAL_SOURCE,
+        project_id=project_id,
+        importance=3,
+        confidence=0.85,
+        pinned=False,
+        status="active",
+        metadata=session_metadata,
+    )
+    if session_receipt_id is None:
+        record_system_metric("ingest_error", label=PORTABLE_TERMINAL_SOURCE)
+        return {
+            "status": "error",
+            "errors": ["failed to save session receipt"],
+            "session_receipt_id": None,
+        }
+
+    spark_ids: list[int] = []
+    rejected_sparks: list[str] = []
+    sparks_raw = writeback.get("sparks") or []
+    assert isinstance(sparks_raw, list)
+
+    for spark in sparks_raw:
+        if not isinstance(spark, dict):
+            rejected_sparks.append("invalid spark object")
+            continue
+        content = str(spark.get("content") or "").strip()
+        sensitivity = str(spark.get("sensitivity") or "normal").lower()
+        is_sensitive = sensitivity in {"sensitive", "high"}
+        spark_metadata = _portable_spark_metadata(
+            spark,
+            session=session_raw,
+            session_receipt_id=int(session_receipt_id),
+        )
+        item_id = save_memory_item(
+            "event",
+            content,
+            summary=str(spark.get("why_keep") or "").strip() or None,
+            source=PORTABLE_TERMINAL_SOURCE,
+            project_id=project_id,
+            importance=2 if is_sensitive else 3,
+            confidence=float(spark.get("confidence") or 0.5),
+            pinned=False,
+            status=PORTABLE_SPARK_STATUS,
+            metadata=spark_metadata,
+        )
+        if item_id is None:
+            rejected_sparks.append(_truncate(content, 64))
+        else:
+            spark_ids.append(int(item_id))
+
+    do_not_save = writeback.get("do_not_save") or []
+    skipped_do_not_save = (
+        [str(item) for item in do_not_save] if isinstance(do_not_save, list) else []
+    )
+
+    record_system_metric("ingest_ok", label=PORTABLE_TERMINAL_SOURCE)
+    return {
+        "status": "ok",
+        "session_receipt_id": int(session_receipt_id),
+        "spark_ids": spark_ids,
+        "rejected_sparks": rejected_sparks,
+        "skipped_do_not_save": skipped_do_not_save,
+        "metadata": session_metadata,
+    }
+
+
 def get_agent_role(agent: str) -> str:
     """Identity text for agents in the Crowley pipeline (sync bundles, docs)."""
     normalized = agent.strip().lower()
@@ -6678,7 +7450,9 @@ def ingest_handoff(
     Store an external handoff in memory_items and optionally extract world-model updates.
     Additive and conservative — no deletes, closes, archives, or project switches.
     """
-    _ = metadata  # accepted for API compatibility; not persisted in Phase 3
+    ingest_metadata: dict[str, object] = dict(metadata or {})
+    ingest_metadata.setdefault("handoff_type", handoff_type)
+    ingest_metadata.setdefault("ingest_source", source)
 
     if source not in INGEST_SOURCES:
         raise IngestHandoffError(f"invalid source: {source}")
@@ -6766,6 +7540,8 @@ def ingest_handoff(
             },
             "skipped": memory_items_rejected,
         }
+
+    attach_memory_item_metadata(int(memory_item_id), ingest_metadata)
 
     applied: dict[str, object] = {
         "decisions_added": 0,

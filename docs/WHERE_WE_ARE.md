@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.11 local · V3.9.12 next (#76–#80) · **2026-07-03**
+**As of:** V3.9.12 on `main` · V4 next · **2026-07-03**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** Pushing V3.9.11 patch to `origin/main` (includes V3.9.8–V3.9.11 ladder). Bus reports `3.9.11` from local code.
+**Git note:** V3.9.12 Portable Context Terminal and #81 sync parity are on `main`. Restart bus so `/api/health` reports `3.9.12`.
 
 ---
 
@@ -42,14 +42,14 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.5** | **Shipped** — mode classifier, depth controller, co-founder voice, diagnostics separation, regression fixtures, chat UX sweep (#25–#30) |
 | **V3.9.6** | **Shipped** — panel states, streaming polish, navigation flow, what-changed feed, livability pass (#31–#36) |
 | **V3.9.7** | **Shipped** — drawer/chat polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics (#40–#49) |
-| **V3.9.8** | **Local** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55) |
-| **V3.9.9** | **Shipped locally** — Context That Feeds: quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene (#56–#63) |
-| **V3.9.10** | **Shipped locally** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
-| **V3.9.11** | **Shipped locally** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
-| **V3.9.12** | **Minted** — Portable Context Terminal (#76–#80); **next** |
+| **V3.9.8** | **Shipped on `main`** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55) |
+| **V3.9.9** | **Shipped on `main`** — Context That Feeds: quality gate, inclusion reasons, slim sync, handoff upgrade, feedback loop, UI/hygiene (#56–#63) |
+| **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
+| **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
+| **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.11"` (`Crowley V3.9.11 Live Wire`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.12"` (`Crowley V3.9.12 Portable Context Terminal`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -130,7 +130,8 @@ Hooks run `--before` automatically. After shipping:
 - Tickets tab: grouped initiatives, row-click **detail view** (`GET /api/tickets/{id}`), done button
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
-- **242 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` still V3.9.7 baseline
+- Portable context terminal — `GET /api/portable/packet`, writeback parse/ingest, `scripts/export_portable_packet.py`, `scripts/import_portable_writeback.py`
+- **320 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` runs the same gate
 - Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -144,18 +145,19 @@ Hooks run `--before` automatically. After shipping:
 
 ## 6. Where we are heading
 
-Pre-V4 quality arc complete through V3.9.7 on `main`. **Local tree** carries V3.9.8 through V3.9.10. See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+Pre-V4 quality arc complete through **V3.9.12 on `main`**. See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 | Initiative | Owner | Notes |
 |------------|-------|-------|
-| **V3.9.8 Runtime Hardening** | Cursor | Local · #50–#55 |
-| **V3.9.9 Context That Feeds** | Cursor | **Shipped locally** · #56–#63 complete |
-| **V3.9.10 Task-Frame Context** | Cursor | **Shipped locally** · #64–#69 complete |
-| **V3.9.11 Live Wire** | Cursor | Minted #70–#75 · compose "In the air" activity wire |
-| **V3.9.12 Portable Context Terminal** | Cursor | Minted #76–#80 · after V3.9.11 · packet-in/writeback-out |
-| **V4 Spark Lanes** | Codex plans | After V3.9.12 · sparks + lanes + trust |
+| **V3.9.8 Runtime Hardening** | Cursor | **Shipped on `main`** · #50–#55 |
+| **V3.9.9 Context That Feeds** | Cursor | **Shipped on `main`** · #56–#63 complete |
+| **V3.9.10 Task-Frame Context** | Cursor | **Shipped on `main`** · #64–#69 complete |
+| **V3.9.11 Live Wire** | Cursor | **Shipped on `main`** · #70–#75 complete |
+| **V3.9.12 Portable Context Terminal** | Cursor | **Shipped on `main`** · #76–#80 · packet-in/writeback-out |
+| **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
+| **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
-**Resume workflow:** Claim **V3.9.11 #70** one ticket at a time → V3.9.12 → V4.0.
+**Resume workflow:** Plan or mint **V4.0 Spark Lanes** when Mr. Go directs.
 
 ---
 
@@ -169,7 +171,9 @@ Pre-V4 quality arc complete through V3.9.7 on `main`. **Local tree** carries V3.
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate (core deps) |
 | `scripts/preflight.py` | Release preflight |
-| `docs/V3.9.10_TASK_FRAME_CONTEXT.md` | V3.9.10 release spec |
+| `docs/V3.9.12_PORTABLE_CONTEXT_TERMINAL.md` | V3.9.12 release spec |
+| `scripts/export_portable_packet.py` | Export paste-ready context packet |
+| `scripts/import_portable_writeback.py` | Import terminal writeback |
 | `docs/V3.9.9_CONTEXT_THAT_FEEDS.md` | V3.9.9 release spec |
 | `docs/V3.9.8_RUNTIME_HARDENING.md` | V3.9.8 release spec |
 | `docs/V3.9.7_WORKSPACE_EXPERIENCE_RELIABILITY.md` | V3.9.7 release spec |

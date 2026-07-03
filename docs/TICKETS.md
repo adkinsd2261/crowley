@@ -1,27 +1,27 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.11 local · V3.9.12 next (#76–#80) · V4 planned (2026-07-03)
+**As of:** V3.9.12 on `main` · V4 planned (2026-07-03)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Active initiative — V3.9.12 next
+## Active initiative — V4 planned
 
-**Current:** V3.9.11 Live Wire — `#70–#75` closed locally. **Next:** V3.9.12 Portable Context Terminal `#76–#80` (minted, do not claim until Mr. Go directs).
+**Current:** V3.9.12 Portable Context Terminal — `#76–#80` closed; **#81** sync parity closed. **Next:** V4.0 Spark Lanes (not minted until Mr. Go directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
 
 | Release                    | Tickets | Packet                                    | Status                          |
 | -------------------------- | ------- | ----------------------------------------- | ------------------------------- |
-| V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Shipped locally**             |
-| V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped locally**             |
-| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | **Shipped locally**             |
-| V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | Minted · approved · **next**  |
+| V3.9.9 Context That Feeds  | #56–#63 | `tickets/v3.9.9_context_that_feeds.json`  | **Shipped on `main`**             |
+| V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped on `main`**             |
+| V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | **Shipped on `main`**             |
+| V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | **Shipped on `main`**  |
 | V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
 
 
-See [V3.9.11_LIVE_WIRE.md](./V3.9.11_LIVE_WIRE.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
 
 | Ticket theme                                   | Status                                       |
@@ -33,11 +33,12 @@ See [V3.9.11_LIVE_WIRE.md](./V3.9.11_LIVE_WIRE.md) · [WHERE_WE_ARE.md](./WHERE_
 | V3.9.6 Workspace Polish (#31–#36)              | Shipped on `main`                            |
 | Pre-V4 QA hygiene (#37)                        | Shipped on `main`                            |
 | V3.9.7 Experience & Reliability (#40–#49)      | Shipped on `main`                            |
-| V3.9.8 Runtime Hardening (#50–#55)             | **Local only** — not pushed to `origin/main` |
-| V3.9.9 Context That Feeds (#56–#63)            | **Local only** — shipped at #63 doc lock     |
-| V3.9.10 Task-Frame Context (#64–#69)         | **Shipped locally** — shipped at #69 doc lock     |
-| V3.9.11 Live Wire (#70–#75)                  | **Shipped locally** — shipped at #75 doc lock     |
-| V3.9.12 Portable Context Terminal (#76–#80)             | Minted · **next**                |
+| V3.9.8 Runtime Hardening (#50–#55)             | **Shipped on `main`** |
+| V3.9.9 Context That Feeds (#56–#63)            | **Shipped on `main`** — shipped at #63 doc lock     |
+| V3.9.10 Task-Frame Context (#64–#69)         | **Shipped on `main`** — shipped at #69 doc lock     |
+| V3.9.11 Live Wire (#70–#75)                  | **Shipped on `main`** — shipped at #75 doc lock     |
+| V3.9.12 Portable Context Terminal (#76–#80)             | **Shipped on `main`** — shipped at #80 doc lock     |
+| #81 Sync parity (codex `--known-issue`)        | **Shipped on `main`** |
 | V4.0 Spark Lanes                               | Planned after V3.9.12                       |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
@@ -65,6 +66,12 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
+- **#81 Sync parity** — codex_sync `--known-issue` parity with cursor_sync
+- **V3.9.12 Portable Context Terminal** — packet export, writeback parse/ingest, CLI (#76–#80)
+- **V3.9.11 Live Wire** — activity pulses, compose wire UI, brain switcher (#70–#75)
+- **V3.9.10 Task-Frame Context** — task frame API, ticket-narrative retrieval (#64–#69)
+- **V3.9.9 Context That Feeds** — quality gate, slim sync, feedback loop (#56–#63)
+- **V3.9.8 Runtime Hardening** — test mode, runtime health, fragile-startup suite (#50–#55)
 - **V3.9.5 Conversation + Model Behavior** — mode classifier (#25), depth (#26), personality (#27), diagnostics separation (#28), fixtures (#29), chat UX (#30)
 - **V3.9.7 Experience & Reliability** — drawer polish (#40), chat readability (#41), embed fallback (#42), CI slim deps (#43), cohesion (#44), work surfaces (#45), diagnostics module (#46), tickets module (#47), metrics (#48), preflight lock (#49)
 - **V3.9.6 Workspace Polish** — panel states (#31), streaming (#32), navigation (#33), what-changed feed (#34), livability (#35), docs lock (#36)

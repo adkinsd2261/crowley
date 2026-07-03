@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.7 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
+"""Crowley V3.9.12 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
 
 from __future__ import annotations
 
@@ -115,6 +115,11 @@ class BrainSettingRequest(BaseModel):
     model: str | None = None
 
 
+class PortableWritebackParseRequest(BaseModel):
+    text: str | None = None
+    writeback: dict[str, object] | None = None
+
+
 @app.get("/api/brain")
 def api_brain_get() -> JSONResponse:
     return JSONResponse(crowley.get_brain_snapshot())
@@ -151,6 +156,71 @@ def api_health() -> JSONResponse:
             "runtime": health.get("runtime"),
         }
     )
+
+
+@app.get("/api/portable/packet")
+def api_portable_packet(
+    surface: str = Query("chatgpt", min_length=1),
+    project: str | None = Query(None),
+) -> JSONResponse:
+    try:
+        packet = crowley.build_portable_context_packet(
+            surface, project_slug=project
+        )
+        markdown = crowley.render_portable_context_packet_markdown(packet)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    return JSONResponse(
+        {
+            "packet": packet,
+            "markdown": markdown,
+            "char_count": len(markdown),
+            "trimmed": bool(packet.get("trimmed")),
+        }
+    )
+
+
+@app.post("/api/portable/writeback/parse")
+def api_portable_writeback_parse(
+    body: PortableWritebackParseRequest,
+) -> JSONResponse:
+    if body.writeback is not None:
+        result = crowley.parse_terminal_writeback(body.writeback)
+    elif body.text:
+        result = crowley.parse_terminal_writeback(body.text)
+    else:
+        return JSONResponse(
+            {"ok": False, "errors": ["text or writeback object is required"]},
+            status_code=400,
+        )
+    if not result.ok:
+        return JSONResponse(
+            {"ok": False, "errors": result.errors},
+            status_code=400,
+        )
+    return JSONResponse({"ok": True, "writeback": result.writeback})
+
+
+@app.post("/api/portable/writeback/ingest")
+def api_portable_writeback_ingest(
+    body: PortableWritebackParseRequest,
+    project: str = Query("crowley", min_length=1),
+) -> JSONResponse:
+    try:
+        if body.writeback is not None:
+            result = crowley.ingest_terminal_writeback(body.writeback, project=project)
+        elif body.text:
+            result = crowley.ingest_terminal_writeback(body.text, project=project)
+        else:
+            return JSONResponse(
+                {"status": "error", "errors": ["text or writeback object is required"]},
+                status_code=400,
+            )
+    except ValueError as exc:
+        return JSONResponse({"status": "error", "errors": [str(exc)]}, status_code=404)
+    if result.get("status") != "ok":
+        return JSONResponse(result, status_code=400)
+    return JSONResponse(result, status_code=201)
 
 
 @app.get("/api/metrics/summary")

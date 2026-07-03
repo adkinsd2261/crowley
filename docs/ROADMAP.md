@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.11 shipped · V3.9.12 next · V4 direction pivot · **2026-07-03**
+**As of:** V3.9.12 shipped · V4 direction pivot · **2026-07-03**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -81,15 +81,15 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.11 Live Wire ✅
                            │
                            ▼
-                    V3.9.12 Portable Context Terminal ◄── YOU ARE HERE
+                    V3.9.12 Portable Context Terminal ✅
                               │
                               ▼
-                    V4.0 Spark Lanes
+                    V4.0 Spark Lanes ◄── YOU ARE HERE
 ```
 
-**Shipped through V3.9.11:** … task-frame context (#64–#69); live wire — pulses, compose ticker, brain switcher (#70–#75).
+**Shipped through V3.9.12:** … live wire (#70–#75); portable context terminal — packet export, writeback parse/ingest, CLI (#76–#80).
 
-**Active initiative:** V3.9.12 Portable Context Terminal (#76–#80). V4.0 Spark Lanes planned after V3.9.12 — see [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V4.0 Spark Lanes (planned). See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
 
 ---
 
@@ -200,11 +200,11 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 | Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
 | V3.9.7 Workspace Experience & Reliability | UI catches up to backend depth; boring boot | Medium | ✅ Shipped on `main` (#40–#49) |
 | V3.9.8 Runtime Hardening | No fragile startup — test mode, runtime health | Medium | Local (#50–#55) — not on `origin/main` |
-| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Shipped locally** (#56–#63) |
-| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped locally** (#64–#69) |
-| V3.9.11 Live Wire | Compose activity wire + brain switcher | Medium | **Shipped locally** (#70–#75) |
-| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | Minted #76–#80 · **next** |
-| V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | Planned after V3.9.12 |
+| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Shipped on `main`** (#56–#63) |
+| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped on `main`** (#64–#69) |
+| V3.9.11 Live Wire | Compose activity wire + brain switcher | Medium | **Shipped on `main`** (#70–#75) |
+| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | **Shipped on `main`** (#76–#80) |
+| V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | **Next** — planned |
 | External collectors | Optional future inputs into lanes | High | Deferred after V4 memory architecture |
 | First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
 | Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
@@ -219,9 +219,9 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 ## 8. Mid-term (V4 themes) **(inference)**
 
-### 8.1 portable context terminal (V3.9.12)
+### 8.1 portable context terminal (V3.9.12) — shipped
 
-Export a compact Crowley packet into ChatGPT or another AI/model surface and import structured writeback out. Store the session recap as an episodic receipt and the useful residue as candidate sparks.
+Export a compact Crowley packet into any AI/model surface and import structured writeback. Session recap is an episodic receipt; useful residue becomes staged spark candidates. See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md).
 
 ### 8.2 Spark lanes (V4.0)
 
@@ -286,12 +286,11 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
 | **V3.9.7** | Experience & Reliability | ✅ UI polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics, preflight |
 | **V3.9.8** | Runtime Hardening | ✅ test mode, model probe, runtime health, sqlite-vec fallback |
-| V3.9.9 | Context That Feeds | Shipped locally (#56–#63) |
-| V3.9.10 | Task-Frame Context | Shipped locally (#64–#69) |
-| V3.9.11 | Live Wire | Shipped locally (#70–#75) |
-| V3.9.12 | Portable Context Terminal | Minted #76–#80 · next |
-| V3.9.12 | Portable Context Terminal | Minted #76–#80; packet-in/writeback-out |
-| **V4.0** | Spark Lanes | Memory lanes, trust states, lane-aware retrieval |
+| V3.9.9 | Context That Feeds | Shipped on `main` (#56–#63) |
+| V3.9.10 | Task-Frame Context | Shipped on `main` (#64–#69) |
+| V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
+| V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
+| **V4.0** | Spark Lanes | **Next** — memory lanes, trust states, lane-aware retrieval |
 
 ---
 

@@ -1,0 +1,12 @@
+{
+  "session": {
+    "summary": "Session missing required spark fields.",
+    "surface": "claude"
+  },
+  "sparks": [
+    {
+      "content": "Incomplete spark entry.",
+      "lane": "work"
+    }
+  ]
+}
