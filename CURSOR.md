@@ -46,4 +46,4 @@ Claim and close tickets:
 - Default handoff: `builder_handoff`
 - `--after` refuses empty scaffolds (same guard as Codex)
 - No secrets in handoffs
-- When Mr. Go talks to Crowley in the browser, that's the OS — not you
+- When D talks to Crowley in the browser, that's the OS — not you

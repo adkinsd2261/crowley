@@ -31,6 +31,11 @@ class PersonalityPromptTests(unittest.TestCase):
         self.assertIn("Honor the inferred Response depth", prompt)
         self.assertIn("when depth is brief, stay tight", prompt)
 
+    def test_addresses_user_as_d(self) -> None:
+        prompt = crowley._personality_prompt()
+        self.assertIn(crowley.USER_NAME, prompt)
+        self.assertIn("default to D", prompt)
+
     def test_drops_theatrical_flourish(self) -> None:
         prompt = crowley._personality_prompt()
         self.assertNotIn("Jarvis-shaped", prompt)

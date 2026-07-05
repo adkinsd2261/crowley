@@ -29,6 +29,8 @@ WRITEBACK_PARSE_BODY: dict[str, Any] = {
     }
 }
 
+DEFAULT_HEADERS = {"User-Agent": "Crowley-ChatGPT-Bridge-Verify/1.0"}
+
 
 def ssl_context() -> ssl.SSLContext:
     return ssl.create_default_context(cafile=certifi.where())
@@ -70,7 +72,7 @@ def request_code(
     connect_ip: str | None = None,
 ) -> int:
     data = None
-    hdrs = dict(headers or {})
+    hdrs = {**DEFAULT_HEADERS, **(headers or {})}
     if body is not None:
         data = json.dumps(body).encode("utf-8")
         hdrs.setdefault("Content-Type", "application/json")

@@ -31,8 +31,8 @@ Crowley remains the only hub. Evidence: decision:31.
 ## Canon: Work
 Current work is memory continuity. Evidence: memory_items:85, docs/TICKETS.md.
 
-## Canon: Mr. Go
-Mr. Go prefers continuity over manual relay. Evidence: memory_items:85.
+## Canon: D
+D prefers continuity over manual relay. Evidence: memory_items:85.
 
 ## Canon: Recent
 Recent sessions wired agent sync and canon planning. Evidence: memory_items:87.

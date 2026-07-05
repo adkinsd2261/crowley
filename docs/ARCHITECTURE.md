@@ -2,14 +2,14 @@
 
 **Document status:** Reverse-engineered from codebase  
 **Last reviewed against code:** 2026-07-03
-**Code version:** `CROWLEY_VERSION = "3.9.13"` (`Crowley V3.9.13 Secure ChatGPT Actions API`)
+**Code version:** `CROWLEY_VERSION = "3.9.14"` (`Crowley V3.9.14 Durable ChatGPT Bridge`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
 
 ## 1. Executive summary
 
-Crowley is a **local-first persistent context layer** for a single user (“Mr. Go” / “D”). It is not one AI model and not only the browser UI; it carries identity, memory, and coordination across reasoning surfaces. It combines:
+Crowley is a **local-first persistent context layer** for a single user (“D”). It is not one AI model and not only the browser UI; it carries identity, memory, and coordination across reasoning surfaces. It combines:
 
 1. **Conversation** — CLI REPL and web workspace; streaming LLM via OpenAI and/or Ollama.
 2. **Episodic memory** — passive sparks + typed `memory_items` with hybrid retrieval.
@@ -30,7 +30,7 @@ Crowley is a **local-first persistent context layer** for a single user (“Mr. 
 17. **V3.9.9 Context That Feeds (2026-07)** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, UI/hygiene (#56–#63).
 19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
 20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
-21. **V3.9.13 Secure ChatGPT Actions API (2026-07)** — bearer-auth `/api/actions/*` for Custom GPT; `CROWLEY_ACTION_KEY` gate; OpenAPI import; bridge scripts + `CHATGPT_SETUP.md`.
+22. **V3.9.14 Durable ChatGPT Bridge (2026-07)** — LaunchAgent service, API-only tunnel ingress, bridge verify tooling, hardened start script.
 22. **Planned V4.0 Spark Lanes** — sparks as the memory unit, lane-aware retrieval, trust states, pattern synthesis.
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/actions/*` uses bearer auth when `CROWLEY_ACTION_KEY` is set; full internal API remains localhost-first.
@@ -250,8 +250,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"3.9.13"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.13 Secure ChatGPT Actions API"` |
+| `CROWLEY_VERSION` | `"3.9.14"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V3.9.14 Durable ChatGPT Bridge"` |
 
 ---
 

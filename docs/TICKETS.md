@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.13 on `main` · V4 planned (2026-07-03)
+**As of:** V3.9.14 · V4 planned (2026-07-05)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative — V4 planned
 
-**Current:** V3.9.13 Secure ChatGPT Actions API shipped. V3.9.12 Portable Context Terminal — `#76–#80` closed; **#81** sync parity closed. **Next:** V4.0 Spark Lanes (not minted until Mr. Go directs).
+**Current:** V3.9.14 Durable ChatGPT Bridge shipped (#82–#86). **Next:** V4.0 Spark Lanes (not minted until D directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -18,11 +18,12 @@
 | V3.9.10 Task-Frame Context | #64–#69 | `tickets/v3.9.10_task_frame_context.json` | **Shipped on `main`**             |
 | V3.9.11 Live Wire          | #70–#75 | `tickets/v3.9.11_live_wire.json`          | **Shipped on `main`**             |
 | V3.9.12 Portable Context Terminal   | #76–#80 | `tickets/v3.9.12_portable_context_terminal.json`   | **Shipped on `main`**  |
+| V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
 | V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
 
 
-See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
+See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
 
 
 | Ticket theme                                   | Status                                       |

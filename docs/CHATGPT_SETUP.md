@@ -1,8 +1,8 @@
-# ChatGPT Custom GPT Setup — Crowley V3.9.13
+# ChatGPT Custom GPT Setup — Crowley V3.9.14
 
 Step-by-step guide to expose Crowley's **Actions API only** to a Custom GPT over HTTPS.
 
-**Prerequisites:** Crowley V3.9.13+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
+**Prerequisites:** Crowley V3.9.14+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
 
 **Do not** expose the full `/api/*` surface. Use only `/api/actions/*`.
 
@@ -44,8 +44,10 @@ Use a long random string (32+ chars). This is the **Bearer token** for Custom GP
 Optional (named Cloudflare tunnel only):
 
 ```bash
-CLOUDFLARE_TUNNEL_HOSTNAME=crowley.yourdomain.com
+CLOUDFLARE_TUNNEL_HOSTNAME=api.yourdomain.com
 ```
+
+Use an **API subdomain** (e.g. `api.yourdomain.com`). Operator example: `api.javlin.ai`.
 
 ---
 
@@ -82,31 +84,58 @@ kill "$(cat .crowley/chatgpt_bridge/tunnel.pid)"
 
 ---
 
-## 4. Named Cloudflare tunnel (stable URL for production)
+## 4. Named Cloudflare tunnel (stable URL, API-only)
 
-Quick tunnels change URL every restart. For a fixed hostname:
+Quick tunnels change URL every restart. For a fixed hostname expose **only** `/api/actions/*`:
 
 ```bash
 cloudflared tunnel login
 cloudflared tunnel create crowley-chatgpt
 mkdir -p .crowley/cloudflared
-# Move credentials JSON from cloudflared output into .crowley/cloudflared/
 cp cloudflared/config.yml.example cloudflared/config.yml
-# Edit tunnel ID, credentials-file path, and hostname
-cloudflared tunnel route dns crowley-chatgpt crowley.yourdomain.com
+# Edit tunnel ID, credentials-file path; keep path: ^/api/actions/.* ingress rules
+cloudflared tunnel route dns crowley-chatgpt api.yourdomain.com
 ```
 
 Set in `.env`:
 
 ```bash
-CLOUDFLARE_TUNNEL_HOSTNAME=crowley.yourdomain.com
+CLOUDFLARE_TUNNEL_HOSTNAME=api.yourdomain.com
 ```
 
-Start:
+**API-only boundary:** `cloudflared/config.yml.example` forwards only `^/api/actions/.*` to Crowley. Root and internal routes return **404** on the public hostname. Verify:
+
+```bash
+# Should be 200 with bearer auth
+curl -si -H "Authorization: Bearer $CROWLEY_ACTION_KEY" https://api.javlin.ai/api/actions/health
+# Should be 404 (not exposed)
+curl -si https://api.javlin.ai/
+curl -si https://api.javlin.ai/api/health
+```
+
+Crowley stays bound to **127.0.0.1:8765** — never bind to `0.0.0.0` or expose the full `/api/*` tree.
+
+Start interactively (testing):
 
 ```bash
 ./scripts/start_chatgpt_bridge.sh --named
 ```
+
+### Durable macOS service (LaunchAgent)
+
+Keep the named connector alive after login/restart — no open terminal:
+
+```bash
+chmod +x scripts/run_durable_bridge.sh
+./scripts/crowley_bridge_service.py install   # write plist + load service
+./scripts/crowley_bridge_service.py status      # plist / launchd / connector
+./scripts/crowley_bridge_service.py stop        # unload (keeps plist + credentials)
+./scripts/crowley_bridge_service.py uninstall   # remove plist only
+```
+
+Requires `cloudflared/config.yml` and `brew install cloudflared`. Logs: `.crowley/chatgpt_bridge/service.log`.
+
+The service ensures Crowley bus on `127.0.0.1:8765`, then runs `cloudflared tunnel --config cloudflared/config.yml run`.
 
 ---
 
@@ -157,7 +186,38 @@ Expected: version `3.9.13` (or current) from the live bridge.
 
 ---
 
-## 6. Manual verification (optional)
+## 6. Verify the durable bridge (one command)
+
+```bash
+./scripts/verify_chatgpt_bridge.py
+```
+
+Checks in order:
+
+1. Local Crowley bus (`/api/health`)
+2. Local authorized Actions health
+3. LaunchAgent service status (macOS durable connector)
+4. Active `cloudflared` connector process
+5. Public authorized `/api/actions/health` (when `CLOUDFLARE_TUNNEL_HOSTNAME` is set)
+6. Public `/` and `/api/health` return **404** (API-only boundary)
+
+Troubleshooting output classifies:
+
+| Category | Meaning |
+|----------|---------|
+| `key_mismatch` | HTTP 401 — check `.env` and Custom GPT bearer |
+| `actions_disabled` | HTTP 503 — set `CROWLEY_ACTION_KEY`, restart bus |
+| `local_connection` | Bus or connector not reachable locally |
+| `no_connector` | `cloudflared` not running — start LaunchAgent or bridge script |
+| `dns_tunnel_not_ready` | Cloudflare 1033/530 — DNS/route not propagated |
+| `tunnel_upstream` | HTTP 502 — connector up but upstream unhealthy |
+| `route_boundary_ok` | HTTP 404 on blocked public paths (expected) |
+
+Skip LaunchAgent check on Linux: `./scripts/verify_chatgpt_bridge.py --skip-service`
+
+---
+
+## 7. Manual verification (optional)
 
 Replace `PUBLIC_URL` and `YOUR_KEY`:
 
@@ -180,8 +240,10 @@ curl -si -X POST -H "Authorization: Bearer $YOUR_KEY" -H "Content-Type: applicat
 | File | Purpose |
 |------|---------|
 | `scripts/start_chatgpt_bridge.sh` | Start bus + tunnel + verify |
+| `scripts/crowley_bridge_service.py` | macOS LaunchAgent install/start/stop/status |
+| `scripts/run_durable_bridge.sh` | LaunchAgent entrypoint (bus + cloudflared) |
 | `scripts/patch_openapi_chatgpt.py` | Patch OpenAPI server URL |
-| `scripts/verify_chatgpt_actions_https.py` | HTTPS smoke test for Actions routes |
+| `scripts/verify_chatgpt_bridge.py` | Full bridge verification (local + public + service) |
 | `openapi-chatgpt.json` | Template (placeholder URL) |
 | `openapi-chatgpt.deployed.json` | Generated with live tunnel URL (gitignored) |
 | `cloudflared/config.yml.example` | Named tunnel template |
@@ -208,4 +270,5 @@ curl -si -X POST -H "Authorization: Bearer $YOUR_KEY" -H "Content-Type: applicat
 | HTTP 401 | Bearer token in Custom GPT must exactly match `CROWLEY_ACTION_KEY` |
 | Tunnel URL not printed | Read `.crowley/chatgpt_bridge/tunnel.log` |
 | `cloudflared` not found | `brew install cloudflared` |
-| Custom GPT schema errors | Re-import `openapi-chatgpt.deployed.json`; if `ContextBundle` errors persist, pull latest `openapi-chatgpt.json` (requires explicit `properties` on object schemas) |
+| HTTP 404 on `/api/actions/*` | Check tunnel ingress `path: ^/api/actions/.*` and DNS hostname |
+| HTTP 404 on `/` or `/api/health` (public) | Expected — API-only tunnel blocks non-Actions paths |

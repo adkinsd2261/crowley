@@ -7,20 +7,33 @@ BRIDGE_DIR="$ROOT/.crowley/chatgpt_bridge"
 TUNNEL_LOG="$BRIDGE_DIR/tunnel.log"
 PID_FILE="$BRIDGE_DIR/tunnel.pid"
 MODE="${1:-}"
+PY="$ROOT/venv/bin/python3"
+LIB="$ROOT/scripts/chatgpt_bridge_lib.py"
 
 usage() {
   cat <<'EOF'
 Usage: ./scripts/start_chatgpt_bridge.sh [--quick|--named|--ngrok]
 
   --quick   Cloudflare quick tunnel (default; random *.trycloudflare.com URL)
-  --named   Use cloudflared/config.yml + CLOUDFLARE_TUNNEL_HOSTNAME in .env
+  --named   Stable hostname via cloudflared/config.yml; prefers durable LaunchAgent
   --ngrok   Fallback when cloudflared is unavailable (requires ngrok)
 
-Loads .env, ensures Crowley bus, starts tunnel, patches openapi-chatgpt.deployed.json,
-verifies /api/actions/* over HTTPS, prints the public URL.
+Loads .env, ensures Crowley bus, checks local Actions auth, starts or reuses tunnel,
+patches openapi-chatgpt.deployed.json, verifies /api/actions/* over HTTPS.
 
-Stop tunnel: kill "$(cat .crowley/chatgpt_bridge/tunnel.pid)"
+Named production: use ./scripts/crowley_bridge_service.py install for durable connector.
+
+Stop foreground tunnel: kill "$(cat .crowley/chatgpt_bridge/tunnel.pid)"
 EOF
+}
+
+fail() {
+  local category="$1"
+  local message="$2"
+  local inspect="$3"
+  echo "ERROR [$category]: $message" >&2
+  echo "Inspect: $inspect" >&2
+  exit 1
 }
 
 load_env() {
@@ -34,8 +47,7 @@ load_env() {
 
 require_action_key() {
   if [[ -z "${CROWLEY_ACTION_KEY:-}" ]]; then
-    echo "ERROR: CROWLEY_ACTION_KEY must be set in .env" >&2
-    exit 1
+    fail "missing_key" "CROWLEY_ACTION_KEY must be set in .env" ".env and Custom GPT bearer auth"
   fi
 }
 
@@ -51,7 +63,20 @@ ensure_cloudflared() {
   return 1
 }
 
+cleanup_stale_pid() {
+  "$PY" -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '${ROOT}/scripts')
+import chatgpt_bridge_lib as lib
+pid_file = Path('${PID_FILE}')
+if lib.cleanup_stale_pid_file(pid_file):
+    print(f'Removed stale tunnel PID file ({pid_file}).', file=sys.stderr)
+"
+}
+
 stop_existing_tunnel() {
+  cleanup_stale_pid
   if [[ -f "$PID_FILE" ]]; then
     old_pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
@@ -60,6 +85,18 @@ stop_existing_tunnel() {
       sleep 1
     fi
     rm -f "$PID_FILE"
+  fi
+}
+
+verify_tunnel_pid_alive() {
+  if [[ ! -f "$PID_FILE" ]]; then
+    fail "no_connector" "Tunnel PID file missing after start" "cloudflared log $TUNNEL_LOG"
+  fi
+  local pid
+  pid="$(cat "$PID_FILE")"
+  if ! kill -0 "$pid" 2>/dev/null; then
+    rm -f "$PID_FILE"
+    fail "stale_pid" "Tunnel process $pid exited immediately" "cloudflared log $TUNNEL_LOG"
   fi
 }
 
@@ -74,42 +111,58 @@ wait_for_tunnel_url() {
     fi
     sleep 1
   done
-  echo "ERROR: Timed out waiting for tunnel URL. See $TUNNEL_LOG" >&2
-  return 1
+  fail "tunnel_not_ready" "Timed out waiting for tunnel URL" "log $TUNNEL_LOG, DNS, cloudflared connector"
 }
 
 start_quick_tunnel() {
-  ensure_cloudflared || {
-    echo "ERROR: cloudflared not installed. Run: brew install cloudflared" >&2
-    exit 1
-  }
+  ensure_cloudflared || fail "cloudflared_missing" "cloudflared not installed" "brew install cloudflared"
   stop_existing_tunnel
   mkdir -p "$BRIDGE_DIR"
   : >"$TUNNEL_LOG"
   echo "Starting Cloudflare quick tunnel → http://127.0.0.1:8765" >&2
   cloudflared tunnel --url http://127.0.0.1:8765 >>"$TUNNEL_LOG" 2>&1 &
   echo $! >"$PID_FILE"
+  verify_tunnel_pid_alive
   wait_for_tunnel_url 'https://[a-zA-Z0-9-]+\.trycloudflare\.com'
 }
 
+named_service_running() {
+  local code
+  code="$("$PY" "$ROOT/scripts/crowley_bridge_service.py" status >/dev/null 2>&1; echo $?)"
+  [[ "$code" == "0" ]]
+}
+
 start_named_tunnel() {
-  ensure_cloudflared || exit 1
+  ensure_cloudflared || fail "cloudflared_missing" "cloudflared not installed" "brew install cloudflared"
   local config="$ROOT/cloudflared/config.yml"
   if [[ ! -f "$config" ]]; then
-    echo "ERROR: Missing $config — copy cloudflared/config.yml.example and configure." >&2
-    exit 1
+    fail "missing_config" "Missing $config" "copy cloudflared/config.yml.example and configure"
   fi
   if [[ -z "${CLOUDFLARE_TUNNEL_HOSTNAME:-}" ]]; then
-    echo "ERROR: Set CLOUDFLARE_TUNNEL_HOSTNAME in .env for --named mode." >&2
-    exit 1
+    fail "missing_hostname" "Set CLOUDFLARE_TUNNEL_HOSTNAME in .env for --named" ".env"
   fi
+
+  if named_service_running; then
+    echo "Durable LaunchAgent connector already running — reusing ${CLOUDFLARE_TUNNEL_HOSTNAME}" >&2
+    printf 'https://%s' "${CLOUDFLARE_TUNNEL_HOSTNAME}"
+    return 0
+  fi
+
+  if "$PY" -c "import sys; sys.path.insert(0, '$ROOT/scripts'); import chatgpt_bridge_lib as l; raise SystemExit(0 if l.connector_process_running() else 1)"; then
+    echo "Named cloudflared connector already running — reusing ${CLOUDFLARE_TUNNEL_HOSTNAME}" >&2
+    printf 'https://%s' "${CLOUDFLARE_TUNNEL_HOSTNAME}"
+    return 0
+  fi
+
+  echo "Tip: for durable named bridge use ./scripts/crowley_bridge_service.py install" >&2
   stop_existing_tunnel
   mkdir -p "$BRIDGE_DIR"
   : >"$TUNNEL_LOG"
-  echo "Starting named Cloudflare tunnel (${CLOUDFLARE_TUNNEL_HOSTNAME})..." >&2
+  echo "Starting named Cloudflare tunnel (${CLOUDFLARE_TUNNEL_HOSTNAME}) in background..." >&2
   cloudflared tunnel --config "$config" run >>"$TUNNEL_LOG" 2>&1 &
   echo $! >"$PID_FILE"
   sleep 3
+  verify_tunnel_pid_alive
   printf 'https://%s' "${CLOUDFLARE_TUNNEL_HOSTNAME}"
 }
 
@@ -119,8 +172,7 @@ start_ngrok_tunnel() {
       echo "Installing ngrok via Homebrew..." >&2
       brew install ngrok/ngrok/ngrok
     else
-      echo "ERROR: ngrok not installed. See https://ngrok.com/download" >&2
-      exit 1
+      fail "ngrok_missing" "ngrok not installed" "https://ngrok.com/download"
     fi
   fi
   stop_existing_tunnel
@@ -129,11 +181,12 @@ start_ngrok_tunnel() {
   echo "Starting ngrok → http://127.0.0.1:8765" >&2
   ngrok http 127.0.0.1:8765 --log=stdout >>"$TUNNEL_LOG" 2>&1 &
   echo $! >"$PID_FILE"
+  verify_tunnel_pid_alive
   local url=""
   for _ in $(seq 1 30); do
     url="$(
       curl -sf http://127.0.0.1:4040/api/tunnels 2>/dev/null \
-        | "$ROOT/venv/bin/python3" -c "
+        | "$PY" -c "
 import json, sys
 data = json.load(sys.stdin)
 for t in data.get('tunnels', []):
@@ -149,8 +202,7 @@ for t in data.get('tunnels', []):
     fi
     sleep 1
   done
-  echo "ERROR: Timed out waiting for ngrok URL. See $TUNNEL_LOG" >&2
-  return 1
+  fail "tunnel_not_ready" "Timed out waiting for ngrok URL" "log $TUNNEL_LOG"
 }
 
 restart_bus_if_actions_disabled() {
@@ -171,6 +223,24 @@ restart_bus_if_actions_disabled() {
   fi
 }
 
+verify_local_actions() {
+  if ! "$PY" "$ROOT/scripts/verify_chatgpt_actions_https.py" \
+    --local-only \
+    --key "${CROWLEY_ACTION_KEY}"; then
+    fail "local_actions" "Local /api/actions/health check failed" "Crowley bus, .env CROWLEY_ACTION_KEY"
+  fi
+}
+
+verify_public_actions() {
+  local url="$1"
+  if ! "$PY" "$ROOT/scripts/verify_chatgpt_actions_https.py" \
+    --url "$url" \
+    --key "${CROWLEY_ACTION_KEY}"; then
+    fail "public_actions" "Public Actions HTTPS verification failed" \
+      "cloudflared connector, DNS, .env key, ChatGPT schema URL"
+  fi
+}
+
 main() {
   case "$MODE" in
     "" | --quick) MODE="quick" ;;
@@ -181,23 +251,19 @@ main() {
       exit 0
       ;;
     *)
-      echo "Unknown option: $MODE" >&2
-      usage
-      exit 1
+      fail "usage" "Unknown option: $MODE" "./scripts/start_chatgpt_bridge.sh --help"
       ;;
   esac
 
   load_env
   require_action_key
   mkdir -p "$BRIDGE_DIR"
+  cleanup_stale_pid
 
   echo "Ensuring Crowley bus on 127.0.0.1:8765..."
   bash "$ROOT/scripts/ensure_crowley_bus.sh"
   restart_bus_if_actions_disabled
-
-  "$ROOT/venv/bin/python3" "$ROOT/scripts/verify_chatgpt_actions_https.py" \
-    --local-only \
-    --key "${CROWLEY_ACTION_KEY}"
+  verify_local_actions
 
   local public_url=""
   case "$MODE" in
@@ -216,21 +282,26 @@ main() {
   echo ""
   echo "Public URL: $public_url"
 
-  "$ROOT/venv/bin/python3" "$ROOT/scripts/patch_openapi_chatgpt.py" --url "$public_url"
+  "$PY" "$ROOT/scripts/patch_openapi_chatgpt.py" --url "$public_url"
 
   echo ""
-  "$ROOT/venv/bin/python3" "$ROOT/scripts/verify_chatgpt_actions_https.py" \
-    --url "$public_url" \
-    --key "${CROWLEY_ACTION_KEY}"
+  verify_public_actions "$public_url"
 
   echo ""
   echo "ChatGPT bridge is running."
-  echo "  Tunnel PID: $(cat "$PID_FILE")"
+  if [[ -f "$PID_FILE" ]]; then
+    echo "  Tunnel PID: $(cat "$PID_FILE")"
+  elif [[ "$MODE" == "named" ]] && named_service_running; then
+    echo "  Connector: durable LaunchAgent service"
+  fi
   echo "  Tunnel log: $TUNNEL_LOG"
   echo "  OpenAPI:    openapi-chatgpt.deployed.json (import into Custom GPT)"
   echo "  Setup doc:  docs/CHATGPT_SETUP.md"
-  echo ""
-  echo "Stop: kill \$(cat $PID_FILE)"
+  echo "  Verify:     ./scripts/verify_chatgpt_bridge.py"
+  if [[ -f "$PID_FILE" ]]; then
+    echo ""
+    echo "Stop foreground tunnel: kill \$(cat $PID_FILE)"
+  fi
 }
 
 main "$@"

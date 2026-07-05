@@ -14,6 +14,9 @@ import verify_chatgpt_actions_https as verifier  # noqa: E402
 
 
 class VerifyChatGptActionsHttpsTests(unittest.TestCase):
+    def test_default_headers_include_user_agent(self) -> None:
+        self.assertIn("User-Agent", verifier.DEFAULT_HEADERS)
+
     def test_verify_fails_when_host_unreachable(self) -> None:
         rc = verifier.verify(
             base_url="https://crowley-bridge-test.invalid",

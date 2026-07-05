@@ -87,21 +87,20 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.13 ship."""
+    """Current world-model fields after V3.9.14 ship."""
     return {
-        "phase": "V3.9.13 shipped — Secure ChatGPT Actions API",
-        "focus": "V4 Spark Lanes planned",
+        "phase": "V3.9.14 shipped — Durable ChatGPT Bridge",
+        "focus": "Durable api.javlin.ai bridge online",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
         "next_action": (
-            "Mint or plan V4.0 Spark Lanes when Mr. Go directs."
+            f"Mint or plan V4.0 Spark Lanes when {crowley.USER_NAME} directs."
         ),
         "what_changed": (
-            "V3.9.13 Secure ChatGPT Actions API: bearer-auth /api/actions/* "
-            "for Custom GPT (context, retrieve, portable packet, writeback "
-            "parse/ingest). CROWLEY_ACTION_KEY gate. OpenAPI "
-            "openapi-chatgpt.json. V3.9.12 portable terminal unchanged on main."
+            "V3.9.14 Durable ChatGPT Bridge: LaunchAgent service runner, hardened "
+            "start_chatgpt_bridge.sh, API-only tunnel templates, "
+            "verify_chatgpt_bridge.py. api.javlin.ai exposes only /api/actions/*."
         ),
     }
 

@@ -1,0 +1,101 @@
+{
+  "objective": "V3.9.14 — Durable ChatGPT Bridge: keep the stable api.javlin.ai Actions bridge online as a local macOS service while exposing only bearer-authenticated /api/actions/*.",
+  "context": "V3.9.13 shipped the Secure ChatGPT Actions API and proved api.javlin.ai can reach local Crowley through a named Cloudflare tunnel. The current setup works only while a cloudflared connector process is kept alive manually. V3.9.14 hardens the operator/runtime layer so the bridge survives login/restart and is easy to verify, without adding new ChatGPT capabilities or exposing the full Crowley UI/API.",
+  "decisions": [
+    "Use macOS LaunchAgent as the durable run strategy",
+    "Keep Crowley bound to 127.0.0.1:8765",
+    "Keep api.javlin.ai as the stable public hostname",
+    "Expose only /api/actions/* through the Cloudflare named tunnel",
+    "Keep CROWLEY_ACTION_KEY bearer auth on every Actions route",
+    "Do not commit .env, tunnel credentials, machine-specific cloudflared/config.yml, or openapi-chatgpt.deployed.json"
+  ],
+  "non_goals": [
+    "New ChatGPT Actions capabilities",
+    "OAuth or multi-user auth",
+    "Cloud hosting Crowley or moving the database off-machine",
+    "Exposing the browser UI, chat, tickets, diagnostics, brain switching, or internal /api/* routes",
+    "V4 Spark Lanes memory architecture"
+  ],
+  "risks": [
+    "A service that appears loaded but has no active tunnel connector would silently break phone ChatGPT",
+    "Forwarding the whole hostname would expose more than the Actions API",
+    "Stale PID/log state can make operator debugging confusing",
+    "LaunchAgent behavior differs between foreground terminal sessions and login-managed services",
+    "Exact public HTTPS checks can fail when the local machine is offline or network-restricted, so diagnostics must distinguish local, connector, DNS, auth, and route-boundary failures"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; focused service/script tests where practical; local authorized /api/actions/health returns 200; public authorized https://api.javlin.ai/api/actions/health returns 200 when connector is running; https://api.javlin.ai/ and /api/health return 404.",
+  "next_action": "Codex mints with scripts/codex_sync.py --create-tickets tickets/v3.9.14_durable_chatgpt_bridge.json. Cursor claims the LaunchAgent service runner ticket first.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-03",
+    "note": "Approved in Codex after stable api.javlin.ai bridge was proven live and API-only."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.14 Durable Bridge: LaunchAgent service runner",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add a macOS LaunchAgent workflow that runs the named Cloudflare connector for api.javlin.ai as a durable user service. Include install, start/load, stop/unload, status, and uninstall commands or scripts. The service should run cloudflared with the named tunnel config and keep the connector alive after login/restart without requiring an open terminal. Do not commit machine-local credentials or generated plist output if it contains absolute user-specific secrets.",
+      "acceptance": [
+        "User can install and start a LaunchAgent-backed bridge service from the repo",
+        "Service uses cloudflared/config.yml and keeps the named connector alive without an interactive terminal",
+        "Status command distinguishes loaded/running from missing/stopped",
+        "Stop/uninstall command removes or unloads the service cleanly without deleting tunnel credentials",
+        "With the service running, authorized https://api.javlin.ai/api/actions/health returns 200 and root/non-actions paths remain 404"
+      ]
+    },
+    {
+      "title": "V3.9.14 Durable Bridge: bridge script hardening",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Harden scripts/start_chatgpt_bridge.sh for named mode. It should not report success with a stale PID or an exited connector. For --named, either keep the connector alive intentionally in the foreground or delegate clearly to the LaunchAgent service workflow. Preserve quick/ngrok behavior. Always check local Actions auth before public verification and produce clear failure messages for missing key, disabled Actions API, no connector, and failed public HTTPS verification.",
+      "acceptance": [
+        "--named no longer exits in a way that kills the connector while claiming the bridge is running",
+        "Stale PID files are detected and cleaned up",
+        "Missing CROWLEY_ACTION_KEY fails before tunnel start",
+        "Local authorized /api/actions/health is checked before public HTTPS checks",
+        "Failure output tells the operator whether to inspect .env, Crowley bus, cloudflared connector, DNS, or ChatGPT schema"
+      ]
+    },
+    {
+      "title": "V3.9.14 Durable Bridge: API-only tunnel templates",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Update Cloudflare tunnel templates and setup docs so named tunnel examples forward only /api/actions/* to local Crowley. Use api.yourdomain.com in generic examples and api.javlin.ai as the current operator example where appropriate. Keep the full hostname, root path, and internal /api/* routes mapped to 404. Do not instruct users to expose the dashboard or full API.",
+      "acceptance": [
+        "cloudflared/config.yml.example includes path: ^/api/actions/.* and 404 fallback rules",
+        ".env.example uses api.yourdomain.com for CLOUDFLARE_TUNNEL_HOSTNAME",
+        "CHATGPT_SETUP and Actions docs state that only /api/actions/* should be public",
+        "Docs explain that https://api.javlin.ai/ and https://api.javlin.ai/api/health should return 404",
+        "No setup doc recommends binding Crowley to 0.0.0.0 or exposing the full /api/* tree"
+      ]
+    },
+    {
+      "title": "V3.9.14 Durable Bridge: operator verification and troubleshooting",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add a focused verification command or documented runbook for the durable bridge. It should check local Crowley health, local authorized Actions health, LaunchAgent/service status, active cloudflared connector status, public authorized Actions health, and blocked public paths. It should classify common failures: key mismatch, Actions disabled, local bus down, no connector, DNS/tunnel route not ready, and public route boundary failure.",
+      "acceptance": [
+        "Operator can run one command or documented sequence to verify the bridge",
+        "Verification confirms public health 200 for /api/actions/health with bearer auth",
+        "Verification confirms public root and /api/health are 404",
+        "Troubleshooting output distinguishes 401, 403/404, 503, 1033/502, and local connection failures",
+        "Tests or fixture-backed checks cover classifier/output logic where practical"
+      ]
+    },
+    {
+      "title": "V3.9.14 Durable Bridge: docs and version lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Lock V3.9.14 as Durable ChatGPT Bridge. Bump CROWLEY_VERSION to 3.9.14 and CROWLEY_RELEASE_LABEL to Crowley V3.9.14 Durable ChatGPT Bridge. Add a release doc and update VERSIONS, PROJECT_STATE, TICKETS, WHERE_WE_ARE, ROADMAP, ARCHITECTURE, PRE_V4 ladder, DECISION_LOG, and lock_in_state. Keep V4 Spark Lanes as next planned architecture work unless Mr. Go directs otherwise.",
+      "acceptance": [
+        "CROWLEY_VERSION is 3.9.14 and release label is Durable ChatGPT Bridge",
+        "Release doc explains local-first architecture, LaunchAgent operation, api.javlin.ai example, and API-only exposure",
+        "Onboarding docs state V3.9.14 is a bridge durability release, not new ChatGPT capability",
+        "Docs keep V4 Spark Lanes as the next planned memory architecture milestone",
+        "Preflight and full test suite pass after bus restart"
+      ]
+    }
+  ]
+}

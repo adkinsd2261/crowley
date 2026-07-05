@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.13 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V3.9.14 — local AI OS with memory backend, context bridge, and web workspace UI."""
 
 from __future__ import annotations
 
@@ -40,8 +40,12 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.13"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.13 Secure ChatGPT Actions API"
+CROWLEY_VERSION = "3.9.14"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.14 Durable ChatGPT Bridge"
+
+USER_NAME = "D"
+USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
+USER_ACTOR_SLUG = "mr_go"  # ticket/API actor id (unchanged for DB compatibility)
 
 PROJECT_ROOT = Path(__file__).parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "crowley.db"
@@ -1737,7 +1741,7 @@ TASK_FRAME_WORKING_ON_CAP = 6
 ACTIVITY_PULSE_VERBS = frozenset(
     {"session_start", "claimed", "working", "note", "handoff", "minted", "closed"}
 )
-ACTIVITY_PULSE_AGENTS = frozenset({"cursor", "codex", "crowley", "mr_go"})
+ACTIVITY_PULSE_AGENTS = frozenset({"cursor", "codex", "crowley", USER_ACTOR_SLUG})
 ACTIVITY_PULSE_WINDOW_MINUTES = 45
 ACTIVITY_WIRE_DEDUPE_MINUTES = 2
 ACTIVITY_WIRE_STALE_MINUTES = 30
@@ -2060,7 +2064,7 @@ _CONVERSATION_MODE_SHAPES: dict[str, str] = {
         "ticket-ready slices."
     ),
     "exploration": (
-        "Think with Mr. Go — open, substantive, willing to go deep when the "
+        f"Think with {USER_NAME} — open, substantive, willing to go deep when the "
         "question warrants it."
     ),
     "debug": (
@@ -5971,7 +5975,7 @@ def _activity_wire_agent_label(agent: str) -> str:
         "cursor": "Cursor",
         "codex": "Codex",
         "crowley": "Crowley",
-        "mr_go": "Mr. Go",
+        USER_ACTOR_SLUG: USER_NAME,
     }
     return labels.get(str(agent).lower(), str(agent).title())
 
@@ -6643,7 +6647,7 @@ def build_portable_context_packet(
         "surface": normalized_surface,
         "identity": {
             "crowley_role": (
-                "Crowley is the persistent context layer for D (Mr. Go). "
+                f"Crowley is the persistent context layer for {USER_NAME}. "
                 "It holds memory, tickets, project truth, and agent handoffs."
             ),
             "terminal_role": (
@@ -7184,6 +7188,465 @@ def ingest_terminal_writeback(
     }
 
 
+WRITEBACK_ACCEPTANCE_CRITERIA: list[dict[str, str]] = [
+    {
+        "id": "chatgpt_surface",
+        "description": "Session surface is chatgpt or chatgpt custom gpt",
+    },
+    {
+        "id": "not_test_fixture",
+        "description": "Session is not a dev/test fixture (fixture summary or duplicate storm)",
+    },
+    {
+        "id": "spark_staged",
+        "description": "Spark candidate status is staged",
+    },
+    {
+        "id": "content_present",
+        "description": "Spark has non-empty content",
+    },
+    {
+        "id": "why_keep_present",
+        "description": "Spark metadata includes why_keep or summary",
+    },
+    {
+        "id": "dedup_canonical",
+        "description": "Selected as the canonical row among duplicate staged content",
+    },
+    {
+        "id": "no_active_duplicate",
+        "description": "No identical active memory already exists",
+    },
+    {
+        "id": "never_auto_pinned",
+        "description": "Portable sparks remain unpinned on promotion",
+    },
+]
+
+WRITEBACK_ACCEPTANCE_REPORT_PATH = PROJECT_ROOT / ".crowley" / "writeback_acceptance_report.json"
+
+_TEST_FIXTURE_SUMMARY_MARKERS = (
+    "v3.9.12 writeback parser scope",
+    "bridge verify.",
+)
+
+
+def _normalize_writeback_content(content: str) -> str:
+    return " ".join(content.strip().lower().split())
+
+
+def _portable_session_sparks(
+    conn: sqlite3.Connection, session_receipt_id: int
+) -> list[sqlite3.Row]:
+    rows = conn.execute(
+        """
+        SELECT * FROM memory_items
+        WHERE source = ?
+          AND memory_type = 'event'
+          AND json_extract(metadata_json, '$.session_receipt_id') = ?
+        ORDER BY id ASC
+        """,
+        (PORTABLE_TERMINAL_SOURCE, session_receipt_id),
+    ).fetchall()
+    return list(rows)
+
+
+def _is_test_fixture_portable_session(
+    session_row: sqlite3.Row, spark_rows: list[sqlite3.Row]
+) -> bool:
+    summary = _normalize_writeback_content(str(session_row["content"] or ""))
+    for marker in _TEST_FIXTURE_SUMMARY_MARKERS:
+        if marker in summary:
+            return True
+    if not spark_rows:
+        return False
+    unique = {
+        _normalize_writeback_content(str(row["content"] or "")) for row in spark_rows
+    }
+    return len(spark_rows) > 5 and len(unique) <= 3
+
+
+def _find_active_memory_by_content(
+    conn: sqlite3.Connection, *, content: str, project_id: int | None
+) -> int | None:
+    normalized = _normalize_writeback_content(content)
+    if not normalized:
+        return None
+    rows = conn.execute(
+        """
+        SELECT id, content FROM memory_items
+        WHERE status = 'active' AND (project_id = ? OR (? IS NULL AND project_id IS NULL))
+        """,
+        (project_id, project_id),
+    ).fetchall()
+    for row in rows:
+        if _normalize_writeback_content(str(row["content"] or "")) == normalized:
+            return int(row["id"])
+    return None
+
+
+def _evaluate_portable_spark_acceptance(
+    *,
+    session_row: sqlite3.Row,
+    spark_row: sqlite3.Row,
+    spark_rows: list[sqlite3.Row],
+    is_test_fixture: bool,
+    canonical_ids: set[int],
+    conn: sqlite3.Connection,
+) -> dict[str, object]:
+    meta = _memory_item_metadata(spark_row)
+    surface = str(meta.get("surface") or "").strip().lower()
+    why_keep = str(meta.get("why_keep") or spark_row["summary"] or "").strip()
+    content = str(spark_row["content"] or "").strip()
+    criteria: dict[str, bool] = {
+        "chatgpt_surface": surface.startswith("chatgpt"),
+        "not_test_fixture": not is_test_fixture,
+        "spark_staged": str(spark_row["status"] or "") == PORTABLE_SPARK_STATUS,
+        "content_present": bool(content),
+        "why_keep_present": len(why_keep) >= MEMORY_GATE_WHY_MIN_LEN,
+        "dedup_canonical": int(spark_row["id"]) in canonical_ids,
+        "no_active_duplicate": _find_active_memory_by_content(
+            conn,
+            content=content,
+            project_id=int(spark_row["project_id"])
+            if spark_row["project_id"] is not None
+            else None,
+        )
+        is None,
+        "never_auto_pinned": int(spark_row["pinned"] or 0) == 0,
+    }
+    accepted = all(criteria.values())
+    reason = "accepted" if accepted else next(
+        key for key, ok in criteria.items() if not ok
+    )
+    return {
+        "memory_item_id": int(spark_row["id"]),
+        "session_receipt_id": int(session_row["id"]),
+        "content": content,
+        "summary": why_keep or None,
+        "lane": meta.get("lane"),
+        "sensitivity": meta.get("sensitivity"),
+        "surface": surface or None,
+        "status_before": str(spark_row["status"] or ""),
+        "accepted": accepted,
+        "rejection_reason": None if accepted else reason,
+        "criteria": criteria,
+        "duplicate_of": None,
+    }
+
+
+def _canonical_staged_spark_ids(spark_rows: list[sqlite3.Row]) -> tuple[set[int], dict[int, list[int]]]:
+    canonical: dict[str, int] = {}
+    duplicates: dict[int, list[int]] = {}
+    for row in spark_rows:
+        key = _normalize_writeback_content(str(row["content"] or ""))
+        row_id = int(row["id"])
+        if not key:
+            continue
+        if key not in canonical:
+            canonical[key] = row_id
+            continue
+        master = canonical[key]
+        duplicates.setdefault(master, []).append(row_id)
+    return set(canonical.values()), duplicates
+
+
+def list_portable_writeback_sessions(
+    *, conn: sqlite3.Connection | None = None
+) -> list[dict[str, object]]:
+    own_conn = conn is None
+    if own_conn:
+        conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM memory_items
+            WHERE source = ? AND memory_type = 'summary'
+            ORDER BY datetime(created_at) ASC, id ASC
+            """,
+            (PORTABLE_TERMINAL_SOURCE,),
+        ).fetchall()
+        sessions: list[dict[str, object]] = []
+        for row in rows:
+            meta = _memory_item_metadata(row)
+            surface = str(meta.get("surface") or "").strip().lower()
+            if not surface.startswith("chatgpt"):
+                continue
+            sparks = _portable_session_sparks(conn, int(row["id"]))
+            is_fixture = _is_test_fixture_portable_session(row, sparks)
+            sessions.append(
+                {
+                    "session_receipt_id": int(row["id"]),
+                    "created_at": str(row["created_at"]),
+                    "surface": surface,
+                    "model": meta.get("model"),
+                    "summary": str(row["content"] or ""),
+                    "classification": "test_fixture" if is_fixture else "user_session",
+                    "spark_rows_total": len(sparks),
+                    "spark_rows_unique": len(
+                        {
+                            _normalize_writeback_content(str(s["content"] or ""))
+                            for s in sparks
+                        }
+                    ),
+                    "metadata": meta,
+                }
+            )
+        sessions.sort(
+            key=lambda item: (
+                0 if item["classification"] == "user_session" else 1,
+                str(item["created_at"]),
+            ),
+        )
+        user_sessions = [s for s in sessions if s["classification"] == "user_session"]
+        fixtures = [s for s in sessions if s["classification"] == "test_fixture"]
+        user_sessions.sort(key=lambda item: str(item["created_at"]), reverse=True)
+        fixtures.sort(key=lambda item: str(item["created_at"]), reverse=True)
+        return user_sessions + fixtures
+    finally:
+        if own_conn and conn is not None:
+            conn.close()
+
+
+def build_portable_writeback_acceptance_report(
+    *,
+    apply: bool = False,
+    reviewer: str = "operator",
+) -> dict[str, object]:
+    """Analyze staged portable writeback sparks; optionally promote accepted rows."""
+    conn = connect_db()
+    try:
+        sessions = list_portable_writeback_sessions(conn=conn)
+        accepted: list[dict[str, object]] = []
+        rejected: list[dict[str, object]] = []
+        deduped: list[dict[str, object]] = []
+        promoted_metadata: list[dict[str, object]] = []
+
+        for index, session in enumerate(sessions, start=1):
+            session_id = int(session["session_receipt_id"])
+            session_row = conn.execute(
+                "SELECT * FROM memory_items WHERE id = ?", (session_id,)
+            ).fetchone()
+            if session_row is None:
+                continue
+            spark_rows = _portable_session_sparks(conn, session_id)
+            is_fixture = session["classification"] == "test_fixture"
+            canonical_ids, duplicate_map = _canonical_staged_spark_ids(spark_rows)
+            session["sort_rank"] = index
+
+            for spark_row in spark_rows:
+                spark_id = int(spark_row["id"])
+                duplicate_master = next(
+                    (
+                        master_id
+                        for master_id, dup_ids in duplicate_map.items()
+                        if spark_id in dup_ids
+                    ),
+                    None,
+                )
+                if duplicate_master is not None:
+                    evaluation = {
+                        "memory_item_id": spark_id,
+                        "session_receipt_id": session_id,
+                        "content": str(spark_row["content"] or ""),
+                        "accepted": False,
+                        "rejection_reason": "duplicate_staged_row",
+                        "duplicate_of": duplicate_master,
+                        "criteria": {
+                            "dedup_canonical": False,
+                        },
+                    }
+                    deduped.append(evaluation)
+                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
+                        conn.execute(
+                            """
+                            UPDATE memory_items
+                            SET status = 'merged', merged_into_id = ?, updated_at = ?
+                            WHERE id = ?
+                            """,
+                            (duplicate_master, _now_iso(), spark_id),
+                        )
+                        attach_memory_item_metadata(
+                            spark_id,
+                            {
+                                "review_rejected_as": "duplicate_staged_row",
+                                "merged_into_id": duplicate_master,
+                                "reviewed_at": _now_iso(),
+                                "reviewed_by": reviewer,
+                            },
+                            conn=conn,
+                        )
+                    continue
+
+                evaluation = _evaluate_portable_spark_acceptance(
+                    session_row=session_row,
+                    spark_row=spark_row,
+                    spark_rows=spark_rows,
+                    is_test_fixture=is_fixture,
+                    canonical_ids=canonical_ids,
+                    conn=conn,
+                )
+                if evaluation["accepted"]:
+                    accepted.append(evaluation)
+                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
+                        conn.execute(
+                            """
+                            UPDATE memory_items
+                            SET status = 'active', updated_at = ?
+                            WHERE id = ?
+                            """,
+                            (_now_iso(), spark_id),
+                        )
+                        attach_memory_item_metadata(
+                            spark_id,
+                            {
+                                "candidate": False,
+                                "promoted_at": _now_iso(),
+                                "promoted_by": reviewer,
+                                "promotion_source": "portable_writeback_acceptance",
+                                "acceptance_criteria": evaluation["criteria"],
+                            },
+                            conn=conn,
+                        )
+                        vector = embed_text(str(spark_row["content"]))
+                        if vector and len(vector) == EMBED_DIM:
+                            provider = _memory_embed_provider()
+                            model_name = (
+                                "text-embedding-3-small"
+                                if provider == "openai"
+                                else EMBED_MODEL_LOCAL
+                            )
+                            index_memory_embedding(
+                                conn, spark_id, vector, model_name
+                            )
+                else:
+                    rejected.append(evaluation)
+                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
+                        conn.execute(
+                            """
+                            UPDATE memory_items
+                            SET status = 'rejected', updated_at = ?
+                            WHERE id = ?
+                            """,
+                            (_now_iso(), spark_id),
+                        )
+                        attach_memory_item_metadata(
+                            spark_id,
+                            {
+                                "review_rejected_as": evaluation["rejection_reason"],
+                                "reviewed_at": _now_iso(),
+                                "reviewed_by": reviewer,
+                            },
+                            conn=conn,
+                        )
+
+            if not is_fixture and apply:
+                meta = session["metadata"]
+                assert isinstance(meta, dict)
+                for field, memory_type in (
+                    ("decisions", "decision"),
+                    ("lessons", "lesson"),
+                ):
+                    values = meta.get(field) or []
+                    if not isinstance(values, list):
+                        continue
+                    for bullet in values:
+                        text = str(bullet or "").strip()
+                        if not text:
+                            continue
+                        if _find_active_memory_by_content(
+                            conn,
+                            content=text,
+                            project_id=int(session_row["project_id"])
+                            if session_row["project_id"] is not None
+                            else None,
+                        ):
+                            continue
+                        item_id = save_memory_item(
+                            memory_type,
+                            text,
+                            summary=text,
+                            source=PORTABLE_TERMINAL_SOURCE,
+                            project_id=int(session_row["project_id"])
+                            if session_row["project_id"] is not None
+                            else None,
+                            importance=4 if memory_type == "decision" else 3,
+                            confidence=0.85,
+                            pinned=False,
+                            status="active",
+                            metadata={
+                                "promoted_from": "session_metadata",
+                                "session_receipt_id": session_id,
+                                "surface": meta.get("surface"),
+                                "promoted_at": _now_iso(),
+                                "promoted_by": reviewer,
+                            },
+                            conn=conn,
+                        )
+                        if item_id is not None:
+                            promoted_metadata.append(
+                                {
+                                    "memory_item_id": int(item_id),
+                                    "session_receipt_id": session_id,
+                                    "memory_type": memory_type,
+                                    "content": text,
+                                }
+                            )
+
+        if apply:
+            conn.commit()
+
+        report = {
+            "status": "ok",
+            "generated_at": _now_iso(),
+            "applied": apply,
+            "reviewer": reviewer,
+            "criteria": WRITEBACK_ACCEPTANCE_CRITERIA,
+            "sessions": sessions,
+            "accepted": accepted,
+            "rejected": rejected,
+            "deduped": deduped,
+            "promoted_session_metadata": promoted_metadata,
+            "counts": {
+                "sessions": len(sessions),
+                "accepted": len(accepted),
+                "rejected": len(rejected),
+                "deduped": len(deduped),
+                "promoted_session_metadata": len(promoted_metadata),
+            },
+        }
+        return report
+    finally:
+        conn.close()
+
+
+def write_portable_writeback_acceptance_report(
+    report: dict[str, object],
+    *,
+    path: Path | None = None,
+) -> Path:
+    target = path or WRITEBACK_ACCEPTANCE_REPORT_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return target
+
+
+def load_portable_writeback_acceptance_report(
+    *, path: Path | None = None
+) -> dict[str, object] | None:
+    target = path or WRITEBACK_ACCEPTANCE_REPORT_PATH
+    if not target.is_file():
+        return None
+    try:
+        parsed = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def get_agent_role(agent: str) -> str:
     """Identity text for agents in the Crowley pipeline (sync bundles, docs)."""
     normalized = agent.strip().lower()
@@ -7198,7 +7661,7 @@ def get_agent_role(agent: str) -> str:
             "You are Cursor in the Crowley pipeline — the builder.\n"
             "Your job: implement, test, ship code, write builder_handoff and notes to Crowley.\n"
             "You are not Crowley. Crowley is the running system — memory, world model, bus — you build against it.\n"
-            "You do not architect in Codex's lane unless Mr. Go explicitly asks for planning here.\n"
+            f"You do not architect in Codex's lane unless {USER_NAME} explicitly asks for planning here.\n"
             "Read Codex only through Crowley's events_from_other_agents — never their chat history."
         ),
         "chatgpt": (
@@ -7859,11 +8322,11 @@ def search_memories(user_message: str, limit: int = MEMORY_LIMIT) -> list[sqlite
 
 
 def _personality_prompt() -> str:
-    return """You are Crowley — not an assistant talking about Crowley, but the running system on this machine: SQLite memory, world model, hybrid retrieval, passive extraction, the context bridge at 127.0.0.1:8765, and the chat Mr. Go is in right now. The readout blocks below are your own state.
+    return f"""You are Crowley — not an assistant talking about Crowley, but the running system on this machine: SQLite memory, world model, hybrid retrieval, passive extraction, the context bridge at 127.0.0.1:8765, and the chat {USER_NAME} is in right now. The readout blocks below are your own state.
 
-In the pipeline: Codex architects (plans, decisions). Cursor builds (ships code). They post handoffs into your memory — you hold truth and speak from the cockpit with Mr. Go. You don't code in Cursor's lane or plan in Codex's lane unless Mr. Go is working with you directly on Crowley internals.
+In the pipeline: Codex architects (plans, decisions). Cursor builds (ships code). They post handoffs into your memory — you hold truth and speak from the cockpit with {USER_NAME}. You don't code in Cursor's lane or plan in Codex's lane unless {USER_NAME} is working with you directly on Crowley internals.
 
-Voice: project co-founder — warm, direct, useful, willing to have a point of view. Partner to Mr. Go without subservience. Match the moment; skip filler and performance.
+Voice: project co-founder — warm, direct, useful, willing to have a point of view. Partner to {USER_NAME} without subservience. Match the moment; skip filler and performance. Address {USER_NAME} by name; an occasional "{USER_NAME_PERSONALITY}" is fine when the moment calls for warmth or personality — default to {USER_NAME}.
 
 Read the message before you respond. Notice what kind of moment it is and let that set the shape of your reply.
 
@@ -7879,7 +8342,7 @@ You're allowed to prefer one path, push back, or say you don't like something wh
 
 
 def _ground_truth_prompt() -> str:
-    return """When Mr. Go asks when you last heard from Codex or Cursor, answer from the Agent activity timestamps — never from chat memory or vague recency like "yesterday" unless the timestamp supports it.
+    return f"""When {USER_NAME} asks when you last heard from Codex or Cursor, answer from the Agent activity timestamps — never from chat memory or vague recency like "yesterday" unless the timestamp supports it.
 
 When asked what work is open, assigned, or blocked, answer from the Tickets block — not from hybrid memory alone.
 
@@ -8653,8 +9116,8 @@ def main() -> None:
     """Set up the DB and run the interactive CLI loop."""
     setup_db()
     start_spark_timer()
-    print("Go for Crowley.\n")
-    print("Morning, Mr. Go.\n")
+    print("Crowley online.\n")
+    print(f"Morning, {USER_NAME}.\n")
     print("Memory: online")
     print("Tasks: online")
     print(f"Brain: {_brain_banner_label()}\n")

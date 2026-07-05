@@ -21,7 +21,7 @@ CANON_TITLES = [
     "Canon: Agents",
     "Canon: Decisions",
     "Canon: Work",
-    "Canon: Mr. Go",
+    "Canon: D",
     "Canon: Recent",
 ]
 

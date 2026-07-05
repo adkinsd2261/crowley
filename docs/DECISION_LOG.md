@@ -18,6 +18,20 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-044 — V3.9.14 Durable ChatGPT Bridge shipped
+
+**Date:** 2026-07-05
+**Status:** Accepted
+**Evidence:** `crowley.py` version `3.9.14`, `scripts/crowley_bridge_service.py`, `scripts/verify_chatgpt_bridge.py`, `scripts/chatgpt_bridge_lib.py`, hardened `start_chatgpt_bridge.sh`, API-only `cloudflared/config.yml.example`, `docs/V3.9.14_DURABLE_CHATGPT_BRIDGE.md`, tickets #82–#86, **353 tests**
+
+**Decision:** Keep `api.javlin.ai` as stable public hostname; expose only `/api/actions/*` via named tunnel ingress; durable macOS LaunchAgent runs connector; foreground bridge script reuses durable connector when running.
+
+**Rejected:**
+- Exposing full hostname or internal `/api/*` routes
+- Auto-promoting writeback sparks (unchanged from V3.9.12/13)
+
+---
+
 ## ADR-043 — V3.9.13 Secure ChatGPT Actions API shipped
 
 **Date:** 2026-07-03
@@ -707,7 +721,7 @@ Generic chatbot tone and invented user facts reduce trust.
 
 ### Decision
 
-Mr. Go / D addressing; calm systems-minded voice; explicit rule to say “I don't have that stored yet” when facts absent from retrieved context.
+Mr. Go / D addressing; calm systems-minded voice; explicit rule to say “I don't have that stored yet” when facts absent from retrieved context. Default address is D; occasional Mr. Go for personality.
 
 ### Rejected
 

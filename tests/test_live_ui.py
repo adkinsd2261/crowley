@@ -113,14 +113,14 @@ class WorldDashboardTests(IsolatedDbTestCase):
         self.assertIn("Agent work board", js)
         self.assertIn("not the agent board", js)
 
-    def test_onboarding_docs_locked_for_v3913_chatgpt_actions(self) -> None:
+    def test_onboarding_docs_locked_for_v3914_durable_bridge(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.13"', where)
-        self.assertIn("V3.9.13", versions)
-        self.assertIn("ChatGPT Actions", versions)
+        self.assertIn('CROWLEY_VERSION = "3.9.14"', where)
+        self.assertIn("V3.9.14", versions)
+        self.assertIn("Durable ChatGPT Bridge", versions)
+        self.assertTrue((ROOT / "docs" / "V3.9.14_DURABLE_CHATGPT_BRIDGE.md").is_file())
         self.assertTrue((ROOT / "docs" / "CHATGPT_ACTIONS_API.md").is_file())
-        self.assertTrue((ROOT / "docs" / "V3.9.13_SECURE_CHATGPT_ACTIONS_API.md").is_file())
         self.assertTrue((ROOT / "openapi-chatgpt.json").is_file())
         actions_doc = (ROOT / "docs" / "CHATGPT_ACTIONS_API.md").read_text(encoding="utf-8")
         self.assertIn("CROWLEY_ACTION_KEY", actions_doc)

@@ -1,20 +1,20 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.13 on `main` · V4 next · **2026-07-03**
+**As of:** V3.9.14 · V4 next · **2026-07-05**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.13 Secure ChatGPT Actions API is on `main`. Set `CROWLEY_ACTION_KEY` for `/api/actions/*`; restart bus so `/api/health` reports `3.9.13`.
+**Git note:** V3.9.14 Durable ChatGPT Bridge shipped locally. Set `CROWLEY_ACTION_KEY` for `/api/actions/*`; restart bus so `/api/health` reports `3.9.14`.
 
 ---
 
 ## 1. What Crowley is right now
 
-Crowley is a **local-first AI OS** for Mr. Go: chat UI + SQLite memory + world model + HTTP bus on `127.0.0.1:8765`.
+Crowley is a **local-first AI OS** for D: chat UI + SQLite memory + world model + HTTP bus on `127.0.0.1:8765`.
 
 **Pipeline (hardwired):**
 
 ```
-Mr. Go ──► Crowley (memory, tickets, chat, docs)
+D ──► Crowley (memory, tickets, chat, docs)
               ▲ handoffs only
          Codex (architect) │ Cursor (builder)
 ```
@@ -47,10 +47,11 @@ Mr. Go ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
 | **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
+| **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.13"` (`Crowley V3.9.13 Secure ChatGPT Actions API`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.14"` (`Crowley V3.9.14 Durable ChatGPT Bridge`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -160,7 +161,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
 | **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
-**Resume workflow:** Plan or mint **V4.0 Spark Lanes** when Mr. Go directs.
+**Resume workflow:** Plan or mint **V4.0 Spark Lanes** when D directs.
 
 ---
 

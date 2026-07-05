@@ -1,19 +1,27 @@
-# Named Cloudflare Tunnel for Crowley ChatGPT Actions (production-style).
+# Named Cloudflare Tunnel for Crowley ChatGPT Actions (API-only).
 #
 # Setup (once):
 #   1. cloudflared tunnel login
 #   2. cloudflared tunnel create crowley-chatgpt
 #   3. Copy this file to cloudflared/config.yml
 #   4. Replace TUNNEL_ID and credentials-file path with output from step 2
-#   5. cloudflared tunnel route dns crowley-chatgpt crowley.YOUR_DOMAIN.com
-#   6. Set in .env: CLOUDFLARE_TUNNEL_HOSTNAME=crowley.YOUR_DOMAIN.com
+#   5. cloudflared tunnel route dns crowley-chatgpt api.yourdomain.com
+#   6. Set in .env: CLOUDFLARE_TUNNEL_HOSTNAME=api.yourdomain.com
 #
-# Start: ./scripts/start_chatgpt_bridge.sh --named
+# Operator example (current): api.javlin.ai
+#
+# Start durable connector: ./scripts/crowley_bridge_service.py install
+# Start foreground (testing): ./scripts/start_chatgpt_bridge.sh --named
 
 tunnel: TUNNEL_ID
 credentials-file: .crowley/cloudflared/TUNNEL_ID.json
 
 ingress:
-  - hostname: crowley.YOUR_DOMAIN.com
+  # Only bearer-authenticated Actions routes reach Crowley.
+  - hostname: api.yourdomain.com
+    path: ^/api/actions/.*
     service: http://127.0.0.1:8765
+  # Block root and all other paths on this hostname.
+  - hostname: api.yourdomain.com
+    service: http_status:404
   - service: http_status:404

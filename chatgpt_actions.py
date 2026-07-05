@@ -198,3 +198,26 @@ def actions_writeback_ingest(
     if result.get("status") != "ok":
         return JSONResponse(result, status_code=400)
     return JSONResponse(result, status_code=201)
+
+
+@router.get("/writeback/acceptance")
+def actions_writeback_acceptance(
+    _auth: None = Depends(require_actions_bearer),
+    refresh: bool = Query(False),
+    apply: bool = Query(False),
+) -> JSONResponse:
+    if refresh or apply:
+        report = crowley.build_portable_writeback_acceptance_report(
+            apply=apply,
+            reviewer="chatgpt_actions_api",
+        )
+        report_path = crowley.write_portable_writeback_acceptance_report(report)
+        report["report_path"] = str(report_path)
+        return JSONResponse(report)
+    cached = crowley.load_portable_writeback_acceptance_report()
+    if cached is not None:
+        return JSONResponse(cached)
+    report = crowley.build_portable_writeback_acceptance_report(apply=False)
+    report_path = crowley.write_portable_writeback_acceptance_report(report)
+    report["report_path"] = str(report_path)
+    return JSONResponse(report)

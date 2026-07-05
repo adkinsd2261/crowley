@@ -1,0 +1,2851 @@
+{
+  "status": "ok",
+  "generated_at": "2026-07-03T21:02:23.569022+00:00",
+  "applied": true,
+  "reviewer": "cursor",
+  "criteria": [
+    {
+      "id": "chatgpt_surface",
+      "description": "Session surface is chatgpt or chatgpt custom gpt"
+    },
+    {
+      "id": "not_test_fixture",
+      "description": "Session is not a dev/test fixture (fixture summary or duplicate storm)"
+    },
+    {
+      "id": "spark_staged",
+      "description": "Spark candidate status is staged"
+    },
+    {
+      "id": "content_present",
+      "description": "Spark has non-empty content"
+    },
+    {
+      "id": "why_keep_present",
+      "description": "Spark metadata includes why_keep or summary"
+    },
+    {
+      "id": "dedup_canonical",
+      "description": "Selected as the canonical row among duplicate staged content"
+    },
+    {
+      "id": "no_active_duplicate",
+      "description": "No identical active memory already exists"
+    },
+    {
+      "id": "never_auto_pinned",
+      "description": "Portable sparks remain unpinned on promotion"
+    }
+  ],
+  "sessions": [
+    {
+      "session_receipt_id": 802,
+      "created_at": "2026-07-03T20:59:54.443763+00:00",
+      "surface": "chatgpt",
+      "model": "gpt-5.5",
+      "summary": "Captured V3.9.15 GPT Toolbelt planning direction: direct read/inspection/write tools, GitHub visibility, ticket operations, QA visibility, planning bundles, and observability. Marked as requiring further Codex planning/QA before ticket minting.",
+      "classification": "user_session",
+      "spark_rows_total": 3,
+      "spark_rows_unique": 3,
+      "metadata": {
+        "context_pull_candidates": [],
+        "corrections": [],
+        "decisions": [],
+        "lessons": [],
+        "model": "gpt-5.5",
+        "open_loops": [
+          "Coordinate with Codex to refine and QA the V3.9.15 GPT Toolbelt scope before minting tickets.",
+          "Decide exact API shapes and route names for direct lookup, recent ingests, GitHub read tools, and inspection/observability tools."
+        ],
+        "provider": null,
+        "spark_count": 3,
+        "surface": "chatgpt",
+        "writeback_format": "crowley_terminal_writeback_v1"
+      },
+      "sort_rank": 1
+    },
+    {
+      "session_receipt_id": 799,
+      "created_at": "2026-07-03T20:50:45.726373+00:00",
+      "surface": "chatgpt",
+      "model": "gpt-5.5",
+      "summary": "Clarified long-term operating model for Crowley as an active context ledger and defined agent responsibilities.",
+      "classification": "user_session",
+      "spark_rows_total": 2,
+      "spark_rows_unique": 2,
+      "metadata": {
+        "context_pull_candidates": [],
+        "corrections": [],
+        "decisions": [],
+        "lessons": [],
+        "model": "gpt-5.5",
+        "open_loops": [],
+        "provider": null,
+        "spark_count": 2,
+        "surface": "chatgpt",
+        "writeback_format": "crowley_terminal_writeback_v1"
+      },
+      "sort_rank": 2
+    },
+    {
+      "session_receipt_id": 758,
+      "created_at": "2026-07-03T08:29:33.086065+00:00",
+      "surface": "chatgpt custom gpt",
+      "model": "GPT-5.5",
+      "summary": "Validated the ChatGPT Actions bridge end-to-end from the Custom GPT. Retrieved project context and memories, discussed V4 Spark Lanes, architecture, security model, and future direction. User reflected on long-term memory accumulation and approved saving a session report.",
+      "classification": "user_session",
+      "spark_rows_total": 2,
+      "spark_rows_unique": 1,
+      "metadata": {
+        "context_pull_candidates": [],
+        "corrections": [],
+        "decisions": [
+          "Treat ChatGPT as the reasoning/interface layer and Crowley as the persistent context layer.",
+          "Continue toward V4 Spark Lanes after V3.9.13 bridge work."
+        ],
+        "lessons": [
+          "The current integration provides a natural conversational interface into Crowley while keeping memory local-first.",
+          "Meaningful long-term value is expected to come from accumulated patterns rather than isolated memories."
+        ],
+        "model": "GPT-5.5",
+        "open_loops": [
+          "Begin V4 Spark Lanes planning and ticket minting when directed."
+        ],
+        "provider": "openai",
+        "spark_count": 1,
+        "surface": "chatgpt custom gpt",
+        "writeback_format": "crowley_terminal_writeback_v1"
+      },
+      "sort_rank": 3
+    },
+    {
+      "session_receipt_id": 528,
+      "created_at": "2026-07-03T04:46:24.417074+00:00",
+      "surface": "chatgpt",
+      "model": "gpt-4.1",
+      "summary": "Discussed V3.9.12 writeback parser scope with D.",
+      "classification": "test_fixture",
+      "spark_rows_total": 226,
+      "spark_rows_unique": 2,
+      "metadata": {
+        "context_pull_candidates": [
+          "Latest Codex architect handoff on V3.9.12"
+        ],
+        "corrections": [],
+        "decisions": [
+          "Ship parser before ingest (#78)."
+        ],
+        "lessons": [
+          "Validate writeback without touching memory."
+        ],
+        "model": "gpt-4.1",
+        "open_loops": [
+          "CLI import workflow (#79)."
+        ],
+        "provider": "openai",
+        "spark_count": 2,
+        "surface": "chatgpt",
+        "writeback_format": "crowley_terminal_writeback_v1"
+      },
+      "sort_rank": 4
+    }
+  ],
+  "accepted": [
+    {
+      "memory_item_id": 803,
+      "session_receipt_id": 802,
+      "content": "V3.9.15 should be planned as a GPT Toolbelt release. Core must-haves: direct object lookup for memory, ticket, session receipt, spark, decision, handoff, and project state; list operations for memories, tickets, sessions, sparks, decisions, handoffs; semantic search/retrieve; ticket mint/update/linking; GitHub read tools including repo status, read_file, search_code, branches, PRs, issues, compare_refs, commits, and workflow runs; QA visibility including health bundle, version constants, test status, and workflow runs; writeback/decision tools for sessions, sparks, decisions, lessons, open loops, corrections; and planning bundle builders for ticket context, release context, and agent handoffs.",
+      "summary": "Defines the candidate scope for the next Crowley implementation release after the durable bridge.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 804,
+      "session_receipt_id": 802,
+      "content": "V3.9.15 must include a new inspection/observability layer so GPT can verify what Crowley stored after writeback. Required tools include get_session_receipt(id), get_spark(id), show_recent_ingests(), show_recent_updates(), memory_lineage(id), why_retrieved(id), show_writeback_result(id), and eventually diff_context(before, after). This is needed because writeback currently returns IDs but GPT cannot directly reopen those objects through the current retrieval API.",
+      "summary": "Captures a concrete gap discovered during live ChatGPT bridge use: ingestion works, but direct verification/inspection is missing.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 805,
+      "session_receipt_id": 802,
+      "content": "V3.9.15 GPT Toolbelt should remain bounded: GPT may read repo/tickets/memories, mint/update tickets, stage decisions, and write session receipts, but should not write code, run arbitrary shell, merge PRs, push commits, edit production files, change secrets, or deploy. The plan requires further planning and QA with Codex before being minted into implementation tickets.",
+      "summary": "Preserves safe autonomy boundaries and makes clear this is a planning direction requiring Codex refinement, not a final shipped scope.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 800,
+      "session_receipt_id": 799,
+      "content": "Crowley's long-term purpose is an amassed context ledger with active recall spanning project knowledge and life context, with ChatGPT as the primary intake surface.",
+      "summary": "Defines the product vision and memory architecture.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 801,
+      "session_receipt_id": 799,
+      "content": "Desired operating model: D + GPT handle planning, prioritization, ticket minting, and strategic oversight; Cursor implements; Codex performs QA; Crowley coordinates memory, tickets, and truth.",
+      "summary": "Establishes long-term agent roles and workflow.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 759,
+      "session_receipt_id": 758,
+      "content": "User is excited to observe how long-term memory accumulation changes the experience over time.",
+      "summary": "Guides future memory system design discussions and priorities.",
+      "lane": "operating_style",
+      "sensitivity": "normal",
+      "surface": "chatgpt custom gpt",
+      "status_before": "staged",
+      "accepted": true,
+      "rejection_reason": null,
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": true,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    }
+  ],
+  "rejected": [
+    {
+      "memory_item_id": 529,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "summary": "Shapes portable terminal size discipline.",
+      "lane": "work",
+      "sensitivity": "normal",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": false,
+      "rejection_reason": "not_test_fixture",
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": false,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    },
+    {
+      "memory_item_id": 530,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "summary": "Operating rhythm affects build quality.",
+      "lane": "health",
+      "sensitivity": "sensitive",
+      "surface": "chatgpt",
+      "status_before": "staged",
+      "accepted": false,
+      "rejection_reason": "not_test_fixture",
+      "criteria": {
+        "chatgpt_surface": true,
+        "not_test_fixture": false,
+        "spark_staged": true,
+        "content_present": true,
+        "why_keep_present": true,
+        "dedup_canonical": true,
+        "no_active_duplicate": true,
+        "never_auto_pinned": true
+      },
+      "duplicate_of": null
+    }
+  ],
+  "deduped": [
+    {
+      "memory_item_id": 760,
+      "session_receipt_id": 758,
+      "content": "User is excited to observe how long-term memory accumulation changes the experience over time.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 759,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 533,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 534,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 535,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 536,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 537,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 538,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 540,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 541,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 542,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 543,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 544,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 545,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 547,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 548,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 549,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 550,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 551,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 552,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 553,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 554,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 555,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 556,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 557,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 558,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 559,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 560,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 564,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 565,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 566,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 567,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 568,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 569,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 570,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 571,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 572,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 573,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 574,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 575,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 576,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 577,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 578,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 579,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 580,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 581,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 582,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 583,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 585,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 586,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 587,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 588,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 590,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 591,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 592,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 593,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 594,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 595,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 596,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 597,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 598,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 599,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 600,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 601,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 602,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 603,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 604,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 605,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 606,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 607,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 608,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 609,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 610,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 611,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 612,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 613,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 616,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 617,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 618,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 619,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 620,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 621,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 622,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 623,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 624,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 625,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 626,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 627,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 628,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 629,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 630,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 631,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 632,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 633,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 634,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 635,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 636,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 637,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 638,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 639,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 642,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 643,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 644,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 645,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 646,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 647,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 648,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 649,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 650,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 651,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 652,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 653,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 657,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 658,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 659,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 660,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 661,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 662,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 665,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 666,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 667,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 668,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 669,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 670,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 671,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 672,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 673,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 674,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 675,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 676,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 681,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 682,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 683,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 684,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 685,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 686,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 687,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 688,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 689,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 690,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 691,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 692,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 693,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 694,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 695,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 696,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 697,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 698,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 700,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 701,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 702,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 703,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 704,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 705,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 706,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 707,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 708,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 709,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 710,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 711,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 712,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 713,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 714,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 715,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 716,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 717,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 720,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 721,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 722,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 723,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 724,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 725,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 726,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 727,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 728,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 729,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 730,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 731,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 732,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 733,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 734,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 735,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 736,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 737,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 738,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 739,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 740,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 741,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 742,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 743,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 744,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 745,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 746,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 747,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 748,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 749,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 750,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 751,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 752,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 753,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 754,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 755,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 762,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 763,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 764,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 765,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 766,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 767,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 768,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 769,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 770,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 771,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 772,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 773,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 780,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 781,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 782,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 783,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 784,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 785,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 786,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 787,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 788,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 789,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 790,
+      "session_receipt_id": 528,
+      "content": "D wants paste-ready packets under 12k chars.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 529,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    },
+    {
+      "memory_item_id": 791,
+      "session_receipt_id": 528,
+      "content": "Morning walks help D reset before deep work.",
+      "accepted": false,
+      "rejection_reason": "duplicate_staged_row",
+      "duplicate_of": 530,
+      "criteria": {
+        "dedup_canonical": false
+      }
+    }
+  ],
+  "promoted_session_metadata": [
+    {
+      "memory_item_id": 806,
+      "session_receipt_id": 758,
+      "memory_type": "decision",
+      "content": "Treat ChatGPT as the reasoning/interface layer and Crowley as the persistent context layer."
+    },
+    {
+      "memory_item_id": 807,
+      "session_receipt_id": 758,
+      "memory_type": "decision",
+      "content": "Continue toward V4 Spark Lanes after V3.9.13 bridge work."
+    },
+    {
+      "memory_item_id": 808,
+      "session_receipt_id": 758,
+      "memory_type": "lesson",
+      "content": "The current integration provides a natural conversational interface into Crowley while keeping memory local-first."
+    },
+    {
+      "memory_item_id": 809,
+      "session_receipt_id": 758,
+      "memory_type": "lesson",
+      "content": "Meaningful long-term value is expected to come from accumulated patterns rather than isolated memories."
+    }
+  ],
+  "counts": {
+    "sessions": 4,
+    "accepted": 6,
+    "rejected": 2,
+    "deduped": 225,
+    "promoted_session_metadata": 4
+  }
+}

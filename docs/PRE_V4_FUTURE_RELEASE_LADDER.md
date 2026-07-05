@@ -1,6 +1,6 @@
 # Crowley Future Pre-V4 Release Ladder
 
-**Status:** V3.9.13 shipped on `main` · V4 planned next · V4 after .10/.11/.12/.13 gate complete.
+**Status:** V3.9.14 shipped · V4 planned next
 **Baseline:** V3.9.7 on `origin/main`; V3.9.8+ in local working tree.
 **Purpose:** Keep the next planning arc ready without cluttering Cursor's active ticket board.
 
@@ -34,11 +34,12 @@ The target state before V4:
 | V3.9.10 | Task-Frame Context | **Shipped on `main`** (#64–#69) |
 | V3.9.11 | Live Wire | **Shipped** (#70–#75) |
 | V3.9.12 | Portable Context Terminal | **Shipped** (#76–#80) |
+| V3.9.14 | Durable ChatGPT Bridge | **Shipped** — LaunchAgent, API-only tunnel, verify |
 | V3.9.13 | Secure ChatGPT Actions API | **Shipped** — bearer `/api/actions/*` |
-| V4.0 | Spark Lanes | **Next** — mint when Mr. Go directs |
+| V4.0 | Spark Lanes | **Next** — mint when D directs |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
-V4 memory-lane architecture starts when Mr. Go mints V4.0 (V3.9.12 terminal loop and V3.9.13 Actions API proven).
+V4 memory-lane architecture starts when D mints V4.0 (V3.9.12 terminal loop and V3.9.13 Actions API proven).
 
 ---
 

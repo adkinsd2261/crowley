@@ -15,6 +15,22 @@ Crowley V3.9.13 adds a **narrow, bearer-authenticated** `/api/actions/*` surface
 
 **Do not** point a Custom GPT at the full `/api/*` tree. Use only `/api/actions/*`.
 
+### Named tunnel (production)
+
+`cloudflared/config.yml.example` uses API-only ingress:
+
+- `path: ^/api/actions/.*` → `http://127.0.0.1:8765`
+- Same hostname catch-all → `http_status:404`
+
+Generic hostname: `api.yourdomain.com`. Operator example: `api.javlin.ai`.
+
+Public checks:
+
+- `https://api.javlin.ai/api/actions/health` → **200** with bearer auth
+- `https://api.javlin.ai/` and `https://api.javlin.ai/api/health` → **404**
+
+Never bind Crowley to `0.0.0.0` or expose the dashboard/full internal API.
+
 ---
 
 ## Security model
