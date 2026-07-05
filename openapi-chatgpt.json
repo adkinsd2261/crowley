@@ -2,295 +2,96 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Crowley ChatGPT Actions API",
-    "version": "3.9.13",
-    "description": "Narrow authenticated surface for ChatGPT Custom GPT Actions. Use these routes to read Crowley context, retrieve memories, export a portable packet, and stage terminal writebacks. Do not call the full internal /api/* surface."
+    "version": "3.9.15",
+    "description": "GPT Toolbelt gateway (V3.9.15). Primary surface: GET /catalog, POST /read, POST /write with tool names from the catalog. Legacy per-route paths remain as deprecated aliases for one release. Bearer auth required. Do not call full /api/*."
   },
   "servers": [
     {
       "url": "https://YOUR-CROWLEY-DOMAIN",
-      "description": "Public HTTPS endpoint (e.g. Cloudflare Tunnel) forwarding to local Crowley on 127.0.0.1:8765"
+      "description": "Public HTTPS endpoint forwarding to local Crowley on 127.0.0.1:8765"
     }
   ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
+  "security": [{ "bearerAuth": [] }],
   "paths": {
     "/api/actions/health": {
       "get": {
         "operationId": "actionsHealth",
-        "summary": "Verify Actions API auth and Crowley runtime",
-        "description": "Call first after setup to confirm bearer auth, version, and safe runtime health before using context or writeback routes.",
+        "summary": "Verify bearer auth and runtime",
         "responses": {
           "200": {
-            "description": "Actions API enabled and authenticated",
+            "description": "OK",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActionsHealthResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid bearer token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "CROWLEY_ACTION_KEY not configured on server",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/LooseObject" }
               }
             }
           }
         }
       }
     },
-    "/api/actions/context": {
+    "/api/actions/catalog": {
       "get": {
-        "operationId": "actionsContext",
-        "summary": "Read Crowley context bundle",
-        "description": "Use when you need current project state, tickets summary, knowledge excerpts, and canon \u2014 the same bundle local agents read via GET /api/context.",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "default": "current project state"
-            },
-            "description": "Query to score knowledge files and retrieval"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 8
-            },
-            "description": "Max memory items to include"
-          },
-          {
-            "name": "project",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Optional project slug (defaults to active project)"
-          }
-        ],
+        "operationId": "actionsCatalog",
+        "summary": "List registered tools and arg schemas",
+        "description": "Call after health check to discover tool names for POST /read and POST /write.",
         "responses": {
           "200": {
-            "description": "Context bundle",
+            "description": "Tool catalog",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContextBundle"
-                }
+                "schema": { "$ref": "#/components/schemas/LooseObject" }
               }
             }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "Project not found"
-          },
-          "503": {
-            "$ref": "#/components/responses/ActionsDisabled"
           }
         }
       }
     },
-    "/api/actions/retrieve": {
-      "get": {
-        "operationId": "actionsRetrieve",
-        "summary": "Hybrid memory search",
-        "description": "Use for targeted memory lookup when the full context bundle is too broad. Returns scored memory items with explanations.",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "description": "Search query"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 8
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Retrieval results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RetrieveResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "503": {
-            "$ref": "#/components/responses/ActionsDisabled"
-          }
-        }
-      }
-    },
-    "/api/actions/portable/packet": {
-      "get": {
-        "operationId": "actionsPortablePacket",
-        "summary": "Export paste-ready portable context packet",
-        "description": "Use at session start when you want the compact Crowley packet formatted for ChatGPT, including identity, world truth, work board, guardrails, and writeback contract.",
-        "parameters": [
-          {
-            "name": "project",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Optional project slug"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Portable packet JSON and markdown",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortablePacketResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "Project not found"
-          },
-          "503": {
-            "$ref": "#/components/responses/ActionsDisabled"
-          }
-        }
-      }
-    },
-    "/api/actions/writeback/parse": {
+    "/api/actions/read": {
       "post": {
-        "operationId": "actionsWritebackParse",
-        "summary": "Validate terminal writeback JSON",
-        "description": "Use before ingest to validate structured session recap and spark candidates. Does not mutate memory.",
+        "operationId": "actionsRead",
+        "summary": "Invoke a read tool",
+        "description": "Examples: context.get, memory.get, ticket.list, agent.sync, inspect.writeback_result, github.file. See GET /catalog.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WritebackRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/ActionsInvokeRequest" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Writeback valid",
+            "description": "Tool result",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WritebackParseOk"
-                }
+                "schema": { "$ref": "#/components/schemas/LooseObject" }
               }
             }
-          },
-          "400": {
-            "description": "Validation errors",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WritebackParseError"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "503": {
-            "$ref": "#/components/responses/ActionsDisabled"
           }
         }
       }
     },
-    "/api/actions/writeback/ingest": {
+    "/api/actions/write": {
       "post": {
-        "operationId": "actionsWritebackIngest",
-        "summary": "Stage session receipt and spark candidates",
-        "description": "Use at session end after parse succeeds. Saves an episodic session receipt and stages spark candidates \u2014 does not promote sparks to canon automatically.",
-        "parameters": [
-          {
-            "name": "project",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "default": "crowley"
-            }
-          }
-        ],
+        "operationId": "actionsWrite",
+        "summary": "Invoke a write tool",
+        "description": "Examples: writeback.ingest, ticket.create, handoff.ingest. See GET /catalog.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WritebackRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/ActionsInvokeRequest" }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Writeback ingested",
+          "200": {
+            "description": "Tool result",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WritebackIngestResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/LooseObject" }
               }
             }
-          },
-          "400": {
-            "description": "Validation or ingest error"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "Project not found"
-          },
-          "503": {
-            "$ref": "#/components/responses/ActionsDisabled"
           }
         }
       }
@@ -300,307 +101,38 @@
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
-        "scheme": "bearer",
-        "description": "Set CROWLEY_ACTION_KEY on the Crowley host and paste the same value into the Custom GPT Action authentication settings."
-      }
-    },
-    "responses": {
-      "Unauthorized": {
-        "description": "Missing or invalid bearer token",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ActionsDisabled": {
-        "description": "Actions API disabled \u2014 CROWLEY_ACTION_KEY not configured",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
+        "scheme": "bearer"
       }
     },
     "schemas": {
+      "ActionsInvokeRequest": {
+        "type": "object",
+        "required": ["tool"],
+        "properties": {
+          "tool": {
+            "type": "string",
+            "description": "Registered tool name from /catalog (e.g. memory.get, ticket.create)"
+          },
+          "args": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": true,
+            "description": "Tool-specific arguments object"
+          }
+        }
+      },
       "LooseObject": {
         "type": "object",
-        "description": "JSON object; Crowley may include additional fields beyond those listed.",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Optional record identifier"
-          },
-          "content": {
-            "type": "string",
-            "description": "Optional text payload"
-          },
-          "summary": {
-            "type": "string",
-            "description": "Optional short summary"
-          }
-        },
+        "properties": {},
         "additionalProperties": true
       },
       "ErrorResponse": {
         "type": "object",
         "properties": {
-          "detail": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "error": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                }
-              }
-            ]
-          }
+          "ok": { "type": "boolean" },
+          "error": { "type": "string" },
+          "message": { "type": "string" }
         }
-      },
-      "ActionsHealthResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ok",
-              "degraded"
-            ]
-          },
-          "version": {
-            "type": "string"
-          },
-          "release_label": {
-            "type": "string"
-          },
-          "actions_api": {
-            "type": "string",
-            "enum": [
-              "enabled"
-            ]
-          },
-          "auth": {
-            "type": "string",
-            "enum": [
-              "bearer"
-            ]
-          },
-          "db": {
-            "type": "string"
-          },
-          "runtime": {
-            "$ref": "#/components/schemas/LooseObject"
-          }
-        }
-      },
-      "ContextBundle": {
-        "type": "object",
-        "description": "Crowley context bundle (world, tickets, memories, knowledge, canon)",
-        "properties": {
-          "project": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/LooseObject"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "state": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/LooseObject"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "recent_decisions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "open_loops": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "open_tasks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "canon": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "relevant_memories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "agent_activity": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "tickets": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "system_health": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "project_files": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "knowledge_files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "recommended_next_action": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "recommended_next_action"
-        ]
-      },
-      "RetrieveResponse": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          }
-        },
-        "additionalProperties": true
-      },
-      "PortablePacketResponse": {
-        "type": "object",
-        "properties": {
-          "packet": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "markdown": {
-            "type": "string"
-          },
-          "char_count": {
-            "type": "integer"
-          },
-          "trimmed": {
-            "type": "boolean"
-          }
-        }
-      },
-      "WritebackRequest": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Raw markdown or JSON text containing a writeback block"
-          },
-          "writeback": {
-            "type": "object",
-            "description": "Structured writeback object",
-            "properties": {
-              "session": {
-                "$ref": "#/components/schemas/LooseObject"
-              },
-              "sparks": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/LooseObject"
-                }
-              },
-              "do_not_save": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "WritebackParseOk": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "writeback": {
-            "$ref": "#/components/schemas/LooseObject"
-          }
-        }
-      },
-      "WritebackParseError": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              false
-            ]
-          },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "WritebackIngestResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string"
-          },
-          "session_receipt": {
-            "$ref": "#/components/schemas/LooseObject"
-          },
-          "sparks_saved": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          },
-          "sparks_rejected": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LooseObject"
-            }
-          }
-        },
-        "additionalProperties": true
       }
     }
   }

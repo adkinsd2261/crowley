@@ -165,6 +165,74 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.json()["ok"])
 
+    def test_gateway_read_context_matches_legacy(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            legacy = client.get(
+                "/api/actions/context",
+                headers=AUTH_HEADER,
+                params={"q": "current project state", "limit": 3},
+            )
+            gateway = client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "context.get",
+                    "args": {"q": "current project state", "limit": 3},
+                },
+            )
+        self.assertEqual(legacy.status_code, 200)
+        self.assertEqual(gateway.status_code, 200)
+        self.assertEqual(gateway.json()["state"], legacy.json()["state"])
+
+    def test_gateway_write_parse_matches_legacy(self) -> None:
+        payload = {
+            "writeback": {
+                "session": {
+                    "summary": "Gateway parse test.",
+                    "surface": "chatgpt",
+                    "model": "test",
+                },
+                "sparks": [],
+            }
+        }
+        with TestClient(crowley_app.app) as client:
+            legacy = client.post(
+                "/api/actions/writeback/parse",
+                headers=AUTH_HEADER,
+                json=payload,
+            )
+            gateway = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={"tool": "writeback.parse", "args": payload},
+            )
+        self.assertEqual(legacy.status_code, 200)
+        self.assertEqual(gateway.status_code, 200)
+        self.assertEqual(gateway.json()["ok"], legacy.json()["ok"])
+
+    def test_catalog_requires_auth(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.get("/api/actions/catalog")
+        self.assertEqual(res.status_code, 401)
+
+    def test_catalog_lists_tools(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.get("/api/actions/catalog", headers=AUTH_HEADER)
+        self.assertEqual(res.status_code, 200)
+        names = {tool["name"] for tool in res.json()["tools"]}
+        self.assertIn("context.get", names)
+        self.assertIn("writeback.ingest", names)
+
+    def test_gateway_unknown_tool(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={"tool": "missing.tool", "args": {}},
+            )
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(res.json()["error"], "unknown_tool")
+
 
 if __name__ == "__main__":
     unittest.main()

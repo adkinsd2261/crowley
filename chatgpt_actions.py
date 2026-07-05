@@ -1,4 +1,4 @@
-"""V3.9.13 — narrow authenticated Actions API for ChatGPT Custom GPTs."""
+"""V3.9.13+ — authenticated Actions API for ChatGPT Custom GPTs."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import actions_tool_registry as registry
 import crowley
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
@@ -18,6 +19,11 @@ router = APIRouter(prefix="/api/actions", tags=["actions"])
 class ActionsWritebackRequest(BaseModel):
     text: str | None = None
     writeback: dict[str, object] | None = None
+
+
+class ActionsInvokeRequest(BaseModel):
+    tool: str
+    args: dict[str, object] | None = None
 
 
 def configured_action_key() -> str | None:
@@ -93,6 +99,11 @@ def _safe_runtime_block() -> dict[str, object]:
     return safe
 
 
+def _invoke_response(kind: registry.ToolKind, tool: str, args: dict[str, object] | None) -> JSONResponse:
+    body, status = registry.dispatch(kind, tool, args)
+    return JSONResponse(body, status_code=status)
+
+
 @router.get("/health")
 def actions_health(_auth: None = Depends(require_actions_bearer)) -> JSONResponse:
     db_status = _database_status()
@@ -106,8 +117,33 @@ def actions_health(_auth: None = Depends(require_actions_bearer)) -> JSONRespons
             "auth": "bearer",
             "db": db_status,
             "runtime": _safe_runtime_block(),
+            "gateway": ["catalog", "read", "write"],
         }
     )
+
+
+@router.get("/catalog")
+def actions_catalog(_auth: None = Depends(require_actions_bearer)) -> JSONResponse:
+    return JSONResponse(registry.catalog_payload())
+
+
+@router.post("/read")
+def actions_read(
+    body: ActionsInvokeRequest,
+    _auth: None = Depends(require_actions_bearer),
+) -> JSONResponse:
+    return _invoke_response("read", body.tool, body.args)
+
+
+@router.post("/write")
+def actions_write(
+    body: ActionsInvokeRequest,
+    _auth: None = Depends(require_actions_bearer),
+) -> JSONResponse:
+    return _invoke_response("write", body.tool, body.args)
+
+
+# --- Legacy V3.9.13 aliases (deprecated; delegate to registry) ---
 
 
 @router.get("/context")
@@ -117,11 +153,7 @@ def actions_context(
     limit: int = Query(8, ge=1, le=50),
     project: str | None = Query(None),
 ) -> JSONResponse:
-    try:
-        bundle = crowley.build_context_bundle(q=q, limit=limit, project_slug=project)
-    except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=404)
-    return JSONResponse(bundle)
+    return _invoke_response("read", "context.get", {"q": q, "limit": limit, "project": project})
 
 
 @router.get("/retrieve")
@@ -130,7 +162,7 @@ def actions_retrieve(
     q: str = Query(..., min_length=1),
     limit: int = Query(8, ge=1, le=50),
 ) -> JSONResponse:
-    return JSONResponse(crowley.retrieve_memories_api(q=q, limit=limit))
+    return _invoke_response("read", "retrieve.search", {"q": q, "limit": limit})
 
 
 @router.get("/portable/packet")
@@ -138,21 +170,7 @@ def actions_portable_packet(
     _auth: None = Depends(require_actions_bearer),
     project: str | None = Query(None),
 ) -> JSONResponse:
-    try:
-        packet = crowley.build_portable_context_packet(
-            "chatgpt", project_slug=project
-        )
-        markdown = crowley.render_portable_context_packet_markdown(packet)
-    except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=404)
-    return JSONResponse(
-        {
-            "packet": packet,
-            "markdown": markdown,
-            "char_count": len(markdown),
-            "trimmed": bool(packet.get("trimmed")),
-        }
-    )
+    return _invoke_response("read", "portable.packet", {"project": project})
 
 
 @router.post("/writeback/parse")
@@ -160,21 +178,12 @@ def actions_writeback_parse(
     body: ActionsWritebackRequest,
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
+    payload: dict[str, object] = {}
     if body.writeback is not None:
-        result = crowley.parse_terminal_writeback(body.writeback)
-    elif body.text:
-        result = crowley.parse_terminal_writeback(body.text)
-    else:
-        return JSONResponse(
-            {"ok": False, "errors": ["text or writeback object is required"]},
-            status_code=400,
-        )
-    if not result.ok:
-        return JSONResponse(
-            {"ok": False, "errors": result.errors},
-            status_code=400,
-        )
-    return JSONResponse({"ok": True, "writeback": result.writeback})
+        payload["writeback"] = body.writeback
+    if body.text:
+        payload["text"] = body.text
+    return _invoke_response("write", "writeback.parse", payload)
 
 
 @router.post("/writeback/ingest")
@@ -183,21 +192,12 @@ def actions_writeback_ingest(
     _auth: None = Depends(require_actions_bearer),
     project: str = Query("crowley", min_length=1),
 ) -> JSONResponse:
-    try:
-        if body.writeback is not None:
-            result = crowley.ingest_terminal_writeback(body.writeback, project=project)
-        elif body.text:
-            result = crowley.ingest_terminal_writeback(body.text, project=project)
-        else:
-            return JSONResponse(
-                {"status": "error", "errors": ["text or writeback object is required"]},
-                status_code=400,
-            )
-    except ValueError as exc:
-        return JSONResponse({"status": "error", "errors": [str(exc)]}, status_code=404)
-    if result.get("status") != "ok":
-        return JSONResponse(result, status_code=400)
-    return JSONResponse(result, status_code=201)
+    payload: dict[str, object] = {"project": project}
+    if body.writeback is not None:
+        payload["writeback"] = body.writeback
+    if body.text:
+        payload["text"] = body.text
+    return _invoke_response("write", "writeback.ingest", payload)
 
 
 @router.get("/writeback/acceptance")
@@ -206,18 +206,8 @@ def actions_writeback_acceptance(
     refresh: bool = Query(False),
     apply: bool = Query(False),
 ) -> JSONResponse:
-    if refresh or apply:
-        report = crowley.build_portable_writeback_acceptance_report(
-            apply=apply,
-            reviewer="chatgpt_actions_api",
-        )
-        report_path = crowley.write_portable_writeback_acceptance_report(report)
-        report["report_path"] = str(report_path)
-        return JSONResponse(report)
-    cached = crowley.load_portable_writeback_acceptance_report()
-    if cached is not None:
-        return JSONResponse(cached)
-    report = crowley.build_portable_writeback_acceptance_report(apply=False)
-    report_path = crowley.write_portable_writeback_acceptance_report(report)
-    report["report_path"] = str(report_path)
-    return JSONResponse(report)
+    return _invoke_response(
+        "read",
+        "writeback.acceptance",
+        {"refresh": refresh, "apply": apply},
+    )

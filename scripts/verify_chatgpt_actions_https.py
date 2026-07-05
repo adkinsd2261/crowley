@@ -171,6 +171,11 @@ def verify_local(*, action_key: str, port: int = 8765) -> int:
         print(f"FAIL local /api/actions/health → HTTP {code}", file=sys.stderr)
         return 1
     print("OK   local /api/actions/health → HTTP 200")
+    code = request_code(f"{base}/api/actions/catalog", headers=auth, timeout=5.0)
+    if code != 200:
+        print(f"FAIL local /api/actions/catalog → HTTP {code}", file=sys.stderr)
+        return 1
+    print("OK   local /api/actions/catalog → HTTP 200")
     return 0
 
 

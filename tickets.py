@@ -21,7 +21,7 @@ TICKET_STATUSES = frozenset({
 })
 TICKET_OPEN_STATUSES = frozenset({"open", "claimed", "in_progress", "blocked"})
 TICKET_ASSIGNEES = frozenset({"codex", "cursor", "crowley", "mr_go", "unassigned"})
-TICKET_SOURCES = frozenset({"codex", "cursor", "crowley", "mr_go", "manual", "system"})
+TICKET_SOURCES = frozenset({"codex", "cursor", "crowley", "mr_go", "manual", "system", "chatgpt"})
 TICKET_EVENT_TYPES = frozenset({
     "created",
     "claimed",

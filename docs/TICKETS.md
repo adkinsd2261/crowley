@@ -7,7 +7,7 @@
 
 ## Active initiative — V4 planned
 
-**Current:** V3.9.14 Durable ChatGPT Bridge shipped (#82–#86). **Next:** V4.0 Spark Lanes (not minted until D directs).
+**Current:** V3.9.15 GPT Toolbelt shipped (#94–#100). **Next:** V4.0 Spark Lanes (not minted until D directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 

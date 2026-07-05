@@ -1,8 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.14 · V4 planned
-**Planning:** V4 Spark Lanes planned — [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
-**Last doc sync:** 2026-07-05 (V3.9.14 Durable ChatGPT Bridge)
+**As of:** V3.9.15 · V4 planned
+**Last doc sync:** 2026-07-05 (V3.9.15 GPT Toolbelt)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -35,6 +34,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.6 shipped on `main`** — panel states, streaming polish, navigation flow, what-changed feed, livability pass, version lock (#31–#36)
 - **V3.9.8 shipped locally** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
+- **V3.9.15 shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100)
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
 - **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)

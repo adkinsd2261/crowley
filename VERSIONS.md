@@ -2,7 +2,7 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.14 (`Crowley V3.9.14 Durable ChatGPT Bridge`)
+**Current:** V3.9.15 (`Crowley V3.9.15 GPT Toolbelt`)
 **Next planned:** V4 Spark Lanes
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
@@ -37,6 +37,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.11 | shipped  | 2026-07-03 | Live Wire — activity pulses, compose wire UI, brain switcher, agent feed fixes (#70–#75) |
 | V3.9.12 | shipped  | 2026-07-03 | Portable Context Terminal — packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
 | V3.9.13 | shipped  | 2026-07-03 | Secure ChatGPT Actions API — bearer `/api/actions/*`, bridge scripts, Custom GPT setup |
+| V3.9.15 | shipped  | 2026-07-05 | GPT Toolbelt — hybrid gateway, tool registry, Codex-parity writes, GitHub read proxy (#94–#100) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 

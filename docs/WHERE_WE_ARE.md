@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.14 · V4 next · **2026-07-05**
+**As of:** V3.9.15 · V4 next · **2026-07-05**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.14 Durable ChatGPT Bridge shipped locally. Set `CROWLEY_ACTION_KEY` for `/api/actions/*`; restart bus so `/api/health` reports `3.9.14`.
+**Git note:** V3.9.15 GPT Toolbelt shipped. Re-import OpenAPI into Custom GPT; optional `CROWLEY_GITHUB_TOKEN` for github.* tools.
 
 ---
 
@@ -47,11 +47,12 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
 | **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
+| **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.14"` (`Crowley V3.9.14 Durable ChatGPT Bridge`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.15"` (`Crowley V3.9.15 GPT Toolbelt`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 

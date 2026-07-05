@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.14"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.14 Durable ChatGPT Bridge"
+CROWLEY_VERSION = "3.9.15"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.15 GPT Toolbelt"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -1687,6 +1687,342 @@ def list_memory_items(
         return list(rows), total
     finally:
         conn.close()
+
+
+def get_memory_item_api_by_id(memory_id: int) -> dict[str, object] | None:
+    """Return one memory item for read APIs (any status)."""
+    conn = connect_db()
+    try:
+        row = conn.execute(
+            "SELECT * FROM memory_items WHERE id = ?",
+            (int(memory_id),),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return _memory_item_api_dict(row)
+
+
+def get_portable_session_api(session_receipt_id: int) -> dict[str, object] | None:
+    """Portable terminal session receipt plus linked sparks."""
+    conn = connect_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT * FROM memory_items
+            WHERE id = ? AND source = ? AND memory_type = 'summary'
+            """,
+            (int(session_receipt_id), PORTABLE_TERMINAL_SOURCE),
+        ).fetchone()
+        if row is None:
+            return None
+        sparks = _portable_session_sparks(conn, int(session_receipt_id))
+    finally:
+        conn.close()
+    return {
+        "session": _memory_item_api_dict(row),
+        "sparks": [_memory_item_api_dict(spark) for spark in sparks],
+    }
+
+
+def list_recent_memory_updates(*, limit: int = 20) -> list[dict[str, object]]:
+    """Recent memory_items ordered by updated_at for inspect.recent_updates."""
+    limit = max(1, min(int(limit), 50))
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM memory_items
+            ORDER BY datetime(updated_at) DESC, id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [_memory_item_api_dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def build_memory_lineage(memory_id: int) -> dict[str, object] | None:
+    """Lineage for a memory item: merged_into, metadata promotion fields."""
+    item = get_memory_item_api_by_id(memory_id)
+    if item is None:
+        return None
+    lineage: dict[str, object] = {"memory": item}
+    merged_into = item.get("merged_into_id")
+    if merged_into is not None:
+        parent = get_memory_item_api_by_id(int(merged_into))
+        if parent is not None:
+            lineage["merged_into"] = parent
+    meta_raw = item.get("metadata_json")
+    if isinstance(meta_raw, str) and meta_raw.strip():
+        try:
+            meta = json.loads(meta_raw)
+            if isinstance(meta, dict):
+                lineage["metadata"] = meta
+                session_id = meta.get("session_receipt_id")
+                if session_id is not None:
+                    session = get_portable_session_api(int(session_id))
+                    if session is not None:
+                        lineage["source_session"] = session
+        except json.JSONDecodeError:
+            pass
+    return lineage
+
+
+def explain_memory_in_retrieval(
+    memory_id: int, *, q: str | None = None
+) -> dict[str, object] | None:
+    """Explain why a memory appears in retrieval for a query."""
+    item = get_memory_item_api_by_id(memory_id)
+    if item is None:
+        return None
+    query = (q or CONTEXT_DEFAULT_QUERY).strip()
+    payload = retrieve_memories_api(q=query, limit=50)
+    results = payload.get("results") if isinstance(payload, dict) else None
+    if isinstance(results, list):
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            entry_id = entry.get("id")
+            if entry_id is not None and int(entry_id) == int(memory_id):
+                return {
+                    "memory_id": int(memory_id),
+                    "query": query,
+                    "in_retrieval": True,
+                    "explanation": entry,
+                }
+    return {
+        "memory_id": int(memory_id),
+        "query": query,
+        "in_retrieval": False,
+        "memory": item,
+        "message": "Memory exists but was not in top retrieval results for this query.",
+    }
+
+
+def build_writeback_inspect_result(session_receipt_id: int) -> dict[str, object] | None:
+    """Inspectable writeback result for one portable session."""
+    session = get_portable_session_api(session_receipt_id)
+    if session is None:
+        return None
+    conn = connect_db()
+    try:
+        session_row = conn.execute(
+            "SELECT * FROM memory_items WHERE id = ?",
+            (int(session_receipt_id),),
+        ).fetchone()
+        if session_row is None:
+            return None
+        spark_rows = _portable_session_sparks(conn, int(session_receipt_id))
+        is_fixture = _is_test_fixture_portable_session(session_row, spark_rows)
+        canonical_ids, duplicate_map = _canonical_staged_spark_ids(spark_rows)
+        spark_details: list[dict[str, object]] = []
+        for spark_row in spark_rows:
+            evaluation = _evaluate_portable_spark_acceptance(
+                session_row=session_row,
+                spark_row=spark_row,
+                spark_rows=spark_rows,
+                is_test_fixture=is_fixture,
+                canonical_ids=canonical_ids,
+                conn=conn,
+            )
+            spark_id = int(spark_row["id"])
+            destination_id: int | None = spark_id
+            if evaluation.get("duplicate_of") is not None:
+                destination_id = int(evaluation["duplicate_of"])
+            elif str(spark_row["status"]) == "active":
+                destination_id = spark_id
+            elif str(spark_row["status"]) == "merged" and spark_row["merged_into_id"]:
+                destination_id = int(spark_row["merged_into_id"])
+            spark_details.append(
+                {
+                    **evaluation,
+                    "destination_memory_id": destination_id,
+                    "current_status": str(spark_row["status"] or ""),
+                }
+            )
+    finally:
+        conn.close()
+    return {
+        "session_receipt_id": int(session_receipt_id),
+        "session": session["session"],
+        "sparks": session["sparks"],
+        "evaluations": spark_details,
+    }
+
+
+def list_recent_portable_ingests(*, limit: int = 20) -> list[dict[str, object]]:
+    """Recent chatgpt portable writeback ingests for inspect.recent_ingests."""
+    limit = max(1, min(int(limit), 50))
+    conn = connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM memory_items
+            WHERE source = ? AND memory_type = 'summary'
+            ORDER BY datetime(created_at) DESC, id DESC
+            LIMIT ?
+            """,
+            (PORTABLE_TERMINAL_SOURCE, limit),
+        ).fetchall()
+        ingests: list[dict[str, object]] = []
+        for row in rows:
+            session_id = int(row["id"])
+            meta = _memory_item_metadata(row)
+            surface = str(meta.get("surface") or "").strip().lower()
+            sparks = _portable_session_sparks(conn, session_id)
+            ingests.append(
+                {
+                    "session_receipt_id": session_id,
+                    "created_at": str(row["created_at"]),
+                    "surface": surface,
+                    "summary": str(row["content"] or ""),
+                    "spark_count": len(sparks),
+                    "spark_ids": [int(s["id"]) for s in sparks],
+                }
+            )
+        return ingests
+    finally:
+        conn.close()
+
+
+def enrich_writeback_ingest_result(result: dict[str, object]) -> dict[str, object]:
+    """Add inspectable summaries to writeback ingest response (#814)."""
+    if result.get("status") != "ok":
+        return result
+    enriched = dict(result)
+    session_id = result.get("session_receipt_id")
+    if session_id is not None:
+        receipt = get_memory_item_api_by_id(int(session_id))
+        if receipt is not None:
+            enriched["session_receipt"] = {
+                "id": receipt.get("id"),
+                "summary": receipt.get("content"),
+                "created_at": receipt.get("created_at"),
+            }
+    spark_summaries: list[dict[str, object]] = []
+    for spark_id in result.get("spark_ids") or []:
+        spark = get_memory_item_api_by_id(int(spark_id))
+        if spark is None:
+            continue
+        spark_summaries.append(
+            {
+                "id": spark.get("id"),
+                "status": spark.get("status"),
+                "summary": spark.get("summary"),
+                "content_preview": _truncate(str(spark.get("content") or ""), 160),
+                "session_receipt_id": session_id,
+            }
+        )
+    enriched["sparks"] = spark_summaries
+    enriched["inspect_tool"] = "inspect.writeback_result"
+    enriched["inspect_args"] = {"session_receipt_id": session_id}
+    return enriched
+
+
+def _read_doc_excerpt(path: Path, *, max_lines: int = 40) -> str:
+    if not path.is_file():
+        return ""
+    lines = path.read_text(encoding="utf-8").splitlines()[:max_lines]
+    return "\n".join(lines)
+
+
+def build_release_planning_bundle() -> dict[str, object]:
+    """Bounded filesystem release truth for GPT planning."""
+    project = get_active_project()
+    project_id = int(project["id"]) if project is not None else None
+    state = get_project_state(project_id) if project_id is not None else None
+    return {
+        "version": CROWLEY_VERSION,
+        "release_label": CROWLEY_RELEASE_LABEL,
+        "state": _state_payload_for_api(state) if state is not None else None,
+        "versions_excerpt": _read_doc_excerpt(PROJECT_ROOT / "VERSIONS.md", max_lines=25),
+        "where_we_are_excerpt": _read_doc_excerpt(
+            PROJECT_ROOT / "docs" / "WHERE_WE_ARE.md", max_lines=55
+        ),
+        "project_state_excerpt": _read_doc_excerpt(
+            PROJECT_ROOT / "docs" / "PROJECT_STATE.md", max_lines=35
+        ),
+    }
+
+
+def build_planning_ticket_bundle(ticket_id: int) -> dict[str, object] | None:
+    """Ticket detail plus task-frame context for implementation planning."""
+    import tickets as tickets_mod
+
+    detail = tickets_mod.get_ticket_detail(ticket_id)
+    if detail is None:
+        return None
+    project = get_active_project()
+    project_id = int(project["id"]) if project is not None else None
+    task_frame = build_task_frame_context(project_id, "chatgpt")
+    return {
+        "ticket": detail,
+        "task_frame": task_frame,
+        "release": {
+            "version": CROWLEY_VERSION,
+            "release_label": CROWLEY_RELEASE_LABEL,
+        },
+    }
+
+
+def build_qa_visibility_bundle() -> dict[str, object]:
+    """Codex-style QA visibility without shell access."""
+    project = get_active_project()
+    project_id = int(project["id"]) if project is not None else None
+    hygiene = memory_hygiene_report_api()
+    tickets_summary = build_tickets_summary(project_id, "chatgpt") if project_id else {}
+    conn = connect_db()
+    try:
+        conn.execute("SELECT 1").fetchone()
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
+    finally:
+        conn.close()
+    bundle: dict[str, object] = {
+        "version": CROWLEY_VERSION,
+        "release_label": CROWLEY_RELEASE_LABEL,
+        "db": db_status,
+        "runtime": build_runtime_diagnostics(),
+        "embed_provider": _memory_embed_provider(),
+        "hygiene": hygiene,
+        "tickets": {
+            "open_total": tickets_summary.get("open_total"),
+            "assigned_to_chatgpt": tickets_summary.get("assigned_to_agent"),
+            "blocked": tickets_summary.get("blocked"),
+        },
+        "test_mode": os.environ.get("CROWLEY_TEST_MODE", "").strip() in {"1", "true", "yes"},
+    }
+    try:
+        import github_read as _github_read
+
+        bundle["github"] = _github_read.github_status()
+    except Exception as exc:
+        name = type(exc).__name__
+        if name == "GitHubNotConfiguredError":
+            bundle["github"] = {"configured": False}
+        elif isinstance(exc, RuntimeError):
+            bundle["github"] = {"configured": True, "error": str(exc)}
+        else:
+            raise
+    return bundle
+
+
+def get_decision_api_by_id(decision_id: int) -> dict[str, object] | None:
+    conn = connect_db()
+    try:
+        row = conn.execute(
+            "SELECT * FROM decisions WHERE id = ?",
+            (int(decision_id),),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return row_to_dict(row)
 
 
 def list_canon_memory_items(project_id: int | None = None) -> list[sqlite3.Row]:
@@ -7595,6 +7931,17 @@ def build_portable_writeback_acceptance_report(
 
         if apply:
             conn.commit()
+
+        for entry in accepted:
+            spark_id = entry.get("memory_item_id")
+            entry["destination_memory_id"] = int(spark_id) if spark_id is not None else None
+            entry["promotion_lineage"] = {
+                "source_session_id": entry.get("session_receipt_id"),
+                "spark_id": spark_id,
+            }
+        for entry in deduped:
+            dup = entry.get("duplicate_of")
+            entry["destination_memory_id"] = int(dup) if dup is not None else None
 
         report = {
             "status": "ok",

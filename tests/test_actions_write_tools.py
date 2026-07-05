@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""V3.9.15 — Codex-parity write tool tests."""
+
+from __future__ import annotations
+
+import os
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
+
+import app as crowley_app  # noqa: E402
+from db_helpers import IsolatedDbTestCase  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+ACTIONS_KEY = "test-secret"
+AUTH_HEADER = {"Authorization": f"Bearer {ACTIONS_KEY}"}
+
+
+class WriteToolTests(IsolatedDbTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self._prior_key = os.environ.get("CROWLEY_ACTION_KEY")
+        os.environ["CROWLEY_ACTION_KEY"] = ACTIONS_KEY
+
+    def tearDown(self) -> None:
+        if self._prior_key is None:
+            os.environ.pop("CROWLEY_ACTION_KEY", None)
+        else:
+            os.environ["CROWLEY_ACTION_KEY"] = self._prior_key
+        super().tearDown()
+
+    def test_ticket_create_read_cancel(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            create = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "ticket.create",
+                    "args": {
+                        "title": "GPT Toolbelt write test ticket",
+                        "description": "temp",
+                        "assignee": "cursor",
+                        "priority": 3,
+                    },
+                },
+            )
+            self.assertEqual(create.status_code, 201, create.text)
+            ticket_id = create.json()["ticket"]["id"]
+            read = client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={"tool": "ticket.get", "args": {"id": ticket_id}},
+            )
+            self.assertEqual(read.status_code, 200)
+            cancel = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "ticket.cancel",
+                    "args": {"id": ticket_id, "comment": "test cleanup"},
+                },
+            )
+        self.assertEqual(cancel.status_code, 200)
+
+    def test_ticket_cancel_requires_comment(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={"tool": "ticket.cancel", "args": {"id": 1}},
+            )
+        self.assertEqual(res.status_code, 400)
+
+
+if __name__ == "__main__":
+    unittest.main()

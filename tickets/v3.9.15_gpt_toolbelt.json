@@ -1,0 +1,130 @@
+{
+  "objective": "V3.9.15 — GPT Toolbelt (hybrid gateway): refactor /api/actions/* into a tool registry with thin read/write gateway routes, migrate existing V3.9.13 Actions into registered tools, and add Codex-parity planning capabilities — without exposing full /api/* or V4 Spark Lanes.",
+  "context": "V3.9.14 shipped durable bridge infrastructure. ChatGPT session #802 defined GPT Toolbelt scope (#803–#805, #814). Initial mint (#87–#93, REST-per-resource) was cancelled 2026-07-05 in favor of hybrid gateway: few public OpenAPI operations, internal tool registry with dynamic dispatch. This rewires the Actions transport layer (chatgpt_actions.py + new registry module); crowley.py/tickets.py business logic stays and is called by tool handlers.",
+  "decisions": [
+    "Public Actions surface: GET /health, GET /catalog, POST /read, POST /write — four gateway operations plus bearer auth unchanged",
+    "Internal dispatch via allowlisted tool names (dot notation: memory.get, ticket.create, github.file, inspect.recent_ingests)",
+    "Migrate all existing V3.9.13 Actions routes into the registry; keep legacy paths as thin deprecated aliases for one release so deployed Custom GPTs do not break until re-import",
+    "Tool handlers live in a dedicated module (e.g. actions_tool_registry.py); chatgpt_actions.py becomes gateway + auth only",
+    "POST /read for all read/inspect/sync/github/planning tools; POST /write for ticket mutations, handoffs, writeback ingest/parse, acceptance apply",
+    "Mirror Codex planning writes only — not Cursor claim/done",
+    "GitHub read via CROWLEY_GITHUB_TOKEN on host; read-only; GPT never sees PAT",
+    "V4 Spark Lanes out of scope"
+  ],
+  "non_goals": [
+    "V4 Spark Lanes architecture",
+    "OAuth or multi-user auth",
+    "Full /api/* or UI/chat/brain exposure",
+    "GitHub writes, shell, code generation, deploy endpoints",
+    "Per-tool public REST paths (internal registry only)"
+  ],
+  "risks": [
+    "Gateway refactor must not regress existing V3.9.13/14 bridge verify scripts",
+    "Legacy alias drift if handlers duplicated — aliases must delegate to same registry functions",
+    "GPT must learn tool names from /catalog and Custom GPT instructions — catalog schema must stay accurate as tools are added",
+    "Write gateway needs strict allowlist to prevent accidental exposure of internal mutations"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off full unittest; registry dispatch tests; legacy route parity tests; verify_chatgpt_bridge.py passes; public tunnel 404 on non-actions paths unchanged.",
+  "next_action": "Cursor claims ticket 1 (registry + gateway foundation + V3.9.13 migration) first, then #94–#99 in order.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-05",
+    "note": "Hybrid gateway remint; supersedes cancelled REST-per-resource tickets #87–#93."
+  },
+  "tickets": [
+    {
+      "title": "V3.9.15 GPT Toolbelt: tool registry and read/write gateway",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Foundation slice — rewires the Actions backend. Add actions_tool_registry.py (or equivalent) with: tool definition schema (name, kind read|write, args validator, handler callable); central dispatch(read|write, tool, args) with allowlist and structured errors (unknown_tool, invalid_args, not_configured); GET /api/actions/catalog returning tool names, descriptions, and JSON arg shapes for GPT. Add POST /api/actions/read and POST /api/actions/write gateway bodies: { \"tool\": \"memory.get\", \"args\": { ... } }. Keep GET /api/actions/health unchanged. Migrate existing V3.9.13 tools into registry: context.get, retrieve.search, portable.packet, writeback.parse, writeback.ingest, writeback.acceptance. Refactor chatgpt_actions.py route handlers to call registry; keep legacy GET/POST paths (/context, /retrieve, /portable/packet, /writeback/*) as thin deprecated aliases that delegate to the same handlers (same response shapes). No new domain tools in this ticket — plumbing only.",
+      "acceptance": [
+        "POST /api/actions/read with tool=context.get returns same payload as GET /api/actions/context",
+        "POST /api/actions/write with tool=writeback.ingest matches legacy ingest behavior",
+        "GET /api/actions/catalog lists all registered tools with arg schemas",
+        "Unknown tool returns structured error without executing anything",
+        "Legacy V3.9.13 paths still pass existing chatgpt_actions tests after refactor",
+        "chatgpt_actions.py contains gateway + auth; business logic not duplicated in route bodies"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: read tools for domain objects",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Register read tools calling existing crowley.py/tickets.py functions (no new SQL). Tools: memory.get, memory.list; ticket.get, ticket.list; session.get, session.list (portable_terminal summaries); spark.get, spark.list; decision.get, decision.list; handoff.get, handoff.list (agent handoff memory types). Args support id, limit, offset, filters (status, source, memory_type). All invoked only via POST /api/actions/read or legacy aliases if any exist. Handlers return stable JSON shapes documented in catalog.",
+      "acceptance": [
+        "memory.get returns full item including metadata_json for valid id; 404 tool error for missing",
+        "ticket.get uses get_ticket_detail shape",
+        "session.get returns receipt with linked sparks",
+        "All tools appear in /catalog with documented args",
+        "Tests cover dispatch happy path and not-found per family"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: inspect and writeback observability tools",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Register read tools: inspect.recent_ingests, inspect.recent_updates, inspect.writeback_result (session_receipt_id), memory.lineage, memory.why_retrieved. Enrich writeback.ingest write tool response with IDs, summaries, linkage. Upgrade writeback acceptance / promotion reporting for per-spark detail (#814): promoted ids, destination memory ids, summaries, session ids, rejection reasons, lineage — not counts alone. Optional stretch: inspect.diff_context documented as future if not implemented.",
+      "acceptance": [
+        "writeback.ingest response is inspectable via inspect.writeback_result",
+        "inspect.recent_ingests lists portable_terminal ingests with session ids and spark counts",
+        "memory.why_retrieved uses existing retrieval explanation when available",
+        "Promotion reports include per-spark detail per #814",
+        "Round-trip test: ingest fixture → inspect.writeback_result → memory.get"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: planning, sync, and QA read tools",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Register read tools: agent.sync (agent=chatgpt, reuse build_agent_sync_bundle); planning.task_frame; planning.ticket (ticket id — detail + linked context); planning.release (bounded VERSIONS/WHERE_WE_ARE/PROJECT_STATE excerpts); qa.bundle (health, version constants, runtime, embed/vec, hygiene summary, ticket counts, optional GitHub workflow hint when github configured). All read-only, respect existing bundle caps, no secrets.",
+      "acceptance": [
+        "agent.sync matches /api/agent/sync bundle for chatgpt",
+        "planning.ticket returns enough context to draft implementation scope",
+        "planning.release returns authoritative version/phase without arbitrary file read",
+        "qa.bundle aggregates diagnostics in one call",
+        "Catalog documents all five tools"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: Codex-parity write tools",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Register write tools mirroring Codex planning ops only: ticket.create (source=chatgpt, actor=chatgpt); ticket.update (status, assignee, comment, linked_memory_id); ticket.cancel (requires comment); handoff.ingest (architect_handoff and note via ingest_handoff); note.ingest alias or same handler. Do NOT register claim, done, builder_handoff, chat, task, or shell tools. All via POST /api/actions/write only.",
+      "acceptance": [
+        "ticket.create then ticket.get via read gateway works end-to-end",
+        "ticket.cancel rejects empty comment",
+        "handoff.ingest creates memory visible in handoff.list",
+        "Write allowlist rejects unknown write tools",
+        "No builder/claim/done tools in catalog"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: GitHub read tools",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Add github_read.py (or similar) used only from registry. Env: CROWLEY_GITHUB_TOKEN (read-only PAT), optional CROWLEY_GITHUB_REPO default adkinsd2261/crowley. Register read tools: github.status, github.file, github.search_code, github.branches, github.pulls, github.pull, github.issues, github.issue, github.compare, github.commits, github.workflow_runs. Return 503 github_not_configured when token missing. Mocked HTTP tests — no live token in CI.",
+      "acceptance": [
+        "github.status ok when token set; 503 when not",
+        "github.file and github.search_code work against main with mocks",
+        "All github tools are read-only and listed in catalog",
+        "Token never appears in responses or logs",
+        "qa.bundle can include workflow hint when github.status ok"
+      ]
+    },
+    {
+      "title": "V3.9.15 GPT Toolbelt: OpenAPI gateway schema, docs, and version lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Lock V3.9.15 GPT Toolbelt. Bump CROWLEY_VERSION to 3.9.15. Replace openapi-chatgpt.json per-resource paths with gateway schema: health, catalog, read (tool enum + args object), write (tool enum + args object). Document legacy routes as deprecated in CHATGPT_ACTIONS_API.md; instruct Custom GPT re-import after upgrade. Add docs/V3.9.15_GPT_TOOLBELT.md covering registry architecture, catalog usage, tool naming, Codex parity bounds, GitHub token setup. Update VERSIONS, PROJECT_STATE, TICKETS, WHERE_WE_ARE, ARCHITECTURE, PRE_V4, DECISION_LOG, lock_in_state. Extend verify scripts to smoke-test read/write dispatch and catalog.",
+      "acceptance": [
+        "CROWLEY_VERSION is 3.9.15",
+        "OpenAPI has gateway operations (health, catalog, read, write) not 30+ resource paths",
+        "CHATGPT_SETUP explains hybrid gateway, catalog, and optional CROWLEY_GITHUB_TOKEN",
+        "Legacy routes documented deprecated; re-import called out",
+        "V4 Spark Lanes remains next milestone — not in .15",
+        "Preflight and full suite pass after bus restart"
+      ]
+    }
+  ]
+}
