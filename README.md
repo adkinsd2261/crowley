@@ -4,6 +4,8 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
+**v3.9.16 (Stable — July 6, 2026)** adds enforced workflow rituals: boot gate for fresh ChatGPT sessions, truth hierarchy in prompts, and structured builder handoffs for Codex QA.
+
 ---
 
 ## What This Is
@@ -15,6 +17,8 @@ Crowley is a **unified context hub** for multi-agent AI workflows. Instead of re
 - **Concurrent ticketing board** — Single source of truth for multi-agent work (planning, building, QA)
 - **Web dashboard** — Live memory search, ticket tracking, agent activity, world model
 - **Multi-agent orchestration** — Structured handoffs between planning, coding, and QA phases
+- **ChatGPT hybrid Actions gateway** — Bearer-authenticated read/write tool dispatch with boot-sequence enforcement
+- **Workflow enforcement (V3.9.16)** — Boot gate, truth hierarchy, core tool tiers, structured builder handoffs
 - **Context packets** — Export portable bundles for external agents or human review
 - **Zero context window math** — Memory layer handles retrieval; agents get what they need
 
@@ -24,11 +28,14 @@ Think of it as a **local-first memory server** that lets you coordinate multiple
 
 ## Status
 
-**v3.9.15 (Stable — July 5, 2026)**
+**v3.9.16 (Stable — July 6, 2026)**
 
-- **333+ unit tests** locally; GitHub Actions regression gate on `main`
-- **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, hotswappable models
+- **389 unit tests** locally; GitHub Actions regression gate on `main`
+- **Workflow enforcement:** fresh ChatGPT sessions must call `agent.sync` first; builder handoffs include Context Basis + QA pipeline sections
+- **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, hotswappable models, ChatGPT Actions API
 - **Architecture locked for v4:** Memory lanes and trust states planned
+
+Release spec: [docs/V3.9.16_WORKFLOW_ENFORCEMENT.md](./docs/V3.9.16_WORKFLOW_ENFORCEMENT.md)
 
 Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
@@ -52,21 +59,28 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 ├── app.py                  # FastAPI server + SSE endpoints
 ├── tickets.py              # Ticketing domain (mint, claim, complete)
 ├── diagnostics.py          # System health and briefing
+├── chatgpt_actions.py      # ChatGPT Actions gateway (bearer auth + boot gate)
+├── workflow.py             # V3.9.16 workflow enforcement (boot, truth hierarchy, core tools)
 ├── requirements.txt        # Dependencies
 ├── .env.example            # Configuration template
 ├── static/                 # Web UI (HTML/CSS/JS) — dashboard, memory search, tickets
 ├── scripts/                # Agent orchestration utilities
-│   ├── codex_sync.py       # Planning agent ritual
-│   ├── cursor_sync.py      # Builder agent ritual
+│   ├── codex_sync.py       # Planning agent ritual (--before / --after)
+│   ├── cursor_sync.py      # Builder agent ritual (hooks + --after + QA handoff fields)
 │   ├── agent_sync_lib.py   # Shared sync library
-│   └── export_portable_packet.py
+│   ├── validate_workflow_e2e.py  # E2E workflow validation
+│   ├── export_portable_packet.py
+│   └── start_chatgpt_bridge.sh
 ├── docs/                   # Architecture and release notes
 │   ├── WHERE_WE_ARE.md     # Current project state (read first)
 │   ├── MEMORY_HIERARCHY.md # Authority order for facts
-│   └── V3.9.15_*.md        # Release specs
-├── tests/                  # Regression suite (90+ tests)
-├── tickets/                # JSON templates for ticketing
-├── VERSIONS.md             # Version trail
+│   ├── CHATGPT_SETUP.md    # Custom GPT + tunnel setup
+│   └── V3.9.16_WORKFLOW_ENFORCEMENT.md  # Latest release spec
+├── tests/                  # Regression suite (389 tests)
+├── tickets/                # JSON templates for `--create-tickets`
+├── CODEX.md                # Codex agent ritual
+├── CURSOR.md               # Cursor agent ritual (hooks setup)
+├── VERSIONS.md             # Complete version trail
 └── .github/workflows/tests.yml  # CI regression gate
 ```
 
@@ -140,20 +154,24 @@ Crowley stores and retrieves **decisions**, **handoffs**, and **summaries** usin
 
 Retrieve with `/api/retrieve?q=search_query` or search in the Memory tab. Memory survives model changes.
 
+**Authority order:** filesystem → tickets → agent activity → live DB state → pinned canon → retrieval. For *what changed* / *what now*, agent activity beats stale project state and memory.
+
 ### Model Hotswapping
 
 Switch between models without losing context:
 
-```python
-# All three queries share the same memory layer
+```bash
+# Use GPT-4
 curl -X POST http://127.0.0.1:8765/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "Summarize decisions", "model": "gpt-4"}'
+  -d '{"message": "Summarize decisions", "model": "gpt-4"}' \
+  -N
 
-# Later, use Claude—memory is preserved
+# Switch to Claude—memory is preserved
 curl -X POST http://127.0.0.1:8765/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "What was the decision?", "model": "claude-opus"}'
+  -d '{"message": "What was the decision?", "model": "claude-opus"}' \
+  -N
 ```
 
 Both queries access the same semantic memory without re-indexing or reprocessing.
@@ -174,7 +192,9 @@ Created by Codex, claimed by Cursor, visible on the dashboard.
 - **Codex** — Planning agent. Mints tickets, posts decisions, sets direction.
 - **Cursor** — Builder agent. Claims tickets, implements, posts completion handoffs.
 - **You** — Operator. Chat with Crowley; approve decisions; run orchestration.
-- **External models** — Via context packets or direct API integration.
+- **ChatGPT (Custom Actions)** — External integration via hybrid `/api/actions/*` gateway.
+
+Setup: [CODEX.md](./CODEX.md) · [CURSOR.md](./CURSOR.md)
 
 ---
 
@@ -193,24 +213,9 @@ Created by Codex, claimed by Cursor, visible on the dashboard.
 | `GET` | `/api/context` | Build context bundle (world + memory + tickets) |
 | `GET` | `/api/portable/packet` | Export context for external agents |
 | `GET` | `/api/agent/sync` | Agent activity feed |
+| `GET/POST` | `/api/actions/*` | ChatGPT hybrid Actions gateway (bearer auth) |
 
 Full interactive docs at `/docs` (if FastAPI docs enabled).
-
-### Example: Chat with Model Selection
-
-```bash
-# Use GPT-4
-curl -X POST http://127.0.0.1:8765/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is the project focus?", "model": "gpt-4"}' \
-  -N
-
-# Switch to Claude—memory persists
-curl -X POST http://127.0.0.1:8765/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What was decided?", "model": "claude-opus"}' \
-  -N
-```
 
 ---
 
@@ -226,6 +231,12 @@ MODEL_PROVIDER=auto
 OPENAI_API_KEY=sk-proj-...
 ANTHROPIC_API_KEY=sk-ant-...
 
+# Bearer token for ChatGPT custom actions (optional)
+CROWLEY_ACTION_KEY=your-secret-key
+
+# GitHub token for github.* tools in ChatGPT Actions (optional)
+CROWLEY_GITHUB_TOKEN=ghp_...
+
 # Ollama endpoint (for local models)
 OLLAMA_BASE_URL=http://localhost:11434
 ```
@@ -239,16 +250,13 @@ At runtime, the web dashboard lets you pick between available models. Context me
 ### Codex (Planning Agent)
 
 ```bash
-# Start of session — read current context
 ./venv/bin/python3 scripts/codex_sync.py --before
 
-# After planning — mint tickets
 ./venv/bin/python3 scripts/codex_sync.py --create-ticket \
   --title "Implement feature X" \
   --assignee cursor \
   --priority 1
 
-# Close session with handoff
 ./venv/bin/python3 scripts/codex_sync.py --after \
   --summary "Planned feature X" \
   --decision "Use approach Y"
@@ -258,15 +266,35 @@ At runtime, the web dashboard lets you pick between available models. Context me
 
 ```bash
 # Session start (auto-triggered by hook)
-# Reads: role, context, tickets, decisions
 
-# After shipping
 ./venv/bin/python3 scripts/cursor_sync.py --after --ticket <TICKET_ID> \
   --summary "Implemented feature X" \
-  --qa-result "Tests pass"
+  --next-action "Codex reviews; merge" \
+  --qa-result "Tests pass; manual QA: ✓" \
+  --confidence high \
+  --context-basis "agent.sync via --before; ticket #N; git diff"
 ```
 
-Setup: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
+Setup: [docs/V3.9.3_PLANNING_WORKFLOW.md](./docs/V3.9.3_PLANNING_WORKFLOW.md)
+
+---
+
+## ChatGPT Integration
+
+Crowley exposes a bearer-authenticated `/api/actions/*` **hybrid gateway**: `GET /catalog`, `POST /read`, `POST /write` dispatch to an internal tool registry.
+
+**Fresh session rule (V3.9.16):** Call `agent.sync` before other tools, or the gateway returns `428 boot_required`.
+
+**Setup:**
+
+1. Start bridge: `scripts/start_chatgpt_bridge.sh --named` (or `--ngrok`)
+2. Import `openapi-chatgpt.deployed.json` into Custom GPT builder
+3. Set bearer token (`CROWLEY_ACTION_KEY`) in Custom GPT Actions config
+4. Test: *"Call actionsHealth, then actionsRead with tool agent.sync"*
+
+**Core tools:** `agent.sync`, `context.get`, `memory.*`, `ticket.*`, `handoff.ingest`, `note.ingest` — see `/api/actions/catalog` for full list with `core` / `secondary` tiers.
+
+Docs: [CHATGPT_SETUP.md](./docs/CHATGPT_SETUP.md) · [docs/V3.9.16_WORKFLOW_ENFORCEMENT.md](./docs/V3.9.16_WORKFLOW_ENFORCEMENT.md)
 
 ---
 
@@ -276,14 +304,21 @@ Setup: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
 ```bash
 CROWLEY_TEST_MODE=1 pytest tests/ -v
+# or
+./venv/bin/python3 -m unittest discover -s tests -q
 ```
 
-333+ tests cover memory, retrieval, ticketing, model switching, and agent sync. GitHub Actions regression gate on `main`.
+389 tests cover memory, retrieval, ticketing, model switching, agent sync, Actions boot gate, and workflow enforcement. GitHub Actions regression gate on `main`.
+
+Validate workflow end-to-end:
+
+```bash
+./venv/bin/python3 scripts/validate_workflow_e2e.py
+```
 
 ### Debug Commands
 
 ```bash
-# Terminal REPL
 python crowley.py
 /debug retrieve query   # Explain retrieval scoring
 /debug consolidate      # Memory hygiene dry-run
@@ -292,6 +327,7 @@ python crowley.py
 
 ### Key Paths
 
+- `workflow.py` — V3.9.16 workflow enforcement
 - `crowley.py` — Core engine (memory, retrieval, chat)
 - `app.py` — FastAPI transport
 - `tickets.py` — Ticketing domain
@@ -321,15 +357,17 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-**Current:** v3.9.15 (Stable)
+**Current:** v3.9.16 (Stable)
 
 - [x] Persistent semantic memory + retrieval
 - [x] Model hotswapping (OpenAI, Anthropic, Ollama)
 - [x] Concurrent ticketing board
-- [x] Multi-agent orchestration
+- [x] Multi-agent orchestration (Codex, Cursor)
+- [x] ChatGPT hybrid Actions gateway + boot gate
+- [x] Workflow enforcement (truth hierarchy, QA handoff schema)
 - [x] Web dashboard
 - [x] Context packet export
-- [x] CI regression gate
+- [x] CI regression gate on GitHub Actions
 
 **Next:** v4.0 Spark Lanes
 
