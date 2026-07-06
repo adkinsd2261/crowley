@@ -1351,6 +1351,9 @@ def setup_db() -> None:
             import conflict_engine
 
             conflict_engine.ensure_conflicts_table(conn)
+            import observability_store
+
+            observability_store.ensure_tables(conn)
         except Exception:
             pass
         conn.commit()
@@ -4644,6 +4647,17 @@ def save_memory_item(
             write_action=write_action,
         )
         merged_metadata = memory_tiers.apply_tier_to_metadata(merged_metadata, tier)
+        import claim_validation
+
+        merged_metadata, claim_status = claim_validation.enrich_claim_write(
+            conn,
+            memory_type,
+            content,
+            merged_metadata,
+            project_id=project_id,
+        )
+        if claim_status == "contested" and status == "active":
+            merged_metadata["claim_status"] = "contested"
         metadata_json = json.dumps(
             merged_metadata, sort_keys=True, ensure_ascii=False
         )

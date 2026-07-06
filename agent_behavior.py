@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from typing import Literal
@@ -162,6 +163,21 @@ def _now() -> float:
     return time.time()
 
 
+def _session_persist_enabled() -> bool:
+    return os.environ.get("CROWLEY_TEST_MODE") != "1"
+
+
+def _persist_state(session_key: str, state: dict[str, object]) -> None:
+    if not _session_persist_enabled():
+        return
+    try:
+        import observability_store
+
+        observability_store.save_session_state(session_key, state)
+    except Exception:
+        pass
+
+
 def _get_state(session_key: str) -> dict[str, object]:
     with _lock:
         state = _session_state.get(session_key)
@@ -177,8 +193,19 @@ def _get_state(session_key: str) -> dict[str, object]:
                 "intents_seen": [],
                 "pending_query": None,
                 "complex_query": False,
+                "planner_attempts": 0,
             }
+            try:
+                import observability_store
+
+                if _session_persist_enabled():
+                    loaded = observability_store.load_session_state(session_key)
+                    if loaded:
+                        state.update(loaded)
+            except Exception:
+                pass
             _session_state[session_key] = state
+        state["_ts"] = _now()
         return state
 
 
@@ -187,6 +214,13 @@ def reset_request_cycle(session_key: str) -> None:
         _session_state.pop(session_key, None)
         _retrieval_log.pop(session_key, None)
         _current_dispatch_id.pop(session_key, None)
+    try:
+        import observability_store
+
+        if _session_persist_enabled():
+            observability_store.delete_session_state(session_key)
+    except Exception:
+        pass
 
 
 def begin_dispatch(session_key: str, dispatch_id: int) -> None:
@@ -325,7 +359,10 @@ def _refresh_checklist_from_tools(session_key: str, *, dispatch_id: int | None =
     observed = _checklist_from_observed_tools(tools)
     state = _get_state(session_key)
     state["tools_called"] = tools
-    state["synced"] = observed["synced"]
+    if observed["synced"] or int(state.get("sync_count", 0)) > 0:
+        state["synced"] = True
+    else:
+        state["synced"] = observed["synced"]
     state["handoffs_loaded"] = observed["handoffs_loaded"]
     state["domain_retrieved"] = observed["domain_retrieved"]
     if "agent.sync" in tools:
@@ -608,6 +645,14 @@ def record_tool_call(
         if len(log) > 100:
             _retrieval_log[session_key] = log[-100:]
 
+    try:
+        import observability_store
+
+        observability_store.append_observability_log(session_key, entry)
+    except Exception:
+        pass
+
+    _persist_state(session_key, state)
     return entry
 
 
@@ -767,12 +812,20 @@ def behavior_payload() -> dict[str, object]:
 def retrieval_observability(session_key: str, *, limit: int = 20) -> dict[str, object]:
     """#130 — expose retrieval log for debugging."""
     with _lock:
-        log = list(_retrieval_log.get(session_key, [])[-limit:])
+        memory_log = list(_retrieval_log.get(session_key, [])[-limit:])
+    try:
+        import observability_store
+
+        db_log = observability_store.get_observability_logs(session_key, limit=limit)
+    except Exception:
+        db_log = []
+    log = memory_log if memory_log else db_log
     state = _get_state(session_key)
     return {
         "session_key": session_key[:16] + "..." if len(session_key) > 16 else session_key,
         "tools_called": state.get("tools_called", []),
         "chain_depth": state.get("chain_depth", 0),
         "log": log,
+        "persisted_count": len(db_log),
         "validation": validate_retrieval_state(session_key),
     }

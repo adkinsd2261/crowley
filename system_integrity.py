@@ -127,6 +127,39 @@ def retrieval_planner(
     }
 
 
+def apply_fallback_retrieval_plan(
+    plan: dict[str, object],
+    query_text: str | None,
+) -> dict[str, object]:
+    """#175 — inject minimal retrieval when planner would leave zero required tools."""
+    query = str(query_text or plan.get("query") or "").strip()
+    if not query:
+        return plan
+    required = list(plan.get("required_tools", []))
+    if required:
+        return plan
+    import agent_behavior
+
+    if (
+        not agent_behavior.is_system_level_query(query)
+        and agent_behavior.classify_intent(query) == "general"
+    ):
+        return plan
+    fallback_tools = ["context.get", "retrieve.search"]
+    domains = list(plan.get("domains", [])) or ["memory"]
+    tool_order = list(plan.get("tool_order", []))
+    for tool in ("agent.sync", *fallback_tools):
+        if tool not in tool_order:
+            tool_order.append(tool)
+    return {
+        **plan,
+        "domains": domains,
+        "required_tools": fallback_tools,
+        "tool_order": tool_order,
+        "fallback_retrieval": True,
+    }
+
+
 def _get_or_run_planner(
     session_key: str,
     query_text: str | None,
@@ -145,10 +178,12 @@ def _get_or_run_planner(
         return cached, False
 
     plan = retrieval_planner(query_text, session_key=session_key)
+    plan = apply_fallback_retrieval_plan(plan, query_text)
     state["execution_plan"] = plan
     state["domain_plan"] = plan
     state["planner_query_key"] = cache_key
     state["planner_called_before_gates"] = True
+    agent_behavior._persist_state(session_key, state)  # noqa: SLF001
     return plan, True
 
 
@@ -406,6 +441,23 @@ def run_enforcement_gates(
     else:
         missing_domains = _planner_missing_domains(session_key, plan)
         if missing_domains:
+            attempts = int(state.get("planner_attempts", 0))
+            if attempts < 1:
+                state["planner_attempts"] = attempts + 1
+                state.pop("execution_plan", None)
+                state.pop("planner_query_key", None)
+                plan, planner_cached = _get_or_run_planner(session_key, query_text)
+                extra.update(
+                    {
+                        "domain_plan": plan,
+                        "planner_output": plan,
+                        "planner_cached": not planner_cached,
+                        "execution_plan": plan,
+                        "planner_refinement_attempt": attempts + 1,
+                    }
+                )
+                missing_domains = _planner_missing_domains(session_key, plan)
+        if missing_domains:
             required = list(plan.get("required_tools", []))
             tool_order = list(plan.get("tool_order", []))
             return (
@@ -441,6 +493,25 @@ def run_enforcement_gates(
         if not guard_ok and guard_msg:
             return False, "automation_guardrail", 429, {"message": guard_msg, **extra}
 
+    invariant_result = run_invariant_checks("dispatch", session_key=session_key)
+    extra["invariant_checks"] = invariant_result
+    blocking = [
+        violation
+        for violation in invariant_result.get("violations", [])
+        if isinstance(violation, dict) and violation.get("severity") == "error"
+    ]
+    if blocking:
+        return (
+            False,
+            "invariant_violation",
+            428,
+            {
+                **extra,
+                "message": "dispatch blocked by invariant violation",
+                "violations": blocking,
+            },
+        )
+
     return True, None, 200, extra
 
 
@@ -471,6 +542,16 @@ def record_dispatch_observability(
         log = agent_behavior._retrieval_log.get(session_key, [])  # noqa: SLF001
         if log:
             log[-1] = entry
+    try:
+        import observability_store
+
+        observability_store.update_observability_log_dispatch(
+            session_key,
+            int(dispatch_id),
+            entry,
+        )
+    except Exception:
+        pass
     return entry
 
 
