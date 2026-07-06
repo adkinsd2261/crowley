@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.16 · V4 planned
-**Last doc sync:** 2026-07-06 (V3.9.16 Workflow Enforcement)
+**As of:** V3.9.17 · V4 planned
+**Last doc sync:** 2026-07-06 (V3.9.17 Trust Control and Clarity)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -35,6 +35,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.8 shipped locally** — test mode, model probe, runtime health, sqlite-vec fallback, fragile-startup suite (#50–#55)
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
 - **V3.9.16 shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tool tiers, QA pipeline handoffs (#101–#111)
+- **V3.9.17 shipped** — Trust Control and Clarity: write attribution, permissions, audit/rollback, memory tiers, conflict engine, agent behavior layer (#112–#130)
 - **V3.9.15 shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100)
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
 - **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
@@ -54,8 +55,14 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `tickets.py` | **Active** | Ticketing domain (extracted V3.9.7) |
 | `app.py` | **Active** | Web transport (FastAPI, SSE, context bridge routes) |
 | `static/` | **Active** | Workspace UI (HTML, CSS, JS) |
-| `workflow.py` | **Active** | V3.9.16 workflow enforcement module |
-| `scripts/validate_workflow_e2e.py` | **Active** | E2E workflow validation script (V3.9.16) |
+| `workflow.py` | **Active** | V3.9.16+ workflow enforcement module |
+| `agent_identity.py` | **Active** | Write attribution + permissions (V3.9.17) |
+| `write_audit.py` | **Active** | Append-only write audit + rollback (V3.9.17) |
+| `memory_tiers.py` | **Active** | Memory tiers, promotion, decay (V3.9.17) |
+| `conflict_engine.py` | **Active** | Conflict detection + resolution (V3.9.17) |
+| `agent_behavior.py` | **Active** | Agent retrieval policy, chaining, validation (V3.9.17) |
+| `scripts/validate_workflow_e2e.py` | **Active** | E2E workflow validation script |
+| `docs/V3.9.17_TRUST_CONTROL_CLARITY.md` | **Active** | V3.9.17 release spec |
 | `docs/V3.9.16_WORKFLOW_ENFORCEMENT.md` | **Active** | V3.9.16 release spec |
 | `chatgpt_actions.py` | **Active** | Bearer-auth `/api/actions/*` for Custom GPT (V3.9.13+) |
 | `openapi-chatgpt.json` | **Active** | OpenAPI template for Custom GPT Actions import (V3.9.13) |

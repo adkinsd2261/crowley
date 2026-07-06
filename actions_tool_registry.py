@@ -83,6 +83,7 @@ def dispatch(
     args: object | None,
     *,
     session_key: str | None = None,
+    agent_id: str | None = None,
 ) -> tuple[dict[str, object], int]:
     ensure_registry()
     name = str(tool or "").strip()
@@ -99,6 +100,7 @@ def dispatch(
             400,
         )
 
+    import agent_identity
     import workflow
 
     session = workflow.normalize_session_key(session_key)
@@ -106,9 +108,33 @@ def dispatch(
     if not allowed and boot_message:
         return _error("boot_required", boot_message, 428)
 
+    resolved_agent = agent_identity.normalize_agent_id(agent_id, fallback_source="chatgpt")
+    if kind == "write":
+        perm_ok, perm_message = agent_identity.check_write_permission(resolved_agent, name)
+        if not perm_ok and perm_message:
+            return _error("permission_denied", perm_message, 403)
+
+    import agent_behavior
+
+    query_text = None
+    if isinstance(args, dict):
+        query_text = (
+            str(args.get("query") or args.get("q") or args.get("intent") or "")
+            or None
+        )
+    sync_ok, sync_msg = agent_behavior.check_sync_for_system_query(
+        session,
+        query_text=query_text,
+        tool_name=name,
+    )
+    if not sync_ok and sync_msg:
+        return _error("sync_required", sync_msg, 428)
+
     if args is not None and not isinstance(args, dict):
         return _error("invalid_args", "args must be a JSON object", 400)
     normalized_args: dict[str, Any] = dict(args) if isinstance(args, dict) else {}
+    if name == "inspect.retrieval_observability" and "session_key" not in normalized_args:
+        normalized_args["session_key"] = session
     try:
         body, status = defn.handler(normalized_args)
     except ValueError as exc:
@@ -117,6 +143,13 @@ def dispatch(
         return _error("not_found", str(exc), 404)
     if not isinstance(body, dict):
         body = {"result": body}
+    intent = normalized_args.get("intent")
+    agent_behavior.record_tool_call(
+        session,
+        name,
+        reason=query_text,
+        intent=str(intent) if intent else None,
+    )
     http_status = 200 if status is None else int(status)
     return body, http_status
 
@@ -548,6 +581,37 @@ def _register_inspect_tools() -> None:
             raise LookupError(f"memory not found: {args['id']}")
         return explanation, None
 
+    def _handle_inspect_audit_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+        import write_audit
+
+        entity_type = _optional_str(args, "entity_type")
+        entity_id = int(args["entity_id"]) if args.get("entity_id") is not None else None
+        limit = min(_optional_int(args, "limit", 20), 100)
+        offset = max(0, int(args.get("offset", 0)))
+        items, total = write_audit.list_write_audit_log(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            limit=limit,
+            offset=offset,
+        )
+        return {"items": items, "total": total, "limit": limit, "offset": offset}, None
+
+    def _handle_inspect_retrieval_observability(
+        args: dict[str, Any],
+    ) -> tuple[dict[str, Any], int | None]:
+        import agent_behavior
+
+        session_key = _optional_str(args, "session_key") or "default"
+        limit = min(_optional_int(args, "limit", 20), 100)
+        payload = agent_behavior.retrieval_observability(session_key, limit=limit)
+        intent = _optional_str(args, "intent")
+        if intent:
+            payload["recommended_tools"] = agent_behavior.tools_for_intent(intent)
+            payload["validation"] = agent_behavior.validate_retrieval_state(
+                session_key, intent=intent
+            )
+        return payload, None
+
     inspect_tools = [
         (
             "inspect.recent_ingests",
@@ -579,6 +643,31 @@ def _register_inspect_tools() -> None:
             {"required": ["id"], "properties": {"id": {"type": "integer"}, "q": {"type": "string"}}},
             _handle_memory_why_retrieved,
         ),
+        (
+            "inspect.audit_list",
+            "List append-only write audit log entries (memory, tickets, handoffs).",
+            {
+                "properties": {
+                    "entity_type": {"type": "string", "enum": ["memory_item", "ticket", "handoff"]},
+                    "entity_id": {"type": "integer"},
+                    "limit": {"type": "integer"},
+                    "offset": {"type": "integer"},
+                }
+            },
+            _handle_inspect_audit_list,
+        ),
+        (
+            "inspect.retrieval_observability",
+            "Retrieval/chaining observability log for a session (tools called, depth, validation).",
+            {
+                "properties": {
+                    "session_key": {"type": "string"},
+                    "intent": {"type": "string"},
+                    "limit": {"type": "integer"},
+                }
+            },
+            _handle_inspect_retrieval_observability,
+        ),
     ]
     for name, description, args_schema, handler in inspect_tools:
         register_tool(
@@ -601,6 +690,12 @@ def _register_planning_tools() -> None:
         bundle = crowley.build_agent_sync_bundle(agent=agent, limit=limit)
         tool_names = sorted(_TOOLS.keys())
         bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
+        import agent_behavior
+
+        bundle["agent_behavior"] = agent_behavior.behavior_payload()
+        bundle["pre_response_validation"] = agent_behavior.validate_retrieval_state(
+            workflow.normalize_session_key(None),
+        )
         return bundle, None
 
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
@@ -732,6 +827,19 @@ def _register_write_tools() -> None:
             return {"status": "error", "error": exc.message}, 400
         return result, 201
 
+    def _handle_audit_rollback(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+        import write_audit
+
+        audit_id = _require_id(args, "audit_id")
+        agent = _optional_str(args, "agent_id") or "chatgpt"
+        try:
+            result = write_audit.rollback_write_audit(int(audit_id), agent_id=agent)
+        except LookupError as exc:
+            raise LookupError(str(exc)) from exc
+        except ValueError as exc:
+            return {"ok": False, "error": "rollback_failed", "message": str(exc)}, 400
+        return result, None
+
     write_tools = [
         (
             "ticket.create",
@@ -793,6 +901,18 @@ def _register_write_tools() -> None:
                 "properties": {"content": {"type": "string"}, "project": {"type": "string"}},
             },
             lambda args: _handle_handoff_ingest({**args, "handoff_type": "note"}),
+        ),
+        (
+            "audit.rollback",
+            "Rollback a write_audit_log entry (restores before snapshot or cancels create).",
+            {
+                "required": ["audit_id"],
+                "properties": {
+                    "audit_id": {"type": "integer"},
+                    "agent_id": {"type": "string"},
+                },
+            },
+            _handle_audit_rollback,
         ),
     ]
     for name, description, args_schema, handler in write_tools:

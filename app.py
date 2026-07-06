@@ -92,6 +92,11 @@ class CancelTicketRequest(BaseModel):
     comment: str = Field(min_length=1)
 
 
+class AuditRollbackRequest(BaseModel):
+    audit_id: int = Field(ge=1)
+    agent_id: str = "system"
+
+
 class ActivityPulseRequest(BaseModel):
     agent: Literal["cursor", "codex", "crowley", "mr_go"]
     verb: Literal[
@@ -487,6 +492,8 @@ def api_sparks(limit: int = Query(10, ge=1, le=50)) -> JSONResponse:
 def api_memory_items(
     q: str | None = Query(None),
     source: str | None = Query(None),
+    agent_id: str | None = Query(None),
+    memory_tier: str | None = Query(None),
     memory_type: str | None = Query(None),
     status: str = Query("active"),
     limit: int = Query(10, ge=1, le=50),
@@ -495,6 +502,8 @@ def api_memory_items(
     rows, total = crowley.list_memory_items(
         q=q,
         source=source,
+        agent_id=agent_id,
+        memory_tier=memory_tier,
         memory_type=memory_type,
         status=status,
         limit=limit,
@@ -509,11 +518,136 @@ def api_memory_items(
             "filters": {
                 "q": q or "",
                 "source": source or "",
+                "agent_id": agent_id or "",
+                "memory_tier": memory_tier or "",
                 "memory_type": memory_type or "",
                 "status": status,
             },
         }
     )
+
+
+@app.get("/api/audit/log")
+def api_audit_log(
+    entity_type: str | None = Query(None),
+    entity_id: int | None = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> JSONResponse:
+    import write_audit
+
+    items, total = write_audit.list_write_audit_log(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        limit=limit,
+        offset=offset,
+    )
+    return JSONResponse(
+        {
+            "items": items,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "filters": {
+                "entity_type": entity_type or "",
+                "entity_id": entity_id,
+            },
+        }
+    )
+
+
+@app.post("/api/audit/rollback")
+def api_audit_rollback(body: AuditRollbackRequest) -> JSONResponse:
+    import write_audit
+
+    try:
+        result = write_audit.rollback_write_audit(
+            body.audit_id,
+            agent_id=body.agent_id,
+        )
+    except LookupError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(result)
+
+
+@app.get("/api/retrieve/explain")
+def api_retrieve_explain(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(8, ge=1, le=50),
+) -> JSONResponse:
+    return JSONResponse(crowley.build_retrieval_explainability_api(q, limit=limit))
+
+
+@app.get("/api/session/changes")
+def api_session_changes(
+    since: str | None = Query(None),
+) -> JSONResponse:
+    return JSONResponse(crowley.build_session_diff(since))
+
+
+@app.get("/api/mode/simple")
+def api_mode_simple() -> JSONResponse:
+    return JSONResponse(crowley.build_simple_mode_payload())
+
+
+@app.post("/api/memory/gc")
+def api_memory_gc(dry_run: bool = Query(False)) -> JSONResponse:
+    return JSONResponse(crowley.run_memory_garbage_collection(dry_run=dry_run))
+
+
+@app.post("/api/memory/{memory_id}/promote")
+def api_memory_promote(
+    memory_id: int,
+    agent_id: str = Query("system"),
+) -> JSONResponse:
+    import memory_tiers
+
+    try:
+        result = memory_tiers.promote_memory_tier(memory_id, agent_id=agent_id)
+    except LookupError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(result)
+
+
+@app.get("/api/memory/conflicts")
+def api_memory_conflicts(
+    status: str = Query("open"),
+    limit: int = Query(20, ge=1, le=100),
+) -> JSONResponse:
+    import conflict_engine
+
+    items = conflict_engine.list_memory_conflicts(status=status, limit=limit)
+    return JSONResponse({"conflicts": items, "status": status, "limit": limit})
+
+
+@app.post("/api/memory/conflicts/detect")
+def api_memory_conflicts_detect() -> JSONResponse:
+    import conflict_engine
+
+    items = conflict_engine.detect_memory_conflicts()
+    return JSONResponse({"conflicts": items, "detected": len(items)})
+
+
+@app.post("/api/memory/conflicts/{conflict_id}/resolve")
+def api_memory_conflicts_resolve(
+    conflict_id: int,
+    agent_id: str = Query("codex"),
+) -> JSONResponse:
+    import conflict_engine
+
+    try:
+        result = conflict_engine.resolve_memory_conflict(
+            conflict_id, agent_id=agent_id
+        )
+    except LookupError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(result)
 
 
 @app.post("/api/consolidate")

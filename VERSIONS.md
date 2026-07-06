@@ -2,7 +2,7 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.16 (`Crowley V3.9.16 Workflow Enforcement`)
+**Current:** V3.9.17 (`Crowley V3.9.17 Trust Control and Clarity`)
 **Next planned:** V4 Spark Lanes
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
@@ -39,6 +39,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.13 | shipped  | 2026-07-03 | Secure ChatGPT Actions API — bearer `/api/actions/*`, bridge scripts, Custom GPT setup |
 | V3.9.15 | shipped  | 2026-07-05 | GPT Toolbelt — hybrid gateway, tool registry, Codex-parity writes, GitHub read proxy (#94–#100) |
 | V3.9.16 | shipped  | 2026-07-06 | Workflow Enforcement — boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
+| V3.9.17 | shipped  | 2026-07-06 | Trust Control and Clarity — attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
@@ -497,6 +498,26 @@ Plan: [docs/V3.9.16_WORKFLOW_ENFORCEMENT.md](./docs/V3.9.16_WORKFLOW_ENFORCEMENT
 | Tests | **389 tests** with `CROWLEY_TEST_MODE=1` |
 
 Also: `github_read.py` certifi SSL fix for macOS Python 3.14.
+
+---
+
+## V3.9.17 — Trust Control and Clarity
+
+**Version:** `CROWLEY_VERSION = "3.9.17"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.17 Trust Control and Clarity"`
+
+Plan: [docs/V3.9.17_TRUST_CONTROL_CLARITY.md](./docs/V3.9.17_TRUST_CONTROL_CLARITY.md) · Tickets `#112–#130`
+
+| Area | Detail |
+|------|--------|
+| Attribution | `agent_identity.py` — agent_id, source, signature on writes |
+| Permissions | read_only / writer / architect; Actions write gate |
+| Audit | `write_audit.py` — append-only log; `inspect.audit_list`, `audit.rollback` |
+| Memory tiers | ephemeral / working / canonical; promotion, decay, retrieval boost |
+| Conflicts | `conflict_engine.py` — detect + deterministic resolve with trace |
+| Agent behavior | `agent_behavior.py` — sync policy, retrieval policy, chaining, validation |
+| Observability | `inspect.retrieval_observability` per-session tool log |
+| QA | `crowley_context_validation` in QA pipeline schema |
+| Tests | **424 tests** with `CROWLEY_TEST_MODE=1` |
 
 ---
 

@@ -65,9 +65,20 @@ def append_ticket_event(
     actor: str,
     payload: dict[str, object] | None = None,
 ) -> int:
+    import agent_identity
+
     if event_type not in TICKET_EVENT_TYPES:
         raise ValueError(f"invalid ticket event type: {event_type}")
     now = crowley._now_iso()
+    actor_norm = actor.strip().lower()
+    enriched = agent_identity.enrich_event_payload(
+        payload,
+        agent_id=actor_norm,
+        source=actor_norm,
+        timestamp=now,
+        action=f"ticket.{event_type}",
+        content_hint=f"ticket:{ticket_id}",
+    )
     conn = crowley.connect_db()
     try:
         cur = conn.execute(
@@ -75,7 +86,7 @@ def append_ticket_event(
             INSERT INTO ticket_events (ticket_id, event_type, actor, payload, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (ticket_id, event_type, actor.strip().lower(), json.dumps(payload or {}), now),
+            (ticket_id, event_type, actor_norm, json.dumps(enriched), now),
         )
         conn.commit()
         return int(cur.lastrowid)
@@ -98,6 +109,12 @@ def create_ticket(
     status: str = "open",
 ) -> dict[str, object]:
     """Create a ticket and initial event. Returns {ticket, event_id}."""
+    import agent_identity
+
+    actor_norm = actor.strip().lower()
+    allowed, message = agent_identity.check_domain_permission(actor_norm, "ticket.create")
+    if not allowed:
+        raise ValueError(message or "permission_denied")
     title_text = crowley._normalize_text(title)
     if not title_text:
         raise ValueError("ticket title is required")
@@ -158,6 +175,16 @@ def create_ticket(
     ticket = get_ticket_by_id(ticket_id)
     if ticket is None:
         raise RuntimeError("ticket create failed")
+    import write_audit
+
+    write_audit.record_write_audit(
+        agent_id=actor_norm,
+        action="ticket.create",
+        entity_type="ticket",
+        entity_id=ticket_id,
+        before=None,
+        after=write_audit.ticket_row_snapshot(ticket),
+    )
     crowley.record_system_metric("ticket_created", label=str(ticket_id))
     return {"ticket": _ticket_row_to_dict(ticket), "event_id": event_id}
 
@@ -306,6 +333,11 @@ def _ticket_linked_handoff(memory_id: int | None) -> dict[str, object] | None:
         "memory_type": row["memory_type"],
         "created_at": row["created_at"],
         "summary": crowley._handoff_summary_line(str(row["content"])),
+        **{
+            k: v
+            for k, v in crowley._memory_item_api_dict(row).items()
+            if k in {"attribution", "agent_id"}
+        },
     }
 
 
@@ -492,6 +524,9 @@ def update_ticket(
     if row is None:
         raise ValueError(f"ticket not found: {ticket_id}")
 
+    import write_audit
+
+    before_snapshot = write_audit.ticket_row_snapshot(row)
     fields: list[str] = []
     params: list[object] = []
     now = crowley._now_iso()
@@ -607,6 +642,15 @@ def update_ticket(
 
     ticket = get_ticket_by_id(ticket_id)
     assert ticket is not None
+    if fields:
+        write_audit.record_write_audit(
+            agent_id=actor.strip().lower(),
+            action="ticket.update",
+            entity_type="ticket",
+            entity_id=ticket_id,
+            before=before_snapshot,
+            after=write_audit.ticket_row_snapshot(ticket),
+        )
     return {"ticket": _ticket_row_to_dict(ticket), "event_ids": event_ids}
 
 
@@ -622,6 +666,12 @@ def cancel_ticket(
     actor: str,
     comment: str,
 ) -> dict[str, object]:
+    import agent_identity
+
+    actor_norm = actor.strip().lower()
+    allowed, message = agent_identity.check_domain_permission(actor_norm, "ticket.cancel")
+    if not allowed:
+        raise ValueError(message or "permission_denied")
     reason = comment.strip()
     if not reason:
         raise ValueError("cancellation comment is required")

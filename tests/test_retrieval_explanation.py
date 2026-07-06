@@ -38,6 +38,7 @@ EXPLANATION_KEYS = {
     "provenance",
     "provenance_available",
     "inclusion_reason",
+    "attribution",
 }
 
 

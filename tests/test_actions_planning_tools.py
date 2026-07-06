@@ -46,6 +46,24 @@ class PlanningToolTests(IsolatedDbTestCase):
         body = res.json()
         self.assertEqual(body["agent"], "chatgpt")
         self.assertIn("tickets", body)
+        self.assertIn("recent_handoffs", body)
+        feed = body["recent_handoffs"]
+        self.assertTrue(feed.get("auto_loaded"))
+        self.assertIn("agent_behavior", body)
+        behavior = body["agent_behavior"]
+        self.assertIn("retrieval_policy", behavior)
+        self.assertIn("pre_response_validation", body)
+
+    def test_retrieval_policy_tools_exist_in_catalog(self) -> None:
+        import actions_tool_registry as registry
+
+        registry.ensure_registry()
+        names = set(registry._TOOLS.keys())
+        import agent_behavior
+
+        for entry in agent_behavior.RETRIEVAL_POLICY:
+            for tool in entry["tools"]:
+                self.assertIn(str(tool), names, msg=f"missing catalog tool {tool}")
 
     def test_qa_bundle(self) -> None:
         with TestClient(crowley_app.app) as client:

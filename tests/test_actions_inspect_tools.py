@@ -64,6 +64,29 @@ class InspectToolTests(IsolatedDbTestCase):
         self.assertEqual(detail["session_receipt_id"], session_id)
         self.assertIn("evaluations", detail)
 
+    def test_retrieval_observability_after_reads(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={"tool": "ticket.list", "args": {}},
+            )
+            inspect = client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "inspect.retrieval_observability",
+                    "args": {"intent": "tickets"},
+                },
+            )
+        self.assertEqual(inspect.status_code, 200)
+        detail = inspect.json()
+        self.assertIn("log", detail)
+        self.assertTrue(detail.get("tools_called"))
+        self.assertIn("validation", detail)
+        self.assertIn("recommended_tools", detail)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.16"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.16 Workflow Enforcement"
+CROWLEY_VERSION = "3.9.17"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.17 Trust Control and Clarity"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -1344,6 +1344,15 @@ def setup_db() -> None:
             _ensure_memory_backend(conn)
         except Exception:
             pass
+        try:
+            import write_audit
+
+            write_audit.ensure_write_audit_table(conn)
+            import conflict_engine
+
+            conflict_engine.ensure_conflicts_table(conn)
+        except Exception:
+            pass
         conn.commit()
     finally:
         conn.close()
@@ -1641,6 +1650,8 @@ def list_memory_items(
     *,
     q: str | None = None,
     source: str | None = None,
+    agent_id: str | None = None,
+    memory_tier: str | None = None,
     memory_type: str | None = None,
     status: str | None = "active",
     limit: int = 10,
@@ -1658,6 +1669,16 @@ def list_memory_items(
     if source:
         clauses.append("LOWER(source) = LOWER(?)")
         params.append(source)
+    if agent_id and str(agent_id).strip():
+        clauses.append(
+            "LOWER(json_extract(metadata_json, '$.write_attribution.agent_id')) = LOWER(?)"
+        )
+        params.append(str(agent_id).strip())
+    if memory_tier and str(memory_tier).strip():
+        clauses.append(
+            "LOWER(json_extract(metadata_json, '$.memory_tier')) = LOWER(?)"
+        )
+        params.append(str(memory_tier).strip())
     if memory_type:
         clauses.append("LOWER(memory_type) = LOWER(?)")
         params.append(memory_type)
@@ -4546,6 +4567,8 @@ def save_memory_item(
     status: str = "active",
     *,
     metadata: dict[str, object] | None = None,
+    agent_id: str | None = None,
+    write_action: str | None = None,
     conn: sqlite3.Connection | None = None,
     legacy_memory_id: int | None = None,
 ) -> int | None:
@@ -4584,11 +4607,43 @@ def save_memory_item(
         if existing_id is not None:
             return existing_id
 
+        if pinned:
+            import agent_identity
+
+            resolved_agent = agent_identity.normalize_agent_id(
+                agent_id, fallback_source=source
+            )
+            allowed, message = agent_identity.check_domain_permission(
+                resolved_agent, "memory.pin"
+            )
+            if not allowed:
+                return None
+
         now = _now_iso()
-        metadata_json = (
-            json.dumps(metadata, sort_keys=True, ensure_ascii=False)
-            if metadata
-            else None
+        import agent_identity
+
+        resolved_agent = agent_identity.normalize_agent_id(agent_id, fallback_source=source)
+        attribution = agent_identity.build_write_attribution(
+            resolved_agent,
+            source,
+            timestamp=now,
+            action=write_action,
+            content_hint=content,
+        )
+        merged_metadata = agent_identity.merge_attribution_into_metadata(
+            metadata, attribution
+        )
+        import memory_tiers
+
+        tier = memory_tiers.infer_tier(
+            memory_type=memory_type,
+            pinned=pinned,
+            source=source,
+            write_action=write_action,
+        )
+        merged_metadata = memory_tiers.apply_tier_to_metadata(merged_metadata, tier)
+        metadata_json = json.dumps(
+            merged_metadata, sort_keys=True, ensure_ascii=False
         )
         cur = conn.execute(
             """
@@ -4630,6 +4685,28 @@ def save_memory_item(
                 index_memory_embedding(conn, item_id, vector, model_name)
         except Exception:
             pass
+
+        saved_row = conn.execute(
+            "SELECT * FROM memory_items WHERE id = ?",
+            (item_id,),
+        ).fetchone()
+        if saved_row is not None:
+            import write_audit
+
+            audit_entity = (
+                "handoff"
+                if write_action and str(write_action).startswith("handoff.")
+                else "memory_item"
+            )
+            write_audit.record_write_audit(
+                agent_id=resolved_agent,
+                action=str(write_action or "memory.save"),
+                entity_type=audit_entity,
+                entity_id=item_id,
+                before=None,
+                after=write_audit.memory_row_snapshot(saved_row),
+                conn=conn,
+            )
 
         if own_conn:
             conn.commit()
@@ -5679,6 +5756,26 @@ def _build_retrieval_explanation(
         "provenance": provenance,
         "provenance_available": _available_provenance_ids(provenance),
         "inclusion_reason": inclusion_reason,
+        "attribution": _memory_item_attribution(row),
+    }
+
+
+def _memory_item_attribution(row: sqlite3.Row) -> dict[str, object] | None:
+    import agent_identity
+
+    meta_raw = row["metadata_json"] if "metadata_json" in row.keys() else None
+    attr = agent_identity.attribution_for_memory_row(
+        str(meta_raw) if meta_raw is not None else None
+    )
+    if attr is not None:
+        return attr
+    return {
+        "agent_id": agent_identity.normalize_agent_id(
+            None, fallback_source=str(row["source"])
+        ),
+        "source": str(row["source"]),
+        "timestamp": str(row["created_at"]),
+        "inferred": True,
     }
 
 
@@ -5699,6 +5796,12 @@ def _score_memory_item(
         active_project_id,
     )
     pinned_bonus = W_SCORE_PINNED_BONUS if int(row["pinned"]) else 0.0
+    import memory_tiers
+
+    tier_bonus = memory_tiers.retrieval_tier_boost(
+        str(row["metadata_json"]) if row["metadata_json"] else None,
+        pinned=bool(int(row["pinned"])),
+    )
     breakdown = {
         "semantic": round(semantic, 4),
         "keyword": round(keyword, 4),
@@ -5707,6 +5810,7 @@ def _score_memory_item(
         "type_match": round(type_match, 4),
         "project_match": round(project_match, 4),
         "pinned_bonus": round(pinned_bonus, 4),
+        "tier_bonus": round(tier_bonus, 4),
     }
     score = (
         W_SCORE_SEMANTIC * semantic
@@ -5716,6 +5820,7 @@ def _score_memory_item(
         + W_SCORE_TYPE * type_match
         + W_SCORE_PROJECT * project_match
         + pinned_bonus
+        + tier_bonus
     )
     return round(score, 4), breakdown
 
@@ -5884,6 +5989,13 @@ def retrieve_memories(
             item["provenance_available"] = explanation["provenance_available"]
             item["inclusion_reason"] = explanation["inclusion_reason"]
             item["explanation"] = explanation
+            import memory_tiers
+
+            item["memory_tier"] = memory_tiers.tier_from_metadata_json(
+                str(row["metadata_json"]) if row["metadata_json"] else None
+            )
+            if int(row["pinned"]):
+                item["memory_tier"] = "canonical"
             finalized.append(item)
         results = finalized
 
@@ -5972,12 +6084,32 @@ def _memory_item_layer(row: sqlite3.Row) -> str:
 
 
 def _memory_item_api_dict(row: sqlite3.Row) -> dict[str, object]:
+    import agent_identity
+
     item = row_to_dict(row)
     item.pop("embedding_blob", None)
     item["display"] = _memory_display_text(row)
     item["is_canon"] = _is_canon_memory_row(row)
     item["is_pinned"] = bool(int(row["pinned"]))
     item["memory_layer"] = _memory_item_layer(row)
+    meta_raw = row["metadata_json"] if "metadata_json" in row.keys() else None
+    attr = agent_identity.attribution_for_memory_row(
+        str(meta_raw) if meta_raw is not None else None
+    )
+    if attr is not None:
+        item["attribution"] = attr
+        item["agent_id"] = attr.get("agent_id")
+    else:
+        item["agent_id"] = agent_identity.normalize_agent_id(
+            None, fallback_source=str(row["source"])
+        )
+    import memory_tiers
+
+    item["memory_tier"] = memory_tiers.tier_from_metadata_json(
+        str(meta_raw) if meta_raw is not None else None
+    )
+    if int(row["pinned"]):
+        item["memory_tier"] = "canonical"
     return item
 
 
@@ -6809,6 +6941,176 @@ def retrieve_memories_api(q: str, limit: int = MEMORY_LIMIT) -> dict[str, object
         "limit": limit,
         "retrieval_mode": get_last_retrieval_mode(),
         "results": results,
+    }
+
+
+def build_retrieval_explainability_api(
+    q: str,
+    *,
+    limit: int = MEMORY_LIMIT,
+) -> dict[str, object]:
+    """Structured explainability without chain-of-thought (V3.9.17 #119)."""
+    import memory_tiers
+
+    payload = retrieve_memories_api(q, limit=limit)
+    results = payload.get("results")
+    signals: list[dict[str, object]] = []
+    if isinstance(results, list):
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            explanation = entry.get("explanation")
+            exp = explanation if isinstance(explanation, dict) else {}
+            tier = entry.get("memory_tier")
+            if not tier:
+                tier = memory_tiers.normalize_tier(str(exp.get("memory_tier", "working")))
+            signals.append(
+                {
+                    "memory_id": entry.get("id"),
+                    "memory_type": entry.get("memory_type") or exp.get("memory_type"),
+                    "memory_tier": tier,
+                    "score": exp.get("score"),
+                    "inclusion_reason": exp.get("inclusion_reason"),
+                    "attribution": exp.get("attribution"),
+                    "provenance": exp.get("provenance"),
+                }
+            )
+    return {
+        "query": q,
+        "limit": limit,
+        "retrieval_mode": payload.get("retrieval_mode"),
+        "signals": signals,
+    }
+
+
+def build_session_diff(
+    since: str | None = None,
+    *,
+    project_id: int | None = None,
+) -> dict[str, object]:
+    """What changed since last session (V3.9.17 #120)."""
+    conn = connect_db()
+    try:
+        if project_id is None:
+            project_id = _active_project_id(conn)
+        since_ts = since.strip() if since and since.strip() else None
+        if since_ts is None:
+            row = conn.execute(
+                "SELECT datetime('now', '-24 hours') AS ts"
+            ).fetchone()
+            since_ts = str(row["ts"])
+
+        ticket_rows = conn.execute(
+            """
+            SELECT * FROM tickets
+            WHERE datetime(updated_at) >= datetime(?)
+            ORDER BY datetime(updated_at) DESC
+            LIMIT 50
+            """,
+            (since_ts,),
+        ).fetchall()
+        memory_rows = conn.execute(
+            """
+            SELECT * FROM memory_items
+            WHERE datetime(updated_at) >= datetime(?)
+            ORDER BY datetime(updated_at) DESC
+            LIMIT 50
+            """,
+            (since_ts,),
+        ).fetchall()
+        decision_rows = conn.execute(
+            """
+            SELECT * FROM decisions
+            WHERE datetime(timestamp) >= datetime(?)
+            ORDER BY datetime(timestamp) DESC
+            LIMIT 20
+            """,
+            (since_ts,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    import tickets as tickets_mod
+
+    return {
+        "since": since_ts,
+        "project_id": project_id,
+        "tickets": [tickets_mod._ticket_row_to_dict(row) for row in ticket_rows],
+        "memory": [_memory_item_api_dict(row) for row in memory_rows],
+        "decisions": [row_to_dict(row) for row in decision_rows],
+        "counts": {
+            "tickets": len(ticket_rows),
+            "memory": len(memory_rows),
+            "decisions": len(decision_rows),
+        },
+    }
+
+
+def build_simple_mode_payload(*, project_id: int | None = None) -> dict[str, object]:
+    """Reduced surface for onboarding (V3.9.17 #122)."""
+    project = get_active_project()
+    if project_id is None and project is not None:
+        project_id = int(project["id"])
+    summary = build_tickets_summary(project_id)
+    open_tasks = [row_to_dict(row) for row in list_tasks(status="open")[:10]]
+    counts = count_memory_items_by_status()
+    return {
+        "mode": "simple",
+        "project": row_to_dict(project) if project is not None else None,
+        "tickets_open": summary.get("open", []),
+        "tasks": open_tasks,
+        "memory_active_count": int(counts.get("active", 0)),
+        "hidden_surfaces": [
+            "decisions",
+            "lineage",
+            "audit_log",
+            "conflicts",
+            "agent_internals",
+        ],
+    }
+
+
+def run_memory_garbage_collection(*, dry_run: bool = False) -> dict[str, object]:
+    """Duplicate prune + tier decay (V3.9.17 #121)."""
+    import memory_tiers
+
+    project = get_active_project()
+    project_id = int(project["id"]) if project is not None else None
+    decay_result = memory_tiers.run_memory_decay(project_id=project_id, dry_run=dry_run)
+    duplicates_pruned = 0
+    conn = connect_db()
+    try:
+        params: list[object] = []
+        where = "status = 'active'"
+        if project_id is not None:
+            where += " AND project_id = ?"
+            params.append(project_id)
+        rows = conn.execute(
+            f"SELECT * FROM memory_items WHERE {where} ORDER BY datetime(created_at) DESC",
+            params,
+        ).fetchall()
+        seen: dict[str, int] = {}
+        now = _now_iso()
+        for row in rows:
+            key = _normalize_dedupe_key(str(row["content"]))
+            if not key or len(key) < 12:
+                continue
+            if key in seen:
+                duplicates_pruned += 1
+                if not dry_run:
+                    conn.execute(
+                        "UPDATE memory_items SET status = 'stale', updated_at = ? WHERE id = ?",
+                        (now, int(row["id"])),
+                    )
+            else:
+                seen[key] = int(row["id"])
+        if not dry_run:
+            conn.commit()
+    finally:
+        conn.close()
+    return {
+        **decay_result,
+        "duplicates_pruned": duplicates_pruned,
     }
 
 
@@ -7994,6 +8296,12 @@ def load_portable_writeback_acceptance_report(
     return parsed if isinstance(parsed, dict) else None
 
 
+def _agent_permissions_payload(agent: str) -> dict[str, object]:
+    import agent_identity
+
+    return agent_identity.permissions_for_agent(agent)
+
+
 def get_agent_role(agent: str) -> str:
     """Identity text for agents in the Crowley pipeline (sync bundles, docs)."""
     normalized = agent.strip().lower()
@@ -8072,9 +8380,14 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         limit=ACTIVITY_WIRE_SYNC_CAP,
     )
 
+    import agent_behavior
+
+    recent_handoffs = agent_behavior.build_auto_handoff_feed(limit=8)
+
     return {
         "agent": normalized_agent,
         "role": get_agent_role(normalized_agent),
+        "permissions": _agent_permissions_payload(normalized_agent),
         "boot_sequence": {
             "required_first_tool": "agent.sync",
             "status": "complete",
@@ -8095,6 +8408,7 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         "tickets": tickets,
         "task_frame": task_frame,
         "activity_wire": activity_wire,
+        "recent_handoffs": recent_handoffs,
         "recent_decisions": recent_decisions,
         "constraint_memories": constraint_memories,
         "events_from_this_agent": events_from_this_agent,
@@ -8296,6 +8610,13 @@ def ingest_handoff(
     memory_items_rejected: list[str] = []
     promoted_ids: list[int] = []
 
+    handoff_write_action = f"handoff.{handoff_type}"
+    handoff_save_kwargs = {
+        "agent_id": source,
+        "write_action": handoff_write_action,
+        "metadata": ingest_metadata,
+    }
+
     for promoted_type, bullet_content, why in typed_memories:
         item_id = save_memory_item(
             promoted_type,
@@ -8306,6 +8627,9 @@ def ingest_handoff(
             importance=4 if promoted_type == "decision" else 3,
             confidence=0.9,
             pinned=False,
+            write_action=f"{handoff_write_action}.{promoted_type}",
+            agent_id=source,
+            metadata=ingest_metadata,
         )
         if item_id is not None:
             promoted_ids.append(int(item_id))
@@ -8330,6 +8654,7 @@ def ingest_handoff(
             importance=importance,
             confidence=0.9,
             pinned=False,
+            **handoff_save_kwargs,
         )
         if memory_item_id is None and promoted_ids:
             memory_item_id = promoted_ids[0]
@@ -8342,6 +8667,7 @@ def ingest_handoff(
             importance=importance,
             confidence=0.9,
             pinned=False,
+            **handoff_save_kwargs,
         )
 
     if memory_item_id is None:

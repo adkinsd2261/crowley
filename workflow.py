@@ -1,4 +1,4 @@
-"""V3.9.16 — Workflow enforcement: boot, truth hierarchy, core tools, QA pipeline."""
+"""V3.9.16+ — Workflow enforcement: boot, truth hierarchy, core tools, QA pipeline."""
 
 from __future__ import annotations
 
@@ -96,6 +96,14 @@ QA_PIPELINE_SCHEMA: dict[str, object] = {
         "Codex must not pass with known blocking issues",
         "Revision loops back to Cursor with suggested_fixes",
     ],
+    "crowley_context_validation": {
+        "required": [
+            "Verify QA conclusions against recent handoffs (handoff.list or sync recent_handoffs)",
+            "Check consistency with memory and agent_activity",
+            "Flag contradictions vs tickets and project_state",
+        ],
+        "must_reference_actual_retrievals": True,
+    },
 }
 
 REDUNDANCY_AUDIT: list[dict[str, object]] = [
@@ -139,6 +147,12 @@ def normalize_session_key(raw: str | None, *, bearer_token: str | None = None) -
 def record_boot_sync(session_key: str) -> None:
     with _session_lock:
         _session_boot[session_key] = time.time()
+    try:
+        import agent_behavior
+
+        agent_behavior.mark_synced(session_key)
+    except ImportError:
+        pass
 
 
 def boot_status(session_key: str) -> BootStatus:
@@ -186,7 +200,7 @@ def secondary_tool_names(all_tools: list[str]) -> list[str]:
 def workflow_enforcement_payload(*, tool_names: list[str] | None = None) -> dict[str, object]:
     names = tool_names or []
     return {
-        "version": "3.9.16",
+        "version": "3.9.17",
         "truth_hierarchy": TRUTH_HIERARCHY,
         "canonical_loop": CANONICAL_WORKFLOW_LOOP,
         "boot_sequence": {
@@ -199,6 +213,26 @@ def workflow_enforcement_payload(*, tool_names: list[str] | None = None) -> dict
         "secondary_tools": secondary_tool_names(names) if names else [],
         "redundancy_audit": REDUNDANCY_AUDIT,
         "qa_pipeline": QA_PIPELINE_SCHEMA,
+        "permissions": _permissions_schema(),
+        "agent_behavior": _agent_behavior_payload(),
+    }
+
+
+def _agent_behavior_payload() -> dict[str, object]:
+    import agent_behavior
+
+    return agent_behavior.behavior_payload()
+
+
+def _permissions_schema() -> dict[str, object]:
+    import agent_identity
+
+    return {
+        "roles": list(agent_identity.PERMISSION_ROLES),
+        "role_map": dict(agent_identity.AGENT_PERMISSION_ROLES),
+        "tool_min_role": dict(agent_identity.TOOL_MIN_ROLE),
+        "domain_min_role": dict(agent_identity.DOMAIN_ACTION_MIN_ROLE),
+        "enforcement": "POST /api/actions/write + ticket domain + memory.pin",
     }
 
 

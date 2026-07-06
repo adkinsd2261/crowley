@@ -111,14 +111,25 @@ def _resolve_session_key(
     return workflow.normalize_session_key(x_crowley_session, bearer_token=token)
 
 
+def _resolve_agent_id(
+    x_crowley_agent: Annotated[str | None, Header(alias="X-Crowley-Agent")] = None,
+) -> str:
+    import agent_identity
+
+    return agent_identity.normalize_agent_id(x_crowley_agent, fallback_source="chatgpt")
+
+
 def _invoke_response(
     kind: registry.ToolKind,
     tool: str,
     args: dict[str, object] | None,
     *,
     session_key: str,
+    agent_id: str,
 ) -> JSONResponse:
-    body, status = registry.dispatch(kind, tool, args, session_key=session_key)
+    body, status = registry.dispatch(
+        kind, tool, args, session_key=session_key, agent_id=agent_id
+    )
     return JSONResponse(body, status_code=status)
 
 
@@ -149,18 +160,24 @@ def actions_catalog(_auth: None = Depends(require_actions_bearer)) -> JSONRespon
 def actions_read(
     body: ActionsInvokeRequest,
     session_key: Annotated[str, Depends(_resolve_session_key)],
+    agent_id: Annotated[str, Depends(_resolve_agent_id)],
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
-    return _invoke_response("read", body.tool, body.args, session_key=session_key)
+    return _invoke_response(
+        "read", body.tool, body.args, session_key=session_key, agent_id=agent_id
+    )
 
 
 @router.post("/write")
 def actions_write(
     body: ActionsInvokeRequest,
     session_key: Annotated[str, Depends(_resolve_session_key)],
+    agent_id: Annotated[str, Depends(_resolve_agent_id)],
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
-    return _invoke_response("write", body.tool, body.args, session_key=session_key)
+    return _invoke_response(
+        "write", body.tool, body.args, session_key=session_key, agent_id=agent_id
+    )
 
 
 # --- Legacy V3.9.13 aliases (deprecated; delegate to registry) ---
@@ -175,7 +192,8 @@ def actions_context(
     project: str | None = Query(None),
 ) -> JSONResponse:
     return _invoke_response(
-        "read", "context.get", {"q": q, "limit": limit, "project": project}, session_key=session_key
+        "read", "context.get", {"q": q, "limit": limit, "project": project},
+        session_key=session_key, agent_id="chatgpt",
     )
 
 
@@ -186,7 +204,10 @@ def actions_retrieve(
     q: str = Query(..., min_length=1),
     limit: int = Query(8, ge=1, le=50),
 ) -> JSONResponse:
-    return _invoke_response("read", "retrieve.search", {"q": q, "limit": limit}, session_key=session_key)
+    return _invoke_response(
+        "read", "retrieve.search", {"q": q, "limit": limit},
+        session_key=session_key, agent_id="chatgpt",
+    )
 
 
 @router.get("/portable/packet")
@@ -195,7 +216,10 @@ def actions_portable_packet(
     _auth: None = Depends(require_actions_bearer),
     project: str | None = Query(None),
 ) -> JSONResponse:
-    return _invoke_response("read", "portable.packet", {"project": project}, session_key=session_key)
+    return _invoke_response(
+        "read", "portable.packet", {"project": project},
+        session_key=session_key, agent_id="chatgpt",
+    )
 
 
 @router.post("/writeback/parse")
@@ -209,7 +233,9 @@ def actions_writeback_parse(
         payload["writeback"] = body.writeback
     if body.text:
         payload["text"] = body.text
-    return _invoke_response("write", "writeback.parse", payload, session_key=session_key)
+    return _invoke_response(
+        "write", "writeback.parse", payload, session_key=session_key, agent_id="chatgpt"
+    )
 
 
 @router.post("/writeback/ingest")
@@ -224,7 +250,9 @@ def actions_writeback_ingest(
         payload["writeback"] = body.writeback
     if body.text:
         payload["text"] = body.text
-    return _invoke_response("write", "writeback.ingest", payload, session_key=session_key)
+    return _invoke_response(
+        "write", "writeback.ingest", payload, session_key=session_key, agent_id="chatgpt"
+    )
 
 
 @router.get("/writeback/acceptance")
@@ -239,4 +267,5 @@ def actions_writeback_acceptance(
         "writeback.acceptance",
         {"refresh": refresh, "apply": apply},
         session_key=session_key,
+        agent_id="chatgpt",
     )
