@@ -82,8 +82,19 @@ def ingest_via_engine(
     handoff_type: str,
     content: str,
     project: str,
+    metadata: dict[str, object] | None = None,
 ) -> dict[str, object]:
     import crowley
+    import handoff_ticket_bridge
+
+    ingest_metadata = dict(metadata or {})
+    if handoff_type in {"builder_handoff", "architect_handoff"}:
+        refs = handoff_ticket_bridge.extract_referenced_ticket_ids(
+            content,
+            metadata=ingest_metadata,
+        )
+        if refs and "closed_work_ticket_id" not in ingest_metadata:
+            ingest_metadata["closed_work_ticket_id"] = refs[0]
 
     crowley.setup_db()
     return crowley.ingest_handoff(
@@ -91,6 +102,7 @@ def ingest_via_engine(
         handoff_type=handoff_type,
         content=content,
         project=project,
+        metadata=ingest_metadata,
     )
 
 
@@ -100,12 +112,19 @@ def ingest_via_http(
     content: str,
     project: str,
 ) -> dict[str, object]:
+    import handoff_ticket_bridge
+
+    metadata: dict[str, object] = {}
+    if handoff_type in {"builder_handoff", "architect_handoff"}:
+        refs = handoff_ticket_bridge.extract_referenced_ticket_ids(content)
+        if refs:
+            metadata["closed_work_ticket_id"] = refs[0]
     payload = {
         "source": source,
         "type": handoff_type,
         "project": project,
         "content": content,
-        "metadata": {},
+        "metadata": metadata,
     }
     data = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(

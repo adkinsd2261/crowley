@@ -8734,12 +8734,19 @@ def ingest_handoff(
         import handoff_ticket_bridge
 
         closed_ticket = ingest_metadata.get("closed_work_ticket_id")
+        if closed_ticket is None:
+            closed_ticket = ingest_metadata.get("ticket_id")
         if closed_ticket is not None:
             try:
                 closed_ticket = int(closed_ticket)
             except (TypeError, ValueError):
                 closed_ticket = None
-        bridge = handoff_ticket_bridge.persist_handoff_as_ticket(
+        if closed_ticket is None:
+            closed_ticket = handoff_ticket_bridge.extract_work_ticket_id(
+                trimmed_content,
+                metadata=ingest_metadata,
+            )
+        bridge = handoff_ticket_bridge.ensure_handoff_ticket_link(
             int(memory_item_id),
             trimmed_content,
             source=source,

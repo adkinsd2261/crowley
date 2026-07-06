@@ -12,6 +12,7 @@ _WORK_TICKET_RE = re.compile(
     r"(?:ticket|closed\s+ticket|work\s+ticket)\s*#(\d+)",
     re.IGNORECASE,
 )
+_BARE_TICKET_HASH_RE = re.compile(r"(?<!\w)#(\d+)\b")
 
 
 def _section_text(content: str, heading: str) -> str:
@@ -32,29 +33,48 @@ def _first_summary_bullet(content: str) -> str:
     return section.splitlines()[0].strip() if section else ""
 
 
+def extract_referenced_ticket_ids(
+    content: str,
+    *,
+    metadata: dict[str, object] | None = None,
+) -> list[int]:
+    """Collect ticket ids from metadata, Context Basis, and body (#167)."""
+    seen: set[int] = set()
+    ordered: list[int] = []
+
+    def _add(raw: object) -> None:
+        try:
+            ticket_id = int(raw)
+        except (TypeError, ValueError):
+            return
+        if ticket_id not in seen:
+            seen.add(ticket_id)
+            ordered.append(ticket_id)
+
+    if metadata:
+        for key in ("closed_work_ticket_id", "work_ticket_id", "ticket_id"):
+            if key in metadata:
+                _add(metadata.get(key))
+
+    context = _section_text(content, "Context Basis")
+    for blob in (context, content):
+        if not blob:
+            continue
+        for match in _WORK_TICKET_RE.finditer(blob):
+            _add(match.group(1))
+        for match in _BARE_TICKET_HASH_RE.finditer(blob):
+            _add(match.group(1))
+    return ordered
+
+
 def extract_work_ticket_id(
     content: str,
     *,
     metadata: dict[str, object] | None = None,
 ) -> int | None:
     """Parse work ticket id from handoff metadata or Context Basis / body."""
-    if metadata:
-        for key in ("closed_work_ticket_id", "work_ticket_id", "ticket_id"):
-            raw = metadata.get(key)
-            if raw is not None:
-                try:
-                    return int(raw)
-                except (TypeError, ValueError):
-                    continue
-
-    context = _section_text(content, "Context Basis")
-    for blob in (context, content):
-        if not blob:
-            continue
-        match = _WORK_TICKET_RE.search(blob)
-        if match:
-            return int(match.group(1))
-    return None
+    refs = extract_referenced_ticket_ids(content, metadata=metadata)
+    return refs[0] if refs else None
 
 
 def parse_handoff_ticket_fields(content: str) -> dict[str, str]:
@@ -286,6 +306,68 @@ def _list_duplicate_linked_memory_groups() -> list[dict[str, object]]:
     return groups
 
 
+def _create_archival_ticket_for_handoff(
+    memory_id: int,
+    content: str,
+    *,
+    source: str,
+    handoff_type: str,
+    project_id: int | None = None,
+    closed_work_ticket_id: int | None = None,
+    linkage_decision: str = "archival_created",
+) -> dict[str, object]:
+    """Create a done ticket dedicated to this handoff memory."""
+    fields = parse_handoff_ticket_fields(content)
+    description = _build_persisted_description(
+        fields,
+        memory_id=memory_id,
+        handoff_type=handoff_type,
+        source=source,
+        closed_work_ticket_id=closed_work_ticket_id,
+    )
+
+    assignee = source.strip().lower()
+    if assignee not in tickets.TICKET_ASSIGNEES:
+        assignee = "unassigned"
+
+    result = tickets.create_ticket(
+        fields["title"],
+        description=description,
+        assignee=assignee,
+        priority=3,
+        source=source if source in tickets.TICKET_SOURCES else "system",
+        actor="system",
+        project_id=project_id,
+        linked_memory_id=int(memory_id),
+        status="done",
+    )
+    ticket_id = int(result["ticket"]["id"])
+    tickets.append_ticket_event(
+        ticket_id,
+        "handoff_linked",
+        "system",
+        {
+            "memory_item_id": memory_id,
+            "handoff_type": handoff_type,
+            "provenance": f"handoff #{memory_id}",
+            "mode": linkage_decision,
+            "linkage_decision": linkage_decision,
+            "work_ticket_id": closed_work_ticket_id,
+        },
+    )
+    _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
+    return {
+        "created": True,
+        "idempotent": False,
+        "mode": linkage_decision,
+        "linkage_decision": linkage_decision,
+        "ticket": result["ticket"],
+        "memory_item_id": memory_id,
+        "work_ticket_id": closed_work_ticket_id,
+        "event_id": result.get("event_id"),
+    }
+
+
 def enrich_work_ticket_from_handoff(
     work_ticket_id: int,
     memory_id: int,
@@ -297,15 +379,32 @@ def enrich_work_ticket_from_handoff(
     """Update an existing work ticket from handoff — no archival duplicate."""
     row = tickets.get_ticket_by_id(work_ticket_id)
     if row is None:
-        return {"ok": False, "reason": f"work ticket not found: {work_ticket_id}"}
+        return {
+            "ok": False,
+            "reason": f"work ticket not found: {work_ticket_id}",
+            "linkage_decision": "work_ticket_missing",
+        }
 
     existing_link = row["linked_memory_id"]
+    if existing_link is not None and int(existing_link) != int(memory_id):
+        project_id = int(row["project_id"]) if row["project_id"] is not None else None
+        return _create_archival_ticket_for_handoff(
+            memory_id,
+            content,
+            source=source,
+            handoff_type=handoff_type,
+            project_id=project_id,
+            closed_work_ticket_id=work_ticket_id,
+            linkage_decision="follow_up_archival",
+        )
+
     if existing_link is not None and int(existing_link) == int(memory_id):
         _cancel_duplicate_linked_tickets(memory_id, keep_id=work_ticket_id, actor=source)
         return {
             "created": False,
             "idempotent": True,
             "mode": "work_ticket_already_linked",
+            "linkage_decision": "work_ticket_already_linked",
             "ticket": tickets._ticket_row_to_dict(row),
             "memory_item_id": memory_id,
             "work_ticket_id": work_ticket_id,
@@ -343,10 +442,44 @@ def enrich_work_ticket_from_handoff(
         "created": False,
         "idempotent": False,
         "mode": "work_ticket_enriched",
+        "linkage_decision": "work_ticket_enriched",
         "ticket": result["ticket"],
         "memory_item_id": memory_id,
         "work_ticket_id": work_ticket_id,
     }
+
+
+def ensure_handoff_ticket_link(
+    memory_id: int,
+    content: str,
+    *,
+    source: str,
+    handoff_type: str,
+    project_id: int | None = None,
+    closed_work_ticket_id: int | None = None,
+    metadata: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """#167 — guarantee every persisted handoff memory has a linked ticket."""
+    if list_tickets_for_handoff_memory(memory_id):
+        linked = get_ticket_for_handoff_memory(memory_id)
+        assert linked is not None
+        return {
+            "created": False,
+            "idempotent": True,
+            "mode": "already_linked",
+            "linkage_decision": "already_linked",
+            "ticket": linked,
+            "memory_item_id": memory_id,
+        }
+    return persist_handoff_as_ticket(
+        memory_id,
+        content,
+        source=source,
+        handoff_type=handoff_type,
+        project_id=project_id,
+        closed_work_ticket_id=closed_work_ticket_id,
+        metadata=metadata,
+    )
 
 
 def persist_handoff_as_ticket(
@@ -452,6 +585,7 @@ def persist_handoff_as_ticket(
             "handoff_type": handoff_type,
             "provenance": f"handoff #{memory_id}",
             "mode": "archival_created",
+            "linkage_decision": "archival_created",
         },
     )
     _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
@@ -459,6 +593,7 @@ def persist_handoff_as_ticket(
         "created": True,
         "idempotent": False,
         "mode": "archival_created",
+        "linkage_decision": "archival_created",
         "ticket": result["ticket"],
         "memory_item_id": memory_id,
         "event_id": result.get("event_id"),

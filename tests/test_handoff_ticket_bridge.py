@@ -259,6 +259,92 @@ class HandoffTicketBridgeTests(IsolatedDbTestCase):
                 linked_memory_id=int(mem_id),
             )
 
+    def test_follow_up_handoff_does_not_steal_work_ticket_link(self) -> None:
+        work_id = int(
+            crowley.create_ticket(
+                "Primary work ticket",
+                assignee="cursor",
+                project_id=self.project_id,
+            )["ticket"]["id"]
+        )
+        first_body = HANDOFF_BODY.replace("ticket #131", f"ticket #{work_id}")
+        first_mem = crowley.save_memory_item(
+            "project_update",
+            first_body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert first_mem is not None
+        first = handoff_ticket_bridge.persist_handoff_as_ticket(
+            int(first_mem),
+            first_body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+            closed_work_ticket_id=work_id,
+        )
+        self.assertEqual(first.get("linkage_decision"), "work_ticket_enriched")
+
+        second_body = (
+            first_body.replace("probe", "follow-up probe")
+            + "\n\n## Follow-up\n\n- Additional doc-lock handoff for the same work ticket.\n"
+        )
+        second_mem = crowley.save_memory_item(
+            "project_update",
+            second_body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert second_mem is not None
+        second = handoff_ticket_bridge.persist_handoff_as_ticket(
+            int(second_mem),
+            second_body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+            closed_work_ticket_id=work_id,
+        )
+        self.assertEqual(second.get("linkage_decision"), "follow_up_archival")
+        self.assertTrue(second.get("created"))
+
+        work_row = tickets.get_ticket_by_id(work_id)
+        assert work_row is not None
+        self.assertEqual(int(work_row["linked_memory_id"]), int(first_mem))
+        self.assertEqual(len(handoff_ticket_bridge.list_tickets_for_handoff_memory(int(second_mem))), 1)
+
+    def test_extract_bare_hash_ticket_reference(self) -> None:
+        body = "Shipped validation wiring (#166) without Context Basis ticket line."
+        self.assertEqual(
+            handoff_ticket_bridge.extract_referenced_ticket_ids(body),
+            [166],
+        )
+
+    def test_ensure_handoff_ticket_link_idempotent(self) -> None:
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        first = handoff_ticket_bridge.ensure_handoff_ticket_link(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        second = handoff_ticket_bridge.ensure_handoff_ticket_link(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        self.assertTrue(first.get("created"))
+        self.assertEqual(second.get("linkage_decision"), "already_linked")
+
 
 if __name__ == "__main__":
     unittest.main()

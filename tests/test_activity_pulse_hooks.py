@@ -106,6 +106,7 @@ class CursorSyncPulseHookTests(unittest.TestCase):
         )
         handoff = mock.Mock()
         handoff.relative_to.return_value = Path(".crowley/inbox/cursor_after_probe.md")
+        handoff.read_text.return_value = "# handoff\n## Summary\n- probe\n## Context Basis\n- ticket #71\n"
         with (
             mock.patch.object(curs, "_ensure_bus"),
             mock.patch.object(curs, "INBOX", Path("/tmp/crowley-test-inbox")),
@@ -117,6 +118,10 @@ class CursorSyncPulseHookTests(unittest.TestCase):
             mock.patch.object(asl, "complete_ticket_api", return_value=(True, None)),
             mock.patch.object(asl, "last_handoff_memory_id", return_value=99),
             mock.patch.object(asl, "format_handoff_closed_ticket", return_value="linked"),
+            mock.patch(
+                "handoff_ticket_bridge.ensure_handoff_ticket_link",
+                return_value={"linkage_decision": "already_linked", "ticket": {"id": 71}},
+            ),
             mock.patch.object(asl, "post_activity_pulse") as pulse,
         ):
             self.assertEqual(curs.after(args), 0)

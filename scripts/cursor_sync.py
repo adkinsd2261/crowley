@@ -16,6 +16,8 @@ if str(_SCRIPTS) not in sys.path:
 import agent_sync_lib as asl  # noqa: E402
 
 ROOT = asl.ROOT
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 PYTHON = ROOT / "venv" / "bin" / "python3"
 INBOX = ROOT / ".crowley" / "inbox"
 HEALTH_URL = asl.url("/api/bus/health")
@@ -407,6 +409,8 @@ def after(args: argparse.Namespace) -> int:
         )
         return 0
 
+    handoff_content = handoff.read_text(encoding="utf-8")
+
     if _ingest_and_verify():
         asl.clear_session_marker()
         summary = args.summary.strip() if args.summary else "Builder handoff"
@@ -422,8 +426,24 @@ def after(args: argparse.Namespace) -> int:
             ok, err = asl.complete_ticket_api(
                 int(args.ticket),
                 actor=AGENT,
-                linked_memory_id=mem_id,
             )
+            if ok and mem_id is not None:
+                import handoff_ticket_bridge
+
+                body = handoff_content
+                link = handoff_ticket_bridge.ensure_handoff_ticket_link(
+                    int(mem_id),
+                    body,
+                    source=AGENT,
+                    handoff_type=args.handoff_type,
+                    closed_work_ticket_id=int(args.ticket),
+                    metadata={"closed_work_ticket_id": int(args.ticket)},
+                )
+                if link.get("linkage_decision") == "follow_up_archival":
+                    print(
+                        f"Handoff #{mem_id} linked via follow-up ticket "
+                        f"#{link.get('ticket', {}).get('id')} (work ticket #{args.ticket} already linked)."
+                    )
             if ok:
                 if mem_id is not None:
                     print(asl.format_handoff_closed_ticket(mem_id, int(args.ticket)))
