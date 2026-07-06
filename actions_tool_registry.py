@@ -141,6 +141,8 @@ def dispatch(
     if args is not None and not isinstance(args, dict):
         return _error("invalid_args", "args must be a JSON object", 400)
     normalized_args: dict[str, Any] = dict(args) if isinstance(args, dict) else {}
+    if "session_key" not in normalized_args:
+        normalized_args["session_key"] = session
     if name == "inspect.retrieval_observability" and "session_key" not in normalized_args:
         normalized_args["session_key"] = session
     try:
@@ -666,6 +668,14 @@ def _register_inspect_tools() -> None:
             )
         return payload, None
 
+    def _handle_memory_lifecycle_cleanup(
+        args: dict[str, Any],
+    ) -> tuple[dict[str, Any], int | None]:
+        import memory_quality
+
+        dry_run = not _optional_bool(args, "apply", default=False)
+        return memory_quality.run_minimal_lifecycle_cleanup(dry_run=dry_run), None
+
     inspect_tools = [
         (
             "inspect.recent_ingests",
@@ -735,6 +745,12 @@ def _register_inspect_tools() -> None:
             },
             _handle_inspect_invariant_checks,
         ),
+        (
+            "memory.lifecycle_cleanup",
+            "Minimal memory lifecycle cleanup — merge duplicates and mark stale (dry-run default).",
+            {"properties": {"apply": {"type": "boolean"}}},
+            _handle_memory_lifecycle_cleanup,
+        ),
     ]
     for name, description, args_schema, handler in inspect_tools:
         register_tool(
@@ -754,19 +770,23 @@ def _register_planning_tools() -> None:
 
         agent = _optional_str(args, "agent") or "chatgpt"
         limit = min(_optional_int(args, "limit", 20), 50)
+        session_key = workflow.normalize_session_key(_optional_str(args, "session_key"))
         bundle = crowley.build_agent_sync_bundle(agent=agent, limit=limit)
         tool_names = sorted(_TOOLS.keys())
         bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
         import agent_behavior
 
+        agent_behavior.apply_agent_sync_completion(session_key)
         bundle["agent_behavior"] = agent_behavior.behavior_payload()
-        bundle["pre_response_validation"] = agent_behavior.validate_retrieval_state(
-            workflow.normalize_session_key(None),
-        )
+        bundle["pre_response_validation"] = agent_behavior.validate_retrieval_state(session_key)
         import system_integrity
+        import memory_quality
 
         bundle["system_integrity"] = system_integrity.integrity_payload()
-        bundle["invariant_checks"] = system_integrity.run_invariant_checks("sync", session_key=workflow.normalize_session_key(None))
+        bundle["memory_quality"] = memory_quality.quality_payload()
+        bundle["invariant_checks"] = system_integrity.run_invariant_checks(
+            "sync", session_key=session_key
+        )
         return bundle, None
 
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:

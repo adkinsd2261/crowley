@@ -180,10 +180,10 @@ MEMORY_RETRIEVE_SUMMARY_CANDIDATES = 5
 MEMORY_RECENCY_HIGH_DAYS = 7
 MEMORY_RECENCY_LOW_DAYS = 90
 
-W_SCORE_SEMANTIC = 0.45
+W_SCORE_SEMANTIC = 0.50
 W_SCORE_KEYWORD = 0.20
-W_SCORE_RECENCY = 0.15
-W_SCORE_IMPORTANCE = 0.10
+W_SCORE_RECENCY = 0.08
+W_SCORE_IMPORTANCE = 0.12
 W_SCORE_TYPE = 0.05
 W_SCORE_PROJECT = 0.05
 W_SCORE_PINNED_BONUS = 0.10
@@ -4601,11 +4601,13 @@ def save_memory_item(
         importance = gate.importance
         confidence = gate.confidence
 
-        existing_id = _find_recent_duplicate_memory_item(
+        import memory_quality
+
+        semantic_dup, _reason = memory_quality.find_ingest_duplicate(
             conn, memory_type, content, project_id
         )
-        if existing_id is not None:
-            return existing_id
+        if semantic_dup is not None:
+            return semantic_dup
 
         if pinned:
             import agent_identity
@@ -6933,15 +6935,18 @@ def build_context_bundle(
 
 def retrieve_memories_api(q: str, limit: int = MEMORY_LIMIT) -> dict[str, object]:
     """Read-only hybrid memory search for external agents (V3.7 memory bus)."""
+    import memory_quality
+
     project = get_active_project()
     project_id = int(project["id"]) if project is not None else None
     results = retrieve_memories(q, limit=limit, project_id=project_id)
-    return {
+    payload = {
         "query": q,
         "limit": limit,
         "retrieval_mode": get_last_retrieval_mode(),
         "results": results,
     }
+    return memory_quality.annotate_retrieval_payload(payload)
 
 
 def build_retrieval_explainability_api(

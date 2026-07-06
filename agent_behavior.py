@@ -188,8 +188,36 @@ def reset_request_cycle(session_key: str) -> None:
 
 
 def mark_synced(session_key: str) -> None:
+    apply_agent_sync_completion(session_key)
+
+
+def apply_agent_sync_completion(session_key: str) -> None:
+    """#152 — propagate agent.sync execution into live checklist state."""
     state = _get_state(session_key)
     state["synced"] = True
+    state["handoffs_loaded"] = True
+    state["sync_count"] = int(state.get("sync_count", 0)) + 1
+    tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
+    if "agent.sync" not in tools:
+        tools.append("agent.sync")
+    state["tools_called"] = tools
+    _refresh_checklist_from_tools(session_key)
+
+
+def _refresh_checklist_from_tools(session_key: str) -> None:
+    """Derive checklist flags from tools_called (live execution state, not cache)."""
+    state = _get_state(session_key)
+    tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
+    if "agent.sync" in tools or int(state.get("sync_count", 0)) >= 1:
+        state["synced"] = True
+        state["handoffs_loaded"] = True
+    if state.get("synced"):
+        state["handoffs_loaded"] = True
+    if any(
+        t.startswith(("ticket.", "github.", "memory.", "context.", "retrieve.", "handoff."))
+        for t in tools
+    ):
+        state["domain_retrieved"] = True
 
 
 def classify_intent(text: str | None) -> IntentDomain:
@@ -468,6 +496,7 @@ def record_tool_call(
 
 def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> dict[str, object]:
     """#127/#128 — state-based validation before answering."""
+    _refresh_checklist_from_tools(session_key)
     state = _get_state(session_key)
     tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
     domain = intent or (state.get("intents_seen", ["general"])[0] if state.get("intents_seen") else "general")
