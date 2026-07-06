@@ -192,6 +192,25 @@ def resolve_memory_conflict(
 
         left_score = _memory_score_for_resolution(left)
         right_score = _memory_score_for_resolution(right)
+
+        import memory_tiers
+        import system_integrity
+
+        left_tier = memory_tiers.tier_from_metadata_json(
+            str(left["metadata_json"]) if left["metadata_json"] else None
+        )
+        right_tier = memory_tiers.tier_from_metadata_json(
+            str(right["metadata_json"]) if right["metadata_json"] else None
+        )
+        allowed, reason = system_integrity.can_auto_resolve_conflict(
+            float(left["confidence"]),
+            float(right["confidence"]),
+            left_tier=left_tier,
+            right_tier=right_tier,
+        )
+        if not allowed:
+            raise ValueError(reason)
+
         winner = left if left_score >= right_score else right
         loser = right if winner is left else left
         now = crowley._now_iso()

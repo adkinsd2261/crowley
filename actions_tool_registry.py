@@ -122,30 +122,21 @@ def dispatch(
             str(args.get("query") or args.get("q") or args.get("intent") or "")
             or None
         )
-    sync_ok, sync_msg = agent_behavior.check_sync_for_system_query(
-        session,
-        query_text=query_text,
-        tool_name=name,
-    )
-    if not sync_ok and sync_msg:
-        return _error("sync_required", sync_msg, 428)
 
-    domain_ok, domain_msg, domain_extra = agent_behavior.check_domain_retrieval_gate(
-        session,
-        name,
-        query_text=query_text,
-    )
-    if not domain_ok and domain_msg:
-        return _error("domain_retrieval_required", domain_msg, 428, **domain_extra)
+    import system_integrity
 
-    gate_ok, gate_msg, gate_extra = agent_behavior.check_pre_response_gate(
+    gates_ok, error_code, http_status, gate_extra = system_integrity.run_enforcement_gates(
         session,
         name,
         query_text=query_text,
         kind=kind,
+        agent_id=resolved_agent,
+        boot_allowed=allowed,
+        boot_message=boot_message if not allowed else None,
     )
-    if not gate_ok and gate_msg:
-        return _error("context_not_ready", gate_msg, 428, **gate_extra)
+    if not gates_ok and error_code:
+        message = str(gate_extra.pop("message", error_code))
+        return _error(error_code, message, http_status, **gate_extra)
 
     if args is not None and not isinstance(args, dict):
         return _error("invalid_args", "args must be a JSON object", 400)
@@ -161,15 +152,18 @@ def dispatch(
     if not isinstance(body, dict):
         body = {"result": body}
     intent = normalized_args.get("intent")
+    dispatch_id = system_integrity.next_dispatch_id()
     trigger_rule = None
-    if isinstance(domain_extra, dict) and domain_extra.get("triggering_rule"):
-        trigger_rule = str(domain_extra.get("triggering_rule"))
-    agent_behavior.record_tool_call(
+    if isinstance(gate_extra, dict) and gate_extra.get("triggering_rule"):
+        trigger_rule = str(gate_extra.get("triggering_rule"))
+    system_integrity.record_dispatch_observability(
         session,
         name,
-        reason=query_text,
+        dispatch_id=dispatch_id,
+        query_text=query_text,
         intent=str(intent) if intent else None,
         triggering_rule=trigger_rule,
+        http_status=http_status,
     )
     http_status = 200 if status is None else int(status)
     return body, http_status
@@ -636,6 +630,20 @@ def _register_inspect_tools() -> None:
             )
         return payload, None
 
+    def _handle_inspect_invariant_checks(
+        args: dict[str, Any],
+    ) -> tuple[dict[str, Any], int | None]:
+        import system_integrity
+        import workflow
+
+        context = _optional_str(args, "context") or "qa"
+        if context not in {"sync", "write", "qa", "dispatch"}:
+            raise ValueError("context must be sync, write, qa, or dispatch")
+        session_key = _optional_str(args, "session_key") or workflow.normalize_session_key(None)
+        parity = system_integrity.check_state_parity(session_key=session_key)
+        invariants = system_integrity.run_invariant_checks(context, session_key=session_key)
+        return {"parity": parity, "invariants": invariants}, None
+
     inspect_tools = [
         (
             "inspect.recent_ingests",
@@ -692,6 +700,17 @@ def _register_inspect_tools() -> None:
             },
             _handle_inspect_retrieval_observability,
         ),
+        (
+            "inspect.invariant_checks",
+            "Run system integrity invariant checks and state parity report.",
+            {
+                "properties": {
+                    "context": {"type": "string", "enum": ["sync", "write", "qa", "dispatch"]},
+                    "session_key": {"type": "string"},
+                }
+            },
+            _handle_inspect_invariant_checks,
+        ),
     ]
     for name, description, args_schema, handler in inspect_tools:
         register_tool(
@@ -720,6 +739,10 @@ def _register_planning_tools() -> None:
         bundle["pre_response_validation"] = agent_behavior.validate_retrieval_state(
             workflow.normalize_session_key(None),
         )
+        import system_integrity
+
+        bundle["system_integrity"] = system_integrity.integrity_payload()
+        bundle["invariant_checks"] = system_integrity.run_invariant_checks("sync", session_key=workflow.normalize_session_key(None))
         return bundle, None
 
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:

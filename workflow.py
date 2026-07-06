@@ -215,7 +215,14 @@ def workflow_enforcement_payload(*, tool_names: list[str] | None = None) -> dict
         "qa_pipeline": QA_PIPELINE_SCHEMA,
         "permissions": _permissions_schema(),
         "agent_behavior": _agent_behavior_payload(),
+        "system_integrity": _system_integrity_payload(),
     }
+
+
+def _system_integrity_payload() -> dict[str, object]:
+    import system_integrity
+
+    return system_integrity.integrity_payload()
 
 
 def _agent_behavior_payload() -> dict[str, object]:
