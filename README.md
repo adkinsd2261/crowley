@@ -1,33 +1,45 @@
 # Crowley
 
-**A local AI agent orchestration platform for coordinating multiple AI systems (Codex, Cursor, ChatGPT) in a unified workspace.**
+**A production-ready AI orchestration platform. Local-first memory layer + persistent context hub for coordinating multiple AI systems (ChatGPT, Claude, Cursor, Codex) in a unified workspace.**
 
-Crowley is a sophisticated memory and task management system that bridges human developers, AI coding agents, architectural planners, and ChatGPT integrations. It provides a shared bus, persistent memory layer, and concurrent ticketing system to coordinate complex development workflows.
+Crowley v3.9.15 is **stable and shipping**. It's a sophisticated memory and task management system that bridges you, AI coding agents, planning agents, and external model integrations—all communicating through a shared bus with persistent, queryable memory.
 
 ---
 
 ## What This Is
 
-Crowley operates as the **central hub** in an AI-assisted development pipeline. Instead of juggling separate conversations with Cursor, Codex, and ChatGPT, you get:
+Crowley is the **central hub** in an AI-assisted development pipeline. Instead of juggling separate conversations with Cursor, Claude, and ChatGPT, you get:
 
-- **Unified memory** — Shared context across all agents, with semantic retrieval
-- **Ticketing board** — Track work across agents with status, priorities, and dependencies
-- **Web chat interface** — Talk to Crowley directly, or integrate via REST APIs
-- **Handoff system** — Structured pass-offs between planning, coding, and QA phases
-- **ChatGPT integration** — Export context packets for custom GPT actions
+- **Persistent local memory** — Semantic retrieval of decisions, handoffs, and context (SQLite + embeddings)
+- **Concurrent ticketing board** — Single work board for architects and builders (Codex, Cursor, you)
+- **Web chat interface** — SSE-streamed responses, live dashboard, integrated planner
+- **Multi-agent bus** — Structured handoffs between planning, coding, and QA phases
+- **ChatGPT integration** — Custom Actions API (bearer-authenticated) for seamless model access
+- **Context packets** — Export portable context bundles for external agents or human review
 
-Think of it as a **local orchestration platform** that helps you coordinate multiple AI systems toward a single goal without losing context or creating silos.
+Think of it as a **local-first context server** that helps you and multiple AI systems stay on the same page without losing institutional memory or creating silos.
+
+---
+
+## Status
+
+**v3.9.15 (Stable — July 5, 2026)**
+
+- **333+ unit tests** locally; GitHub Actions regression gate on `main`
+- **Live production workflows:** web chat, diagnostics, memory consolidation, concurrent tickets, handoff ingestion, ChatGPT Actions API
+- **Architecture locked for V4:** v4.0 Spark Lanes planned (memory lanes, trust states)
+
+Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
 ---
 
 ## Stack
 
-- **Language:** Python 82% + JavaScript 10% (static UI)
-- **Framework:** FastAPI for REST + WebSocket APIs
-- **Core engine:** `crowley.py` (memory, chat, scheduling)
-- **Ticketing:** Concurrent ticket system with handoff linking
-- **Database:** SQLite with vector embeddings (sqlite-vec)
-- **Chat models:** OpenAI, Anthropic, Ollama (pluggable)
+- **Language:** Python 84% + JavaScript 9% + CSS 5% (minimal frontend)
+- **Backend:** FastAPI (REST + WebSocket) + SQLite with embeddings (sqlite-vec)
+- **Memory:** Semantic embeddings (`all-MiniLM-L6-v2` or `text-embedding-3-small`), hybrid retrieval, deduplication
+- **Chat models:** OpenAI, Anthropic, Ollama (pluggable via unified `call_model()` interface)
+- **Tests:** Regression suite; `CROWLEY_TEST_MODE=1` for isolated DB
 
 ---
 
@@ -35,33 +47,45 @@ Think of it as a **local orchestration platform** that helps you coordinate mult
 
 ```
 .
-├── app.py                  # FastAPI web server + endpoints
-├── crowley.py              # Core engine (memory, bus, chat, retrieval)
-├── tickets.py              # Ticketing board domain
-├── chatgpt_actions.py      # ChatGPT custom actions router
-├── diagnostics.py          # System health checks
-├── requirements.txt        # Dependencies (FastAPI, pydantic, sqlite-vec, etc.)
+├── crowley.py              # Core engine (memory, bus, chat, retrieval, world model)
+├── app.py                  # FastAPI web server + SSE endpoints
+├── tickets.py              # Ticketing domain (mint, claim, complete)
+├── diagnostics.py          # System health and briefing
+├── chatgpt_actions.py      # ChatGPT custom actions router (bearer auth)
+├── requirements.txt        # Dependencies
 ├── .env.example            # Configuration template
-├── CODEX.md                # Instructions for Codex (planning agent)
-├── VERSIONS.md             # Release notes and changelog
-├── static/                 # Web UI (HTML/CSS/JS)
-├── scripts/                # Sync utilities (codex_sync.py, etc.)
-├── docs/                   # Architecture docs
-├── tests/                  # Test suite
-└── tickets/                # Ticket and planning templates
+├── static/                 # Web UI (HTML/CSS/JS) — chat, dashboard, inspector
+├── scripts/                # Agent orchestration utilities
+│   ├── codex_sync.py       # Planning agent ritual (--before / --after)
+│   ├── cursor_sync.py      # Builder agent ritual (hooks + --after)
+│   ├── agent_sync_lib.py   # Shared sync library
+│   ├── export_portable_packet.py
+│   └── start_chatgpt_bridge.sh
+├── docs/                   # Architecture and release notes
+│   ├── WHERE_WE_ARE.md     # Current project state (read first)
+│   ├── MEMORY_HIERARCHY.md # Authority order for facts
+│   ├── CHATGPT_SETUP.md    # Custom GPT + tunnel setup
+│   └── V3.9.15_*.md        # Release specs
+├── tests/                  # Regression suite (90+ tests)
+├── tickets/                # JSON templates for `--create-tickets`
+├── CODEX.md                # Codex agent ritual
+├── CURSOR.md               # Cursor agent ritual (hooks setup)
+├── VERSIONS.md             # Complete version trail
+└── .github/workflows/tests.yml  # CI regression gate
 ```
 
 **How it fits together:**
 
-1. **Agent communication** — Multiple agents (Cursor, Codex, ChatGPT) submit structured handoffs via `/api/ingest`
-2. **Memory layer** — Handoffs, decisions, and chat are stored, summarized, and consolidated
-3. **Ticketing** — Work is tracked as tickets with parent/child relationships, blocks, and handoff links
-4. **Retrieval** — Semantic search over memory returns relevant context for each agent
-5. **Chat UI** — Local web interface at `http://127.0.0.1:8765` streams SSE events from Crowley
+1. **You chat** at `http://127.0.0.1:8765` or via REST API (`/api/chat`)
+2. **Memory layer** stores decisions, handoffs, and session summaries; retrieves on demand
+3. **Ticketing** tracks work across agents with status, priorities, and dependencies
+4. **Agent handoffs** (Cursor, Codex) sync state via `scripts/*.py --before / --after`
+5. **World model** tracks project phase, focus, risks, and next actions
+6. **ChatGPT integration** exports context packets and runs `/api/actions/*` endpoints
 
 ---
 
-## Getting Started
+## Quick Start
 
 ### Requirements
 
@@ -73,19 +97,19 @@ Think of it as a **local orchestration platform** that helps you coordinate mult
 
 ```bash
 # Clone
-git clone https://github.com/yourusername/crowley.git
+git clone https://github.com/adkinsd2261/crowley.git
 cd crowley
 
 # Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # on Windows: venv\Scripts\activate
 
-# Install
+# Install dependencies
 pip install -r requirements.txt
 
-# Copy example env and add your key
+# Copy and configure env
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your OPENAI_API_KEY (or use Ollama)
 ```
 
 ### Run
@@ -99,22 +123,12 @@ python app.py
 python crowley.py
 ```
 
-### Key Endpoints
+### First Steps
 
-- **`GET /api/health`** — System status + version
-- **`POST /api/chat`** — Stream SSE chat responses
-- **`GET /api/world`** — Dashboard snapshot (memories, tickets, recent events)
-- **`GET /api/tickets`** — List open tickets (with filtering)
-- **`POST /api/ingest`** — Ingest handoffs from agents
-- **`GET /api/portable/packet`** — Export context for ChatGPT
-
-### Example: Chat via API
-
-```bash
-curl -X POST http://127.0.0.1:8765/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is my current project?"}'
-```
+1. **Web UI** (recommended): `python app.py` → click the link, start chatting
+2. **Terminal REPL**: `python crowley.py` → type messages, press Enter
+3. **Read the state**: Visit http://127.0.0.1:8765 → Intelligence drawer shows memory, tickets, decisions
+4. **Onboarding**: See [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md) for agent setup
 
 ---
 
@@ -122,27 +136,65 @@ curl -X POST http://127.0.0.1:8765/api/chat \
 
 ### Memory
 
-Crowley stores and retrieves **agent events**, **handoffs**, and **decisions** using semantic embeddings. Memory items have:
-- **Type:** builder_handoff, architect_handoff, session_summary, qa_result, note
-- **Source:** codex, cursor, chatgpt, manual
+Crowley stores and retrieves **handoffs**, **decisions**, and **session summaries** using semantic embeddings. Memory items have:
+
+- **Type:** architect_handoff, builder_handoff, session_summary, qa_result, note, canon
+- **Source:** codex, cursor, crowley, manual
 - **Status:** active, archived, pruned
 
-Retrieve with `/api/retrieve?q=search_query`.
+Retrieve with `/api/retrieve?q=search_query` or search in the Memory tab.
+
+**Authority order:** filesystem (`VERSIONS.md`, `docs/WHERE_WE_ARE.md`) → live DB state → agent activity → tickets → pinned canon → retrieval.
 
 ### Tickets
 
 Work tracked on a **concurrent ticketing board** with:
+
 - **Status:** open, claimed, in_progress, blocked, done, cancelled
-- **Priorities:** 1-4 (lower = higher priority)
-- **Hierarchy:** parent/child relationships for initiatives and subtasks
-- **Handoff links:** Tickets can reference memory handoffs for context
+- **Priority:** 1–4 (lower = higher)
+- **Hierarchy:** parent/child relationships (initiatives → subtasks)
+- **Handoff links:** Tickets reference memory handoffs for context
+
+Created by Codex, claimed by Cursor, visible in the Intelligence drawer.
 
 ### Agents
 
-- **Codex** — Planning / architectural agent. Creates specs and decisions.
-- **Cursor** — Coding agent. Implements features and runs tests.
-- **ChatGPT** — External integration. Receives context packets via `/api/portable/packet`.
-- **Crowley** — The coordinator. Runs the bus and serves the chat UI.
+- **Codex** — Planning agent. Mints tickets, posts architect handoffs, sets direction.
+- **Cursor** — Builder agent. Claims tickets, implements, posts builder handoffs on completion.
+- **You** — Operator. Chat with Crowley; approve decisions; run orchestration scripts.
+- **ChatGPT (Custom Actions)** — External integration. Receives context packets via `/api/actions/context`.
+
+Setup rituals: [CODEX.md](./CODEX.md) · [CURSOR.md](./CURSOR.md)
+
+---
+
+## API Overview
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/api/chat` | Stream chat responses (SSE) |
+| `GET` | `/api/health` | System status + version |
+| `GET` | `/api/world` | Dashboard snapshot (memory, tickets, activity) |
+| `GET` | `/api/tickets` | List tickets (with filtering) |
+| `POST` | `/api/tickets` | Create ticket |
+| `PATCH` | `/api/tickets/{id}` | Update ticket |
+| `GET` | `/api/retrieve` | Search memories (hybrid semantic + keyword) |
+| `POST` | `/api/ingest` | Ingest handoffs from agents |
+| `GET` | `/api/context` | Build context bundle (world + memory + tickets) |
+| `GET` | `/api/portable/packet` | Export context for external agents |
+| `GET` | `/api/agent/sync` | Agent activity feed (last contact, recent events) |
+| `GET` | `/api/actions/*` | ChatGPT custom actions (bearer auth) |
+
+Full interactive docs at `/docs` (if FastAPI docs enabled).
+
+### Example: Chat via API
+
+```bash
+curl -X POST http://127.0.0.1:8765/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is the current project focus?"}' \
+  -N  # Stream
+```
 
 ---
 
@@ -151,22 +203,81 @@ Work tracked on a **concurrent ticketing board** with:
 Edit `.env`:
 
 ```dotenv
-# OpenAI API key (required)
+# OpenAI API key (required for OpenAI models)
 OPENAI_API_KEY=sk-proj-...
 
+# Model provider (auto / openai / anthropic / ollama)
+MODEL_PROVIDER=auto
+
 # Bearer token for ChatGPT custom actions (optional)
-CROWLEY_ACTION_KEY=
+CROWLEY_ACTION_KEY=your-secret-key
 
 # Cloudflare tunnel hostname (optional, for remote access)
 CLOUDFLARE_TUNNEL_HOSTNAME=crowley.yourdomain.com
+
+# GitHub token for git.* tools in ChatGPT Actions (optional)
+CROWLEY_GITHUB_TOKEN=ghp_...
 ```
 
-### Using a Different Model
+### Switching Models
+
+The web UI and `POST /api/brain` endpoint let you switch between OpenAI, Anthropic, and Ollama at runtime. See [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md) § 4 for agent-specific setup.
+
+---
+
+## Multi-Agent Workflows
+
+### Codex (Planning Agent)
 
 ```bash
-# At startup, the web UI lets you switch between OpenAI, Anthropic, and Ollama
-# Or set via /api/brain endpoint
+# Start of session — read context
+./venv/bin/python3 scripts/codex_sync.py --before
+
+# After planning — mint tickets and close session
+./venv/bin/python3 scripts/codex_sync.py --create-ticket \
+  --title "Implement feature X" \
+  --assignee cursor \
+  --priority 1 \
+  --description "Spec: ..." \
+  --acceptance "Passes test suite"
+
+./venv/bin/python3 scripts/codex_sync.py --after \
+  --summary "Planned feature X" \
+  --next-action "Cursor implements" \
+  --decision "Use approach Y"
 ```
+
+### Cursor (Builder Agent)
+
+```bash
+# Session start (auto-triggered by hook)
+# Reads: your role, last contact, tickets, decisions
+
+# After shipping
+./venv/bin/python3 scripts/cursor_sync.py --after --ticket <TICKET_ID> \
+  --summary "Implemented feature X" \
+  --next-action "Codex reviews; merge" \
+  --qa-result "Tests pass; manual QA: ✓"
+```
+
+Setup: [CODEX.md](./CODEX.md) · [CURSOR.md](./CURSOR.md) · [docs/V3.9.3_PLANNING_WORKFLOW.md](./docs/V3.9.3_PLANNING_WORKFLOW.md)
+
+---
+
+## ChatGPT Integration
+
+Crowley exposes a bearer-authenticated `/api/actions/*` endpoint for custom ChatGPT actions.
+
+**Setup:**
+
+1. Generate OpenAPI schema: `scripts/start_chatgpt_bridge.sh --named`
+2. Deploy with Cloudflare tunnel or ngrok: `scripts/start_chatgpt_bridge.sh`
+3. Import schema into Custom GPT builder
+4. Set bearer token in Custom GPT Actions config
+
+**Features:** Query memory, list tickets, create notes, retrieve context, read GitHub.
+
+Docs: [CHATGPT_SETUP.md](./docs/CHATGPT_SETUP.md) · [docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md)
 
 ---
 
@@ -175,48 +286,37 @@ CLOUDFLARE_TUNNEL_HOSTNAME=crowley.yourdomain.com
 ### Run Tests
 
 ```bash
-pytest tests/
+CROWLEY_TEST_MODE=1 pytest tests/ -v
+# or
+./venv/bin/python3 -m unittest discover -s tests -q
 ```
 
-### Debugging
+333+ tests cover memory, tickets, agent sync, diagnostics, and chat behavior. GitHub Actions regression gate on `main`.
 
-Check system health:
+### Debug Commands
 
 ```bash
+# Terminal REPL
+python crowley.py
+/debug prompt           # Show system prompt + context
+/debug retrieve query   # Explain retrieval scoring
+/debug consolidate type # Memory hygiene dry-run
+/diagnostics            # System briefing
+
+# Web API
 curl http://127.0.0.1:8765/api/health | jq
+curl -N http://127.0.0.1:8765/api/diagnostics  # Stream briefing
 ```
 
-Stream diagnostics:
+### Key Paths
 
-```bash
-curl -N http://127.0.0.1:8765/api/diagnostics
-```
-
-### Architecture Files
-
-- **`docs/WHERE_WE_ARE.md`** — Current project state and focus
-- **`CODEX.md`** — Instructions for Codex planning phase
-- **`CURSOR.md`** — Instructions for Cursor builder phase
-
----
-
-## API Overview
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/api/health` | System status |
-| `POST` | `/api/chat` | Stream chat messages |
-| `GET` | `/api/world` | Dashboard data |
-| `GET` | `/api/context` | Build context bundle |
-| `GET` | `/api/retrieve` | Search memories |
-| `GET` | `/api/messages` | Recent chat history |
-| `GET` | `/api/tickets` | List tickets |
-| `POST` | `/api/tickets` | Create ticket |
-| `PATCH` | `/api/tickets/{id}` | Update ticket |
-| `POST` | `/api/ingest` | Ingest handoff |
-| `GET` | `/api/portable/packet` | ChatGPT context export |
-
-For full docs, see the FastAPI interactive docs at `/docs` (if enabled).
+- `crowley.py` — Core engine
+- `app.py` — FastAPI transport
+- `tickets.py` — Ticketing domain
+- `diagnostics.py` — System health
+- `docs/WHERE_WE_ARE.md` — Current state (read first)
+- `docs/MEMORY_HIERARCHY.md` — Authority order for facts
+- `.github/workflows/tests.yml` — CI regression gate
 
 ---
 
@@ -226,8 +326,10 @@ Contributions are welcome! Please:
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit with clear messages
-4. Push and open a PR
+3. Add tests for new functionality
+4. Run `pytest tests/ -v` locally (with `CROWLEY_TEST_MODE=1`)
+5. Commit with clear messages
+6. Push and open a PR
 
 ---
 
@@ -239,24 +341,38 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-- [ ] Multi-project isolation and switching
-- [ ] Advanced memory consolidation heuristics
-- [ ] Slack integration for async notifications
-- [ ] Web UI dark mode and accessibility improvements
-- [ ] Distributed agent coordination (multiple machines)
+**Current:** v3.9.15 (Stable)
+
+- [x] Persistent memory + semantic retrieval
+- [x] Concurrent ticketing board
+- [x] Multi-agent orchestration (Codex, Cursor)
+- [x] ChatGPT custom actions API
+- [x] Web UI with live dashboard
+- [x] Portable context packets
+- [x] CI regression gate on GitHub Actions
+
+**Next:** v4.0 Spark Lanes
+
+- [ ] Memory lanes (narrative threads)
+- [ ] Trust states (confidence levels)
+- [ ] Lane-aware retrieval
+- [ ] Distributed agent coordination
 
 ---
 
-## Support
+## Getting Help
 
+- **Docs:** [docs/](./docs/) — Architecture, release notes, setup guides
+- **Where we are:** [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md) — State and roadmap (start here)
 - **Issues:** [GitHub Issues](https://github.com/adkinsd2261/crowley/issues)
-- **Docs:** See `docs/` directory
-- **Chat in Crowley:** `python app.py` and ask at http://127.0.0.1:8765
+- **Chat in Crowley:** `python app.py` → web UI at http://127.0.0.1:8765
 
 ---
 
 ## What's Next?
 
-- Try the web interface: `python app.py`
-- Read `CODEX.md` if you're integrating a planning agent
-- Check `docs/WHERE_WE_ARE.md` for current project status
+1. **Run the web interface:** `python app.py` (no terminal needed)
+2. **Chat with Crowley:** Ask about the project; explore memory, tickets, and decisions in the Intelligence drawer
+3. **Read current state:** [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md) — Version history, agent setup, what's shipping
+4. **Integrate an agent:** Follow [CODEX.md](./CODEX.md) or [CURSOR.md](./CURSOR.md) for Cursor/Codex setup
+5. **Explore the API:** See `/docs` endpoint or read the API table above
