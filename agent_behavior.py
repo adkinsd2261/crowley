@@ -192,32 +192,59 @@ def mark_synced(session_key: str) -> None:
 
 
 def apply_agent_sync_completion(session_key: str) -> None:
-    """#152 — propagate agent.sync execution into live checklist state."""
+    """#152/#162 — propagate agent.sync into observability-backed checklist."""
+    record_tool_call(session_key, "agent.sync", triggering_rule="sync")
+
+
+def _observed_tools(session_key: str) -> list[str]:
+    """#162 — merge tools from retrieval observability log and session state."""
+    with _lock:
+        log = list(_retrieval_log.get(session_key, []))
+    from_log: list[str] = []
+    for entry in log:
+        if not isinstance(entry, dict):
+            continue
+        tool = str(entry.get("tool_called") or entry.get("tool") or "").strip()
+        if tool:
+            from_log.append(tool)
     state = _get_state(session_key)
-    state["synced"] = True
-    state["handoffs_loaded"] = True
-    state["sync_count"] = int(state.get("sync_count", 0)) + 1
-    tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
-    if "agent.sync" not in tools:
-        tools.append("agent.sync")
-    state["tools_called"] = tools
-    _refresh_checklist_from_tools(session_key)
+    from_state: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
+    merged: list[str] = []
+    seen: set[str] = set()
+    for tool in from_log + from_state:
+        if tool and tool not in seen:
+            seen.add(tool)
+            merged.append(tool)
+    return merged
+
+
+def _checklist_from_observed_tools(tools: list[str]) -> dict[str, bool]:
+    """Derive pre-response checklist from observed tool calls (#162)."""
+    synced = "agent.sync" in tools
+    handoffs_loaded = synced or "handoff.list" in tools or "inspect.recent_updates" in tools
+    domain_retrieved = any(
+        t.startswith(("ticket.", "github.", "memory.", "context.", "retrieve.", "handoff."))
+        or t in {"planning.ticket", "qa.bundle", "agent.sync"}
+        for t in tools
+    )
+    return {
+        "synced": synced,
+        "handoffs_loaded": handoffs_loaded,
+        "domain_retrieved": domain_retrieved,
+    }
 
 
 def _refresh_checklist_from_tools(session_key: str) -> None:
-    """Derive checklist flags from tools_called (live execution state, not cache)."""
+    """Sync legacy state flags from observed execution trace."""
+    tools = _observed_tools(session_key)
+    observed = _checklist_from_observed_tools(tools)
     state = _get_state(session_key)
-    tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
-    if "agent.sync" in tools or int(state.get("sync_count", 0)) >= 1:
-        state["synced"] = True
-        state["handoffs_loaded"] = True
-    if state.get("synced"):
-        state["handoffs_loaded"] = True
-    if any(
-        t.startswith(("ticket.", "github.", "memory.", "context.", "retrieve.", "handoff."))
-        for t in tools
-    ):
-        state["domain_retrieved"] = True
+    state["tools_called"] = tools
+    state["synced"] = observed["synced"]
+    state["handoffs_loaded"] = observed["handoffs_loaded"]
+    state["domain_retrieved"] = observed["domain_retrieved"]
+    if "agent.sync" in tools:
+        state["sync_count"] = max(int(state.get("sync_count", 0)), 1)
 
 
 def classify_intent(text: str | None) -> IntentDomain:
@@ -495,10 +522,11 @@ def record_tool_call(
 
 
 def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> dict[str, object]:
-    """#127/#128 — state-based validation before answering."""
+    """#127/#128/#162 — validation from observability trace before answering."""
+    tools = _observed_tools(session_key)
     _refresh_checklist_from_tools(session_key)
     state = _get_state(session_key)
-    tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
+    observed = _checklist_from_observed_tools(tools)
     domain = intent or (state.get("intents_seen", ["general"])[0] if state.get("intents_seen") else "general")
 
     missing: list[str] = []
@@ -526,7 +554,8 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
         checklist.append(
             {
                 "item": item["item"],
-                "passed": bool(state.get(key)),
+                "passed": bool(observed.get(key)),
+                "source": "observability",
             }
         )
 
@@ -539,12 +568,13 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
 
     if state.get("complex_query"):
         min_depth = int(PROACTIVE_CHAIN_POLICY.get("min_chain_depth", 2))
-        if int(state.get("chain_depth", 0)) < min_depth:
+        chain_depth = int(state.get("chain_depth", 0))
+        if chain_depth < min_depth:
             missing.append(
                 f"Complex query requires proactive chaining (min depth {min_depth})"
             )
             ready = False
-        has_feed = bool(state.get("handoffs_loaded"))
+        has_feed = observed["handoffs_loaded"]
         has_repo = any(t.startswith("github.") for t in tools)
         has_memory = any(t.startswith(("context.", "retrieve.", "memory.")) for t in tools)
         if not (has_feed and (has_repo or has_memory)):
@@ -553,6 +583,9 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
             )
             ready = False
 
+    with _lock:
+        log_len = len(_retrieval_log.get(session_key, []))
+
     return {
         "ready": ready,
         "domain": domain,
@@ -560,6 +593,10 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
         "chain_depth": state.get("chain_depth", 0),
         "missing_requirements": missing,
         "checklist": checklist,
+        "observability": {
+            "log_entries": log_len,
+            "source": "retrieval_log",
+        },
     }
 
 

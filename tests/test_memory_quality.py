@@ -108,6 +108,33 @@ class MemoryQualityIntegrationTests(IsolatedDbTestCase):
         self.assertTrue(report.get("dry_run"))
         self.assertIn("duplicates", report)
         self.assertIn("stale", report)
+        metrics = report.get("metrics")
+        assert isinstance(metrics, dict)
+        self.assertIn("duplicates_found", metrics)
+        self.assertIn("merges_applied", metrics)
+        self.assertIn("items_archived_stale", metrics)
+
+    def test_constraint_backfill_dry_run(self) -> None:
+        conn = crowley.connect_db()
+        project_id = crowley._active_project_id(conn)
+        assert project_id is not None
+        now = crowley._now_iso()
+        text = "User claim conflicts with authoritative release 3.9.18 backfill probe"
+        for _ in range(3):
+            conn.execute(
+                """
+                INSERT INTO memory_items (
+                    project_id, memory_type, content, source, importance,
+                    confidence, pinned, status, created_at, updated_at
+                ) VALUES (?, 'constraint', ?, 'manual', 3, 0.9, 0, 'active', ?, ?)
+                """,
+                (project_id, text, now, now),
+            )
+        conn.commit()
+        conn.close()
+        report = memory_quality.backfill_constraint_deduplication(dry_run=True)
+        self.assertGreaterEqual(int(report.get("clusters_found", 0)), 1)
+        self.assertGreaterEqual(int(report.get("merges_planned", 0)), 1)
 
 
 if __name__ == "__main__":

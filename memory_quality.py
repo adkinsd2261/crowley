@@ -80,7 +80,7 @@ def _constraints_are_conflicting(left: str, right: str) -> bool:
     combined = f"{left} {right}".lower()
     return any(
         marker in combined
-        for marker in ("opposite", "instead of", "rather than", "conflicts with")
+        for marker in ("opposite", "instead of", "rather than")
     )
 
 
@@ -159,8 +159,101 @@ def annotate_retrieval_payload(payload: dict[str, object]) -> dict[str, object]:
     return payload
 
 
+BACKFILL_CONSTRAINT_SIMILARITY = 0.90
+
+
+def backfill_constraint_deduplication(
+    *,
+    dry_run: bool = True,
+    project_id: int | None = None,
+) -> dict[str, object]:
+    """#163 — cluster and merge duplicate constraint memories (one-time cleanup)."""
+    import crowley
+
+    conn = crowley.connect_db()
+    try:
+        clauses = ["memory_type = 'constraint'", "status = 'active'", "pinned = 0"]
+        params: list[object] = []
+        if project_id is not None:
+            clauses.append("project_id = ?")
+            params.append(project_id)
+        rows = conn.execute(
+            f"""
+            SELECT id, content, confidence, created_at, project_id
+            FROM memory_items
+            WHERE {' AND '.join(clauses)}
+            ORDER BY confidence DESC, datetime(created_at) DESC, id DESC
+            """,
+            params,
+        ).fetchall()
+        active_before = len(rows)
+        merges: list[dict[str, object]] = []
+        used: set[int] = set()
+        clusters_found = 0
+
+        for row in rows:
+            keep_id = int(row["id"])
+            if keep_id in used:
+                continue
+            keep_content = str(row["content"])
+            cluster_ids = [keep_id]
+            used.add(keep_id)
+            for other in rows:
+                other_id = int(other["id"])
+                if other_id in used:
+                    continue
+                other_content = str(other["content"])
+                if _constraints_are_conflicting(keep_content, other_content):
+                    continue
+                if token_similarity(keep_content, other_content) >= BACKFILL_CONSTRAINT_SIMILARITY:
+                    cluster_ids.append(other_id)
+                    used.add(other_id)
+            if len(cluster_ids) <= 1:
+                continue
+            clusters_found += 1
+            for merge_id in cluster_ids[1:]:
+                action = {
+                    "keep_id": keep_id,
+                    "merge_id": merge_id,
+                    "similarity": round(
+                        token_similarity(keep_content, str(
+                            next(r["content"] for r in rows if int(r["id"]) == merge_id)
+                        )),
+                        4,
+                    ),
+                }
+                merges.append(action)
+                if not dry_run:
+                    crowley.mark_memory_item_merged(conn, merge_id, keep_id)
+        if not dry_run:
+            conn.commit()
+        active_after = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM memory_items
+                WHERE memory_type = 'constraint' AND status = 'active' AND pinned = 0
+                """
+                + (" AND project_id = ?" if project_id is not None else ""),
+                ([project_id] if project_id is not None else []),
+            ).fetchone()["n"]
+        )
+    finally:
+        conn.close()
+
+    return {
+        "dry_run": dry_run,
+        "constraints_scanned": active_before,
+        "clusters_found": clusters_found,
+        "merges_planned": len(merges),
+        "merges_applied": 0 if dry_run else len(merges),
+        "active_before": active_before,
+        "active_after": active_after if not dry_run else active_before - len(merges),
+        "merges": merges,
+    }
+
+
 def run_minimal_lifecycle_cleanup(*, dry_run: bool = True) -> dict[str, object]:
-    """#157 — merge duplicate clusters and mark stale low-access memories."""
+    """#157/#164 — merge duplicate clusters and mark stale low-access memories."""
     import crowley
 
     conn = crowley.connect_db()
@@ -170,6 +263,7 @@ def run_minimal_lifecycle_cleanup(*, dry_run: bool = True) -> dict[str, object]:
                 "SELECT COUNT(*) AS n FROM memory_items WHERE status = 'active'"
             ).fetchone()["n"]
         )
+        pairs = crowley.find_duplicate_memory_pairs(conn)
         duplicates = crowley.run_duplicate_merge(conn, dry_run=dry_run)
         stale = crowley.run_stale_marking(conn, dry_run=dry_run)
         if not dry_run:
@@ -181,13 +275,25 @@ def run_minimal_lifecycle_cleanup(*, dry_run: bool = True) -> dict[str, object]:
         )
     finally:
         conn.close()
+
+    merges_applied = 0 if dry_run else int(duplicates.get("merged", 0))
+    stale_marked = 0 if dry_run else int(stale.get("stale", 0))
+    metrics = {
+        "duplicates_found": len(pairs),
+        "merges_applied": merges_applied,
+        "items_archived_stale": stale_marked,
+        "active_before": before,
+        "active_after": after,
+        "reduced_by": max(0, before - after),
+    }
     return {
         "dry_run": dry_run,
         "active_before": before,
         "active_after": after,
         "duplicates": duplicates,
         "stale": stale,
-        "reduced_by": max(0, before - after),
+        "reduced_by": metrics["reduced_by"],
+        "metrics": metrics,
     }
 
 
