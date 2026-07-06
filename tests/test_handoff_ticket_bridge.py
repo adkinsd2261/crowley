@@ -345,6 +345,125 @@ class HandoffTicketBridgeTests(IsolatedDbTestCase):
         self.assertTrue(first.get("created"))
         self.assertEqual(second.get("linkage_decision"), "already_linked")
 
+    def test_resolve_work_ticket_link_prefers_metadata(self) -> None:
+        body = "Shipped (#999) but metadata wins."
+        ticket_id, source = handoff_ticket_bridge.resolve_work_ticket_link(
+            body,
+            {"closed_work_ticket_id": 42},
+        )
+        self.assertEqual(ticket_id, 42)
+        self.assertEqual(source, "metadata.closed_work_ticket_id")
+
+    def test_get_ticket_for_handoff_memory_matches_earliest_linked(self) -> None:
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        bridge = handoff_ticket_bridge.ensure_handoff_ticket_link(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        linked = handoff_ticket_bridge.list_tickets_for_handoff_memory(int(mem_id))
+        canonical = handoff_ticket_bridge.get_ticket_for_handoff_memory(int(mem_id))
+        assert canonical is not None
+        self.assertEqual(int(canonical["id"]), int(linked[0]["id"]))
+        self.assertEqual(int(canonical["id"]), int(bridge["ticket"]["id"]))
+
+    def test_archival_replay_upserts_instead_of_duplicate(self) -> None:
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        first = handoff_ticket_bridge._create_archival_ticket_for_handoff(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        second = handoff_ticket_bridge._create_archival_ticket_for_handoff(
+            int(mem_id),
+            body + "\n\nReplay ingest.",
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        self.assertTrue(first.get("created"))
+        self.assertTrue(second.get("idempotent"))
+        self.assertEqual(
+            len(handoff_ticket_bridge.list_tickets_for_handoff_memory(int(mem_id))),
+            1,
+        )
+
+    def test_linked_memory_id_immutable_on_update(self) -> None:
+        mem_a = crowley.save_memory_item(
+            "project_update",
+            "Memory A for immutability probe — unique alpha content.",
+            source="cursor",
+            project_id=self.project_id,
+        )
+        mem_b = crowley.save_memory_item(
+            "project_update",
+            "Memory B for immutability probe — unique beta content.",
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_a is not None and mem_b is not None
+        self.assertNotEqual(int(mem_a), int(mem_b))
+        created = tickets.create_ticket(
+            "immutable link test",
+            description="x",
+            assignee="cursor",
+            priority=3,
+            source="system",
+            actor="system",
+            project_id=self.project_id,
+            linked_memory_id=int(mem_a),
+            status="done",
+        )
+        ticket_id = int(created["ticket"]["id"])
+        with self.assertRaises(ValueError):
+            tickets.update_ticket(
+                ticket_id,
+                actor="system",
+                linked_memory_id=int(mem_b),
+            )
+
+    def test_ingest_enforces_handoff_ticket_parity(self) -> None:
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        result = crowley.ingest_handoff("cursor", "builder_handoff", body)
+        self.assertEqual(result.get("status"), "ok")
+        bridge = result.get("handoff_ticket")
+        assert isinstance(bridge, dict)
+        self.assertIn("ticket", bridge)
+        mem_id = int(result["memory_item_id"])
+        self.assertEqual(
+            len(handoff_ticket_bridge.list_tickets_for_handoff_memory(mem_id)),
+            1,
+        )
+
+    def test_parity_metrics_counters(self) -> None:
+        before = handoff_ticket_bridge.parity_metrics()
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        crowley.ingest_handoff("cursor", "builder_handoff", body)
+        after = handoff_ticket_bridge.parity_metrics()
+        self.assertGreaterEqual(
+            int(after["counters"]["tickets_created"]),
+            int(before["counters"]["tickets_created"]),
+        )
+        self.assertIn("parity_ok", after)
+
 
 if __name__ == "__main__":
     unittest.main()

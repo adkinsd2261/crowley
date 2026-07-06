@@ -14,6 +14,30 @@ _WORK_TICKET_RE = re.compile(
 )
 _BARE_TICKET_HASH_RE = re.compile(r"(?<!\w)#(\d+)\b")
 
+_parity_metrics: dict[str, int] = {
+    "tickets_created": 0,
+    "work_ticket_enriched": 0,
+    "follow_up_archival": 0,
+    "archival_upserted": 0,
+    "duplicates_canceled": 0,
+    "missing_links_blocked": 0,
+}
+
+
+def parity_metrics() -> dict[str, object]:
+    """#184 — observability counters for handoff↔ticket parity."""
+    report = verify_handoff_ticket_parity(limit=20)
+    return {
+        "counters": dict(_parity_metrics),
+        "parity_ok": report.get("parity_ok"),
+        "missing_count": report.get("missing_count", 0),
+        "duplicate_group_count": report.get("duplicate_group_count", 0),
+    }
+
+
+def _record_parity_metric(name: str, *, amount: int = 1) -> None:
+    _parity_metrics[name] = int(_parity_metrics.get(name, 0)) + amount
+
 
 def _section_text(content: str, heading: str) -> str:
     text = crowley._memory_gate_section_text(content, heading)
@@ -77,6 +101,29 @@ def extract_work_ticket_id(
     return refs[0] if refs else None
 
 
+def resolve_work_ticket_link(
+    content: str,
+    metadata: dict[str, object] | None = None,
+    *,
+    closed_work_ticket_id: int | None = None,
+) -> tuple[int | None, str]:
+    """#182 — prefer metadata; regex content is explicit fallback."""
+    if closed_work_ticket_id is not None:
+        return int(closed_work_ticket_id), "explicit_metadata"
+    if metadata:
+        for key in ("closed_work_ticket_id", "work_ticket_id", "ticket_id"):
+            raw = metadata.get(key)
+            if raw is not None:
+                try:
+                    return int(raw), f"metadata.{key}"
+                except (TypeError, ValueError):
+                    continue
+    refs = extract_referenced_ticket_ids(content, metadata=metadata)
+    if refs:
+        return refs[0], "content_reference"
+    return None, "unresolved"
+
+
 def parse_handoff_ticket_fields(content: str) -> dict[str, str]:
     """Extract ticket title, description, QA, and file hints from handoff markdown."""
     summary = _section_text(content, "Summary")
@@ -131,23 +178,22 @@ def list_tickets_for_handoff_memory(memory_id: int) -> list[dict[str, object]]:
 
 
 def get_ticket_for_handoff_memory(memory_id: int) -> dict[str, object] | None:
-    """Return canonical ticket for a handoff memory (prefer work ticket / earliest)."""
+    """Return canonical ticket for a handoff memory (#180 — earliest id wins)."""
     linked = list_tickets_for_handoff_memory(memory_id)
-    if not linked:
-        return None
-    if len(linked) == 1:
-        return linked[0]
+    return linked[0] if linked else None
 
-    for ticket in linked:
-        title = str(ticket.get("title", ""))
-        lower = title.lower()
-        if lower.startswith("v3."):
-            continue
-        if "handoff_ticket_bridge" in lower or "check_pre_response" in lower:
-            continue
-        if len(title) <= 100:
-            return ticket
-    return linked[0]
+
+def require_handoff_memory_parity(memory_id: int, bridge: dict[str, object]) -> None:
+    """#177/#179 — fail fast when a persisted handoff lacks a linked ticket."""
+    if bridge.get("skipped"):
+        return
+    if list_tickets_for_handoff_memory(memory_id):
+        return
+    _record_parity_metric("missing_links_blocked")
+    raise ValueError(
+        f"handoff_ticket_parity_failed: handoff #{memory_id} has no linked ticket "
+        f"(bridge mode={bridge.get('mode')}, linkage={bridge.get('linkage_decision')})"
+    )
 
 
 def _build_persisted_description(
@@ -243,6 +289,8 @@ def _cancel_duplicate_linked_tickets(
                 "action": "cancel_duplicate",
             },
         )
+    if cancelled and not dry_run:
+        _record_parity_metric("duplicates_canceled", amount=len(cancelled))
     return cancelled
 
 
@@ -317,6 +365,28 @@ def _create_archival_ticket_for_handoff(
     linkage_decision: str = "archival_created",
 ) -> dict[str, object]:
     """Create a done ticket dedicated to this handoff memory."""
+    existing = list_tickets_for_handoff_memory(memory_id)
+    if existing:
+        keep_id = int(existing[0]["id"])
+        ticket = _upsert_linked_ticket_from_handoff(
+            keep_id,
+            memory_id,
+            content,
+            source=source,
+            handoff_type=handoff_type,
+            closed_work_ticket_id=closed_work_ticket_id,
+        )
+        _record_parity_metric("archival_upserted")
+        return {
+            "created": False,
+            "idempotent": True,
+            "mode": linkage_decision,
+            "linkage_decision": linkage_decision,
+            "ticket": ticket,
+            "memory_item_id": memory_id,
+            "work_ticket_id": closed_work_ticket_id,
+        }
+
     fields = parse_handoff_ticket_fields(content)
     description = _build_persisted_description(
         fields,
@@ -356,6 +426,9 @@ def _create_archival_ticket_for_handoff(
         },
     )
     _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
+    _record_parity_metric("tickets_created")
+    if linkage_decision == "follow_up_archival":
+        _record_parity_metric("follow_up_archival")
     return {
         "created": True,
         "idempotent": False,
@@ -438,6 +511,7 @@ def enrich_work_ticket_from_handoff(
         },
     )
     _cancel_duplicate_linked_tickets(memory_id, keep_id=work_ticket_id, actor=source)
+    _record_parity_metric("work_ticket_enriched")
     return {
         "created": False,
         "idempotent": False,
@@ -499,17 +573,26 @@ def persist_handoff_as_ticket(
     if handoff_type not in HANDOFF_PERSIST_TYPES:
         return {"skipped": True, "reason": f"handoff type {handoff_type} not persisted"}
 
-    work_ticket_id = closed_work_ticket_id or extract_work_ticket_id(content, metadata=metadata)
+    work_ticket_id, extraction_source = resolve_work_ticket_link(
+        content,
+        metadata,
+        closed_work_ticket_id=closed_work_ticket_id,
+    )
+
     linked = list_tickets_for_handoff_memory(memory_id)
 
     if work_ticket_id is not None:
-        return enrich_work_ticket_from_handoff(
+        result = enrich_work_ticket_from_handoff(
             work_ticket_id,
             memory_id,
             content,
             source=source,
             handoff_type=handoff_type,
         )
+        if result.get("linkage_decision") != "work_ticket_missing":
+            result["ticket_extraction_source"] = extraction_source
+            return result
+        work_ticket_id = None
 
     if linked:
         canonical = get_ticket_for_handoff_memory(memory_id)
@@ -589,6 +672,7 @@ def persist_handoff_as_ticket(
         },
     )
     _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
+    _record_parity_metric("tickets_created")
     return {
         "created": True,
         "idempotent": False,
@@ -597,6 +681,7 @@ def persist_handoff_as_ticket(
         "ticket": result["ticket"],
         "memory_item_id": memory_id,
         "event_id": result.get("event_id"),
+        "ticket_extraction_source": extraction_source,
     }
 
 

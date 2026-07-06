@@ -30,7 +30,7 @@ INVARIANT_REGISTRY: list[dict[str, object]] = [
     {
         "id": "handoff_ticket_parity",
         "description": "Every recent handoff has exactly one linked ticket",
-        "contexts": ["sync", "qa", "write"],
+        "contexts": ["sync", "qa", "write", "dispatch"],
     },
     {
         "id": "context_before_response",

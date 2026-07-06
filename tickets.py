@@ -593,8 +593,14 @@ def update_ticket(
     if clear_linked_memory:
         fields.append("linked_memory_id = NULL")
     elif linked_memory_id is not None:
-        fields.append("linked_memory_id = ?")
-        params.append(linked_memory_id)
+        if old_linked_memory_id is not None and int(old_linked_memory_id) != int(linked_memory_id):
+            raise ValueError(
+                f"linked_memory_id is immutable on ticket #{ticket_id}: "
+                f"existing={old_linked_memory_id}, requested={linked_memory_id}"
+            )
+        if old_linked_memory_id is None:
+            fields.append("linked_memory_id = ?")
+            params.append(linked_memory_id)
 
     if not fields and not comment:
         ticket = get_ticket_by_id(ticket_id)

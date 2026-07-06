@@ -8755,11 +8755,14 @@ def ingest_handoff(
                 closed_ticket = int(closed_ticket)
             except (TypeError, ValueError):
                 closed_ticket = None
-        if closed_ticket is None:
-            closed_ticket = handoff_ticket_bridge.extract_work_ticket_id(
-                trimmed_content,
-                metadata=ingest_metadata,
-            )
+
+        closed_ticket, extraction_source = handoff_ticket_bridge.resolve_work_ticket_link(
+            trimmed_content,
+            ingest_metadata,
+            closed_work_ticket_id=closed_ticket,
+        )
+        if extraction_source == "content_reference":
+            ingest_metadata["ticket_extraction_source"] = extraction_source
         bridge = handoff_ticket_bridge.ensure_handoff_ticket_link(
             int(memory_item_id),
             trimmed_content,
@@ -8769,6 +8772,8 @@ def ingest_handoff(
             closed_work_ticket_id=closed_ticket,
             metadata=ingest_metadata,
         )
+        handoff_ticket_bridge.require_handoff_memory_parity(int(memory_item_id), bridge)
+        bridge["ticket_extraction_source"] = extraction_source
         result["handoff_ticket"] = bridge
 
     return result
