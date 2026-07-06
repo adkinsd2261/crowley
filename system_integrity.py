@@ -63,16 +63,39 @@ def next_dispatch_id() -> int:
 
 def plan_retrieval_domains(query_text: str | None) -> dict[str, object]:
     """#145 — precompute all domains and required tools for a query."""
+    return retrieval_planner(query_text)
+
+
+def retrieval_planner(
+    query_text: str | None,
+    *,
+    session_key: str | None = None,
+) -> dict[str, object]:
+    """#150 — sole planner source; gates must consume this output (no independent inference)."""
     import agent_behavior
 
-    if not query_text or not str(query_text).strip():
-        return {"domains": [], "required_tools": [], "single_pass": True}
+    text = query_text
+    if (not text or not str(text).strip()) and session_key:
+        pending = agent_behavior._get_state(session_key).get("pending_query")  # noqa: SLF001
+        if pending:
+            text = str(pending)
 
-    text = str(query_text)
+    if not text or not str(text).strip():
+        return {
+            "domains": [],
+            "required_tools": [],
+            "tool_order": [],
+            "single_pass": True,
+            "complex": False,
+            "query": None,
+        }
+
+    body = str(text)
+    intent = agent_behavior.classify_intent(body)
     domains: list[str] = []
-    if agent_behavior.classify_intent(text) != "general":
-        domains.append(agent_behavior.classify_intent(text))
-    if agent_behavior.is_complex_query(text):
+    if intent != "general":
+        domains.append(intent)
+    if agent_behavior.is_complex_query(body):
         for domain in ("recent_work", "code", "memory"):
             if domain not in domains:
                 domains.append(domain)
@@ -87,12 +110,60 @@ def plan_retrieval_domains(query_text: str | None) -> dict[str, object]:
                 seen.add(tool)
                 required.append(tool)
 
+    tool_order: list[str] = []
+    if domains or agent_behavior.is_system_level_query(body):
+        tool_order.append("agent.sync")
+    for tool in required:
+        if tool not in tool_order:
+            tool_order.append(tool)
+
     return {
         "domains": domains,
         "required_tools": required,
+        "tool_order": tool_order,
         "single_pass": True,
-        "complex": agent_behavior.is_complex_query(text),
+        "complex": agent_behavior.is_complex_query(body),
+        "query": body,
     }
+
+
+def _get_or_run_planner(
+    session_key: str,
+    query_text: str | None,
+) -> tuple[dict[str, object], bool]:
+    """Idempotent planner per request cycle; runs before domain gates."""
+    import agent_behavior
+
+    state = agent_behavior._get_state(session_key)  # noqa: SLF001
+    if query_text and str(query_text).strip():
+        agent_behavior._note_query_context(session_key, query_text)  # noqa: SLF001
+
+    resolved = query_text or state.get("pending_query") or ""
+    cache_key = str(resolved).strip()
+    cached = state.get("execution_plan")
+    if isinstance(cached, dict) and state.get("planner_query_key") == cache_key:
+        return cached, False
+
+    plan = retrieval_planner(query_text, session_key=session_key)
+    state["execution_plan"] = plan
+    state["domain_plan"] = plan
+    state["planner_query_key"] = cache_key
+    state["planner_called_before_gates"] = True
+    return plan, True
+
+
+def _planner_missing_domains(session_key: str, plan: dict[str, object]) -> list[str]:
+    """Domains from planner output still missing required reads."""
+    import agent_behavior
+
+    domains = list(plan.get("domains", []))
+    if not domains:
+        return []
+    missing: list[str] = []
+    for domain in domains:
+        if not agent_behavior._domain_retrieval_satisfied(session_key, str(domain)):  # noqa: SLF001
+            missing.append(str(domain))
+    return missing
 
 
 def _check_handoff_ticket_parity() -> dict[str, object] | None:
@@ -314,49 +385,45 @@ def run_enforcement_gates(
     if not sync_ok and sync_msg:
         return False, "sync_required", 428, {"message": sync_msg, **extra}
 
-    plan = plan_retrieval_domains(query_text)
-    extra["domain_plan"] = plan
+    plan, planner_cached = _get_or_run_planner(session_key, query_text)
+    extra.update(
+        {
+            "domain_plan": plan,
+            "planner_output": plan,
+            "planner_called_before_gates": True,
+            "gates_use_planner_output": True,
+            "planner_cached": not planner_cached,
+            "execution_plan": plan,
+        }
+    )
     state = agent_behavior._get_state(session_key)  # noqa: SLF001
-    state["domain_plan"] = plan
 
+    tools_called: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
     if agent_behavior.is_retrieval_tool(tool_name):
         pass
+    elif tool_name in tools_called:
+        pass
     else:
-        domains = list(plan.get("domains", []))
-        if domains:
-            missing_domains = [
-                d
-                for d in domains
-                if agent_behavior.validate_retrieval_state(session_key, intent=str(d)).get(
-                    "missing_requirements"
-                )
-            ]
-            if missing_domains:
-                required = list(plan.get("required_tools", []))
-                return (
-                    False,
-                    "domain_retrieval_required",
-                    428,
-                    {
-                        **extra,
-                        "message": (
-                            f"multi-domain plan requires retrieval before {tool_name}: "
-                            f"{', '.join(missing_domains)}"
-                        ),
-                        "required_tools": required,
-                        "missing_domains": missing_domains,
-                        "triggering_rule": "domain_plan",
-                    },
-                )
-        else:
-            domain_ok, domain_msg, domain_extra = agent_behavior.check_domain_retrieval_gate(
-                session_key,
-                tool_name,
-                query_text=query_text,
+        missing_domains = _planner_missing_domains(session_key, plan)
+        if missing_domains:
+            required = list(plan.get("required_tools", []))
+            tool_order = list(plan.get("tool_order", []))
+            return (
+                False,
+                "domain_retrieval_required",
+                428,
+                {
+                    **extra,
+                    "message": (
+                        f"execution plan requires retrieval before {tool_name}: "
+                        f"{', '.join(missing_domains)}"
+                    ),
+                    "required_tools": required,
+                    "tool_order": tool_order,
+                    "missing_domains": missing_domains,
+                    "triggering_rule": "execution_plan",
+                },
             )
-            if not domain_ok and domain_msg:
-                merged = {**extra, **domain_extra, "message": domain_msg}
-                return False, "domain_retrieval_required", 428, merged
 
     gate_ok, gate_msg, gate_extra = agent_behavior.check_pre_response_gate(
         session_key,

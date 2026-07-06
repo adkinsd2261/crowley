@@ -316,6 +316,47 @@ def check_pre_response_gate(
     if is_retrieval_tool(tool_name):
         return True, None, {}
 
+    state = _get_state(session_key)
+    plan = state.get("execution_plan") or state.get("domain_plan")
+    plan_domains = list(plan.get("domains", [])) if isinstance(plan, dict) else []
+
+    if plan_domains:
+        missing_all: list[str] = []
+        validations: list[dict[str, object]] = []
+        retry_path: list[str] = []
+        seen_retry: set[str] = set()
+        for domain in plan_domains:
+            validation = validate_retrieval_state(session_key, intent=str(domain))
+            validations.append(validation)
+            missing_all.extend(str(m) for m in validation.get("missing_requirements", []))
+            for tool in tools_for_intent(str(domain)):
+                if tool not in seen_retry:
+                    seen_retry.add(tool)
+                    retry_path.append(tool)
+        if isinstance(plan, dict):
+            for tool in plan.get("tool_order", []):
+                if str(tool) not in seen_retry:
+                    seen_retry.add(str(tool))
+                    retry_path.insert(0, str(tool))
+        ready = all(bool(v.get("ready")) for v in validations)
+        if ready:
+            return True, None, {"gates_use_planner_output": True, "execution_plan": plan}
+        if not any(v.get("checklist", [{}])[0].get("passed") for v in validations if v.get("checklist")):
+            if "agent.sync" not in retry_path:
+                retry_path.insert(0, "agent.sync")
+        return (
+            False,
+            "context_not_ready: complete execution plan retrieval before this action",
+            {
+                "pre_response_validation": validations[-1] if validations else {},
+                "validations": validations,
+                "retry_path": retry_path,
+                "execution_plan": plan,
+                "gates_use_planner_output": True,
+                "triggering_rule": "pre_response_gate",
+            },
+        )
+
     intent = _note_query_context(session_key, query_text)
     validation = validate_retrieval_state(session_key, intent=intent)
     if validation.get("ready"):

@@ -29,7 +29,104 @@ class SystemIntegrityUnitTests(unittest.TestCase):
         plan = system_integrity.plan_retrieval_domains("audit system consistency across repo")
         self.assertTrue(plan.get("domains"))
         self.assertTrue(plan.get("required_tools"))
+        self.assertTrue(plan.get("tool_order"))
         self.assertTrue(plan.get("complex"))
+
+    def test_retrieval_planner_execution_plan(self) -> None:
+        plan = system_integrity.retrieval_planner("what tickets are open")
+        self.assertIn("tickets", plan.get("domains", []))
+        self.assertIn("agent.sync", plan.get("tool_order", []))
+        self.assertIn("ticket.list", plan.get("required_tools", []))
+
+    def test_planner_cached_per_request_cycle(self) -> None:
+        agent_behavior.reset_request_cycle("planner-cache")
+        plan1, fresh1 = system_integrity._get_or_run_planner("planner-cache", "what tickets are open")
+        plan2, fresh2 = system_integrity._get_or_run_planner("planner-cache", "what tickets are open")
+        self.assertTrue(fresh1)
+        self.assertFalse(fresh2)
+        self.assertEqual(plan1, plan2)
+
+    def test_gates_emit_planner_observability(self) -> None:
+        agent_behavior.reset_request_cycle("planner-obs")
+        _, _, _, extra = system_integrity.run_enforcement_gates(
+            "planner-obs",
+            "agent.sync",
+            query_text="what tickets are open",
+        )
+        self.assertTrue(extra.get("planner_called_before_gates"))
+        self.assertTrue(extra.get("gates_use_planner_output"))
+        self.assertIn("domains", extra.get("planner_output", {}))
+
+    def test_retrieval_tools_not_blocked_before_reads(self) -> None:
+        agent_behavior.reset_request_cycle("ret-pass")
+        system_integrity.run_enforcement_gates(
+            "ret-pass",
+            "agent.sync",
+            query_text="what tickets are open",
+        )
+        ok, code, _, _ = system_integrity.run_enforcement_gates(
+            "ret-pass",
+            "ticket.list",
+            query_text="what tickets are open",
+        )
+        self.assertTrue(ok)
+        self.assertIsNone(code)
+
+    def test_multi_domain_retrieval_single_pass(self) -> None:
+        agent_behavior.reset_request_cycle("multi-pass")
+        query = "audit system consistency across repo"
+        system_integrity.run_enforcement_gates("multi-pass", "agent.sync", query_text=query)
+        for tool in ("handoff.list", "github.status", "context.get"):
+            ok, code, _, _ = system_integrity.run_enforcement_gates(
+                "multi-pass",
+                tool,
+                query_text=query,
+            )
+            self.assertTrue(ok, f"{tool} blocked: {code}")
+
+    def test_non_retrieval_blocked_until_plan_satisfied(self) -> None:
+        agent_behavior.reset_request_cycle("block-plan")
+        system_integrity.run_enforcement_gates(
+            "block-plan",
+            "agent.sync",
+            query_text="what tickets are open",
+        )
+        ok, code, _, extra = system_integrity.run_enforcement_gates(
+            "block-plan",
+            "spark.list",
+            query_text="what tickets are open",
+        )
+        self.assertFalse(ok)
+        self.assertEqual(code, "domain_retrieval_required")
+        self.assertTrue(extra.get("gates_use_planner_output"))
+        self.assertEqual(extra.get("triggering_rule"), "execution_plan")
+
+    def test_ambiguous_query_no_domain_block(self) -> None:
+        agent_behavior.reset_request_cycle("ambiguous")
+        agent_behavior.record_tool_call("ambiguous", "agent.sync")
+        ok, code, _, extra = system_integrity.run_enforcement_gates(
+            "ambiguous",
+            "context.get",
+            query_text="hello there",
+        )
+        self.assertTrue(ok)
+        self.assertTrue(extra.get("gates_use_planner_output"))
+        self.assertEqual(extra.get("planner_output", {}).get("domains"), [])
+
+    def test_idempotent_sync_recall(self) -> None:
+        agent_behavior.reset_request_cycle("idem-sync")
+        system_integrity.run_enforcement_gates(
+            "idem-sync",
+            "agent.sync",
+            query_text="what tickets are open",
+        )
+        ok, code, _, _ = system_integrity.run_enforcement_gates(
+            "idem-sync",
+            "agent.sync",
+            query_text="what tickets are open",
+        )
+        self.assertTrue(ok)
+        self.assertIsNone(code)
 
     def test_gate_order(self) -> None:
         gates = [g["gate"] for g in system_integrity.GATE_ORDER]
