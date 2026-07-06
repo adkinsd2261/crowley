@@ -257,21 +257,80 @@ def _check_no_conflicting_canonical() -> dict[str, object] | None:
     }
 
 
-def _check_observability_truth(session_key: str) -> dict[str, object] | None:
+def _check_observability_truth(
+    session_key: str,
+    *,
+    check_db: bool = False,
+) -> dict[str, object] | None:
     import agent_behavior
 
-    obs = agent_behavior.retrieval_observability(session_key, limit=50)
-    tools_state = list(obs.get("tools_called", []))
-    tools_log = [str(e.get("tool_called", e.get("tool", ""))) for e in obs.get("log", [])]
-    if tools_state == tools_log:
-        return None
-    if len(tools_log) < len(tools_state):
+    dispatch_id = agent_behavior.current_dispatch_id(session_key) if check_db else None
+
+    with agent_behavior._lock:  # noqa: SLF001
+        memory_log = [
+            entry
+            for entry in agent_behavior._retrieval_log.get(session_key, [])  # noqa: SLF001
+            if isinstance(entry, dict)
+        ]
+    if dispatch_id is not None:
+        memory_log = [
+            entry for entry in memory_log if entry.get("dispatch_id") == dispatch_id
+        ]
+        memory_tools = agent_behavior._tools_from_log(session_key, dispatch_id=dispatch_id)
+        tools_state = memory_tools
+    else:
+        memory_tools = [
+            str(entry.get("tool_called", entry.get("tool", ""))) for entry in memory_log
+        ]
+        state = agent_behavior._get_state(session_key)  # noqa: SLF001
+        tools_state = list(state.get("tools_called", []))  # type: ignore[arg-type]
+
+    if tools_state != memory_tools and len(memory_tools) < len(tools_state):
         return {
             "invariant": "observability_truth",
             "severity": "error",
+            "mismatch": "state_vs_memory",
             "tools_called": tools_state,
-            "log_tools": tools_log,
+            "log_tools": memory_tools,
         }
+
+    if not check_db or not memory_log:
+        return None
+
+    db_log: list[dict[str, object]] = []
+    try:
+        import observability_store
+
+        db_log = [
+            entry
+            for entry in observability_store.get_observability_logs(session_key, limit=50)
+            if isinstance(entry, dict)
+        ]
+    except Exception:
+        return None
+    if dispatch_id is not None:
+        db_log = [entry for entry in db_log if entry.get("dispatch_id") == dispatch_id]
+    db_tools = [str(entry.get("tool_called", entry.get("tool", ""))) for entry in db_log]
+
+    if len(db_tools) < len(memory_tools):
+        return {
+            "invariant": "observability_truth",
+            "severity": "error",
+            "mismatch": "memory_not_persisted",
+            "memory_tools": memory_tools,
+            "db_tools": db_tools,
+            "dispatch_id": dispatch_id,
+        }
+    if db_tools[-len(memory_tools) :] != memory_tools:
+        return {
+            "invariant": "observability_truth",
+            "severity": "error",
+            "mismatch": "memory_vs_db",
+            "memory_tools": memory_tools,
+            "db_tools": db_tools,
+            "dispatch_id": dispatch_id,
+        }
+
     return None
 
 
@@ -300,35 +359,53 @@ def run_invariant_checks(
     session_key: str | None = None,
 ) -> dict[str, object]:
     """#143 — run applicable invariants; violations emit failure signal."""
-    violations: list[dict[str, object]] = []
-    applicable = {inv["id"] for inv in INVARIANT_REGISTRY if context in inv.get("contexts", [])}
+    try:
+        violations: list[dict[str, object]] = []
+        applicable = {inv["id"] for inv in INVARIANT_REGISTRY if context in inv.get("contexts", [])}
 
-    if "handoff_ticket_parity" in applicable:
-        v = _check_handoff_ticket_parity()
-        if v:
-            violations.append(v)
+        if "handoff_ticket_parity" in applicable:
+            v = _check_handoff_ticket_parity()
+            if v:
+                violations.append(v)
 
-    if "no_conflicting_canonical" in applicable:
-        v = _check_no_conflicting_canonical()
-        if v:
-            violations.append(v)
+        if "no_conflicting_canonical" in applicable:
+            v = _check_no_conflicting_canonical()
+            if v:
+                violations.append(v)
 
-    if "observability_truth" in applicable and session_key:
-        v = _check_observability_truth(session_key)
-        if v:
-            violations.append(v)
+        if "observability_truth" in applicable and session_key:
+            v = _check_observability_truth(
+                session_key,
+                check_db=context in ("sync", "qa"),
+            )
+            if v:
+                violations.append(v)
 
-    if "context_before_response" in applicable and session_key:
-        v = _check_context_before_response(session_key)
-        if v:
-            violations.append(v)
+        if "context_before_response" in applicable and session_key:
+            v = _check_context_before_response(session_key)
+            if v:
+                violations.append(v)
 
-    return {
-        "context": context,
-        "ok": not violations,
-        "violations": violations,
-        "registry": INVARIANT_REGISTRY,
-    }
+        return {
+            "context": context,
+            "ok": not violations,
+            "violations": violations,
+            "registry": INVARIANT_REGISTRY,
+        }
+    except Exception as exc:
+        return {
+            "context": context,
+            "ok": False,
+            "violations": [
+                {
+                    "invariant": "invariant_system",
+                    "severity": "error",
+                    "detail": str(exc)[:500],
+                }
+            ],
+            "registry": INVARIANT_REGISTRY,
+            "system_error": True,
+        }
 
 
 def check_state_parity(*, session_key: str | None = None, limit: int = 20) -> dict[str, object]:
@@ -339,7 +416,7 @@ def check_state_parity(*, session_key: str | None = None, limit: int = 20) -> di
     invariants = run_invariant_checks("qa", session_key=session_key)
     obs_ok = True
     if session_key:
-        obs_ok = _check_observability_truth(session_key) is None
+        obs_ok = _check_observability_truth(session_key, check_db=True) is None
 
     return {
         "handoff_ticket_parity": handoff_report,
@@ -501,6 +578,24 @@ def run_enforcement_gates(
         if isinstance(violation, dict) and violation.get("severity") == "error"
     ]
     if blocking:
+        try:
+            import crowley
+
+            crowley.record_system_metric(
+                "dispatch_blocked",
+                label="invariant_violation",
+                payload={
+                    "tool": tool_name,
+                    "session_key": session_key[:32],
+                    "violations": [
+                        str(v.get("invariant"))
+                        for v in blocking
+                        if isinstance(v, dict) and v.get("invariant")
+                    ],
+                },
+            )
+        except Exception:
+            pass
         return (
             False,
             "invariant_violation",

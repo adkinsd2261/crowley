@@ -538,6 +538,22 @@ Plan: [docs/V3.9.19_MEMORY_QUALITY.md](./docs/V3.9.19_MEMORY_QUALITY.md) · Tick
 | Validation | Observability-backed checklist (#162); runtime wiring on Actions + `/api/agent/sync` (#166) |
 | Tests | **471 tests** with `CROWLEY_TEST_MODE=1` |
 
+### Post-3.9.19 integrity hardening (no version bump yet — Codex to review)
+
+Tickets `#167`, `#171–#193` (ChatGPT-minted; #185–#188/#191–#192 closed as duplicates of #171–#184).
+
+| Area | Detail |
+|------|--------|
+| Ingest parity | `ensure_handoff_ticket_link()` + `require_handoff_memory_parity()` — every persisted handoff gets exactly one ticket (#167/#177/#179) |
+| Observability persistence | `observability_store.py` — `observability_logs` + `session_state` tables; wired into `record_tool_call` (#171/#173) |
+| Dispatch enforcement | `run_enforcement_gates` blocks on error-severity invariants; `dispatch_blocked` metric on block (#172/#185/#190) |
+| Planner | Refinement retry + fallback retrieval plan (#174/#175) |
+| Claim validation | `claim_validation.py` — claim_status metadata, contested-peer marking (#176) |
+| Link hardening | `linked_memory_id` immutable on tickets; metadata-first `resolve_work_ticket_link` (#178/#182) |
+| Invariants | `observability_truth` DB comparison in qa/sync contexts (#189); fail-safe blocks dispatch when invariant system errors (#193) |
+| Parity metrics | `handoff_ticket_bridge.parity_metrics()` counters (#184) |
+| Tests | **492 tests** with `CROWLEY_TEST_MODE=1` |
+
 ---
 
 ## V3.9.18 — Agent Retrieval Enforcement

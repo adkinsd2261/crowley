@@ -3,7 +3,7 @@
 **As of:** V3.9.19 · V4 next · **2026-07-06**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.19 Memory Quality shipped (#152–#157, follow-up #162–#166). Restart bus after version bumps so `/api/health` matches constants.
+**Git note:** V3.9.19 Memory Quality shipped (#152–#157, follow-up #162–#166). Post-3.9.19 integrity hardening shipped on `main`: #167 ingest parity, #171–#176 observability/session persistence + claim validation, #177–#184 handoff↔ticket parity hardening, #185–#193 triage (dupes closed; observability_truth DB check, dispatch-blocked metric, invariant fail-safe). Version constant still `3.9.19` — V3.9.20 label used in handoffs but not minted; Codex to decide bump. Restart bus after version bumps so `/api/health` matches constants.
 
 ---
 
@@ -191,6 +191,10 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `conflict_engine.py` | Conflict detection + resolution (V3.9.17) |
 | `agent_behavior.py` | Agent retrieval policy, chaining, validation (V3.9.17) |
 | `memory_quality.py` | Ingest dedup, retrieval strength, lifecycle cleanup (V3.9.19) |
+| `system_integrity.py` | Invariant registry, gate orchestration, planner, guardrails (V3.9.18 #142–#150) |
+| `observability_store.py` | DB-backed observability logs + session state (#171/#173) |
+| `claim_validation.py` | Claim status metadata + contested-peer marking (#176) |
+| `scripts/reconcile_handoff_ticket_parity.py` | Parity audit/fix + unique index (#151/#167) |
 | `docs/V3.9.19_MEMORY_QUALITY.md` | V3.9.19 release spec |
 | `handoff_ticket_bridge.py` | Handoff → ticket persistence bridge (V3.9.18) |
 | `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | V3.9.18 release spec |

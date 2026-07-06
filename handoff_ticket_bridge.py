@@ -616,73 +616,17 @@ def persist_handoff_as_ticket(
             "duplicate_count": len(linked),
         }
 
-    existing = tickets.get_ticket_by_linked_memory_id(memory_id)
-    if existing is not None:
-        keep_id = int(existing["id"])
-        ticket = _upsert_linked_ticket_from_handoff(
-            keep_id,
-            memory_id,
-            content,
-            source=source,
-            handoff_type=handoff_type,
-        )
-        return {
-            "created": False,
-            "idempotent": True,
-            "mode": "upsert_linked",
-            "ticket": ticket,
-            "memory_item_id": memory_id,
-        }
-
-    fields = parse_handoff_ticket_fields(content)
-    description = _build_persisted_description(
-        fields,
-        memory_id=memory_id,
-        handoff_type=handoff_type,
+    result = _create_archival_ticket_for_handoff(
+        memory_id,
+        content,
         source=source,
-        closed_work_ticket_id=None,
-    )
-
-    assignee = source.strip().lower()
-    if assignee not in tickets.TICKET_ASSIGNEES:
-        assignee = "unassigned"
-
-    result = tickets.create_ticket(
-        fields["title"],
-        description=description,
-        assignee=assignee,
-        priority=3,
-        source=source if source in tickets.TICKET_SOURCES else "system",
-        actor="system",
+        handoff_type=handoff_type,
         project_id=project_id,
-        linked_memory_id=int(memory_id),
-        status="done",
+        closed_work_ticket_id=None,
+        linkage_decision="archival_created",
     )
-    ticket_id = int(result["ticket"]["id"])
-    tickets.append_ticket_event(
-        ticket_id,
-        "handoff_linked",
-        "system",
-        {
-            "memory_item_id": memory_id,
-            "handoff_type": handoff_type,
-            "provenance": f"handoff #{memory_id}",
-            "mode": "archival_created",
-            "linkage_decision": "archival_created",
-        },
-    )
-    _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
-    _record_parity_metric("tickets_created")
-    return {
-        "created": True,
-        "idempotent": False,
-        "mode": "archival_created",
-        "linkage_decision": "archival_created",
-        "ticket": result["ticket"],
-        "memory_item_id": memory_id,
-        "event_id": result.get("event_id"),
-        "ticket_extraction_source": extraction_source,
-    }
+    result["ticket_extraction_source"] = extraction_source
+    return result
 
 
 def verify_handoff_ticket_parity(*, limit: int = 50) -> dict[str, object]:

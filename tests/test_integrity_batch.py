@@ -158,5 +158,70 @@ class ClaimValidationTests(IsolatedDbTestCase):
         self.assertEqual(meta.get("claim_status"), "contested")
 
 
+class ObservabilityTruthTests(IsolatedDbTestCase):
+    def test_observability_truth_detects_memory_db_mismatch(self) -> None:
+        session = "obs-truth-db"
+        agent_behavior.reset_request_cycle(session)
+        agent_behavior.begin_dispatch(session, 9001)
+        agent_behavior.record_tool_call(session, "agent.sync", triggering_rule="sync")
+        agent_behavior.record_tool_call(session, "ticket.list", reason="tickets")
+        with mock.patch.object(
+            observability_store,
+            "get_observability_logs",
+            return_value=[{"tool_called": "agent.sync", "dispatch_id": 9001}],
+        ):
+            violation = system_integrity._check_observability_truth(session, check_db=True)
+        self.assertIsNotNone(violation)
+        self.assertEqual(violation.get("mismatch"), "memory_not_persisted")
+
+
+class IntegrityFailSafeTests(unittest.TestCase):
+    def test_invariant_system_error_blocks_dispatch(self) -> None:
+        session = "invariant-fail-safe"
+        agent_behavior.reset_request_cycle(session)
+        agent_behavior.record_tool_call(session, "agent.sync", triggering_rule="sync")
+        with mock.patch.object(
+            system_integrity,
+            "_check_handoff_ticket_parity",
+            side_effect=RuntimeError("db unavailable"),
+        ):
+            ok, code, status, extra = system_integrity.run_enforcement_gates(
+                session,
+                "agent.sync",
+                kind="read",
+                boot_allowed=True,
+            )
+        self.assertFalse(ok)
+        self.assertEqual(code, "invariant_violation")
+        self.assertEqual(status, 428)
+        checks = extra.get("invariant_checks") or {}
+        self.assertTrue(checks.get("system_error"))
+
+    def test_dispatch_blocked_records_metric(self) -> None:
+        session = "dispatch-block-metric"
+        agent_behavior.reset_request_cycle(session)
+        agent_behavior.record_tool_call(session, "agent.sync", triggering_rule="sync")
+        invariant = {
+            "context": "dispatch",
+            "ok": False,
+            "violations": [
+                {"invariant": "handoff_ticket_parity", "severity": "error"},
+            ],
+        }
+        with mock.patch.object(system_integrity, "run_invariant_checks", return_value=invariant):
+            with mock.patch("crowley.record_system_metric") as metric:
+                ok, code, _, _ = system_integrity.run_enforcement_gates(
+                    session,
+                    "spark.list",
+                    query_text="status",
+                    kind="read",
+                    boot_allowed=True,
+                )
+        self.assertFalse(ok)
+        self.assertEqual(code, "invariant_violation")
+        metric.assert_called_once()
+        self.assertEqual(metric.call_args.args[0], "dispatch_blocked")
+
+
 if __name__ == "__main__":
     unittest.main()
