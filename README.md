@@ -4,7 +4,7 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
-**v3.9.17 (Stable — July 6, 2026)** adds trust and control over writes and memory, plus an agent behavior layer that enforces retrieve-before-answer for system queries.
+**v3.9.18 (Stable — July 6, 2026)** enforces agent retrieval at the Actions gateway: handoff→ticket persistence, pre-response gating, domain triggers, and structured observability.
 
 ---
 
@@ -20,7 +20,7 @@ Crowley is a **unified context hub** for multi-agent AI workflows. Instead of re
 - **ChatGPT hybrid Actions gateway** — Bearer-authenticated read/write tool dispatch with boot-sequence enforcement
 - **Workflow enforcement (V3.9.16+)** — Boot gate, truth hierarchy, core tool tiers, structured builder handoffs
 - **Trust & control (V3.9.17)** — Write attribution, permissions, audit/rollback, memory tiers, conflict resolution
-- **Agent behavior layer (V3.9.17)** — Retrieval policy, chaining, mandatory sync, observability
+- **Agent retrieval enforcement (V3.9.18)** — Gateway gating, domain triggers, handoff→ticket bridge, proactive chaining
 - **Context packets** — Export portable bundles for external agents or human review
 - **Zero context window math** — Memory layer handles retrieval; agents get what they need
 
@@ -30,16 +30,15 @@ Think of it as a **local-first memory server** that lets you coordinate multiple
 
 ## Status
 
-**v3.9.17 (Stable — July 6, 2026)**
+**v3.9.18 (Stable — July 6, 2026)**
 
-- **424 unit tests** locally; GitHub Actions regression gate on `main`
-- **Trust & control:** write attribution, permissions, audit log, memory tiers, conflict resolution
-- **Agent behavior:** mandatory sync for system queries, retrieval policy, chaining observability
-- **Workflow enforcement:** fresh ChatGPT sessions must call `agent.sync` first; builder handoffs include Context Basis + QA pipeline sections
-- **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, hotswappable models, ChatGPT Actions API
-- **Architecture locked for v4:** Memory lanes and trust states planned
+- **430 unit tests** locally; GitHub Actions regression gate on `main`
+- **Retrieval enforcement:** pre-response gating, domain triggers, proactive chaining on complex queries
+- **Handoff persistence:** completed handoffs auto-create durable done tickets
+- **Trust & control (V3.9.17):** write attribution, permissions, audit, memory tiers, conflict resolution
+- **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, ChatGPT Actions API
 
-Release spec: [docs/V3.9.17_TRUST_CONTROL_CLARITY.md](./docs/V3.9.17_TRUST_CONTROL_CLARITY.md)
+Release spec: [docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md](./docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md)
 
 Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
@@ -69,7 +68,8 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 ├── write_audit.py          # V3.9.17 append-only audit + rollback
 ├── memory_tiers.py         # V3.9.17 memory tiers, promotion, decay
 ├── conflict_engine.py      # V3.9.17 conflict detection + resolution
-├── agent_behavior.py       # V3.9.17 retrieval policy, chaining, validation
+├── handoff_ticket_bridge.py # V3.9.18 handoff → ticket persistence
+├── agent_behavior.py       # V3.9.17+ retrieval policy, gating, observability
 ├── requirements.txt        # Dependencies
 ├── .env.example            # Configuration template
 ├── static/                 # Web UI (HTML/CSS/JS) — dashboard, memory search, tickets
@@ -84,8 +84,8 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 │   ├── WHERE_WE_ARE.md     # Current project state (read first)
 │   ├── MEMORY_HIERARCHY.md # Authority order for facts
 │   ├── CHATGPT_SETUP.md    # Custom GPT + tunnel setup
-│   └── V3.9.17_TRUST_CONTROL_CLARITY.md  # Latest release spec
-├── tests/                  # Regression suite (424 tests)
+│   └── V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md  # Latest release spec
+├── tests/                  # Regression suite (430 tests)
 ├── tickets/                # JSON templates for `--create-tickets`
 ├── CODEX.md                # Codex agent ritual
 ├── CURSOR.md               # Cursor agent ritual (hooks setup)
@@ -303,7 +303,7 @@ Crowley exposes a bearer-authenticated `/api/actions/*` **hybrid gateway**: `GET
 
 **Core tools:** `agent.sync`, `context.get`, `memory.*`, `ticket.*`, `handoff.ingest`, `note.ingest` — see `/api/actions/catalog` for full list with `core` / `secondary` tiers.
 
-Docs: [CHATGPT_SETUP.md](./docs/CHATGPT_SETUP.md) · [docs/V3.9.17_TRUST_CONTROL_CLARITY.md](./docs/V3.9.17_TRUST_CONTROL_CLARITY.md)
+Docs: [CHATGPT_SETUP.md](./docs/CHATGPT_SETUP.md) · [docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md](./docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md)
 
 ---
 
@@ -317,7 +317,7 @@ CROWLEY_TEST_MODE=1 pytest tests/ -v
 ./venv/bin/python3 -m unittest discover -s tests -q
 ```
 
-424 tests cover memory, retrieval, ticketing, model switching, agent sync, Actions boot gate, workflow enforcement, and V3.9.17 trust/behavior layers. GitHub Actions regression gate on `main`.
+430 tests cover memory, retrieval, ticketing, agent sync, workflow enforcement, trust layers, and V3.9.18 retrieval gating. GitHub Actions regression gate on `main`.
 
 Validate workflow end-to-end:
 
@@ -367,7 +367,7 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-**Current:** v3.9.17 (Stable)
+**Current:** v3.9.18 (Stable)
 
 - [x] Persistent semantic memory + retrieval
 - [x] Model hotswapping (OpenAI, Anthropic, Ollama)

@@ -130,6 +130,23 @@ def dispatch(
     if not sync_ok and sync_msg:
         return _error("sync_required", sync_msg, 428)
 
+    domain_ok, domain_msg, domain_extra = agent_behavior.check_domain_retrieval_gate(
+        session,
+        name,
+        query_text=query_text,
+    )
+    if not domain_ok and domain_msg:
+        return _error("domain_retrieval_required", domain_msg, 428, **domain_extra)
+
+    gate_ok, gate_msg, gate_extra = agent_behavior.check_pre_response_gate(
+        session,
+        name,
+        query_text=query_text,
+        kind=kind,
+    )
+    if not gate_ok and gate_msg:
+        return _error("context_not_ready", gate_msg, 428, **gate_extra)
+
     if args is not None and not isinstance(args, dict):
         return _error("invalid_args", "args must be a JSON object", 400)
     normalized_args: dict[str, Any] = dict(args) if isinstance(args, dict) else {}
@@ -144,18 +161,25 @@ def dispatch(
     if not isinstance(body, dict):
         body = {"result": body}
     intent = normalized_args.get("intent")
+    trigger_rule = None
+    if isinstance(domain_extra, dict) and domain_extra.get("triggering_rule"):
+        trigger_rule = str(domain_extra.get("triggering_rule"))
     agent_behavior.record_tool_call(
         session,
         name,
         reason=query_text,
         intent=str(intent) if intent else None,
+        triggering_rule=trigger_rule,
     )
     http_status = 200 if status is None else int(status)
     return body, http_status
 
 
-def _error(code: str, message: str, status: int) -> tuple[dict[str, object], int]:
-    return {"ok": False, "error": code, "message": message}, status
+def _error(code: str, message: str, status: int, **extra: object) -> tuple[dict[str, object], int]:
+    payload: dict[str, object] = {"ok": False, "error": code, "message": message}
+    if extra:
+        payload.update(extra)
+    return payload, status
 
 
 def _optional_str(args: dict[str, Any], key: str) -> str | None:

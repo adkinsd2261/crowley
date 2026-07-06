@@ -28,8 +28,8 @@ def main() -> int:
         return 1
 
     version = str(health.get("version", ""))
-    if not version.startswith("3.9.17"):
-        errors.append(f"expected version 3.9.17, got {version}")
+    if not version.startswith("3.9.18"):
+        errors.append(f"expected version 3.9.18, got {version}")
 
     sync = _get("/api/agent/sync?agent=cursor&limit=10")
     if sync.get("boot_sequence", {}).get("required_first_tool") != "agent.sync":

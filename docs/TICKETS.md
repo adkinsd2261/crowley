@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.17 · V4 planned (2026-07-06)
+**As of:** V3.9.18 · V4 planned (2026-07-06)
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative — V4 planned
 
-**Current:** V3.9.17 Trust Control and Clarity shipped (#112–#130). **Next:** V4.0 Spark Lanes (not minted until D directs).
+**Current:** V3.9.18 Agent Retrieval Enforcement shipped (#131–#135). **Next:** V4.0 Spark Lanes (not minted until D directs).
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -21,6 +21,7 @@
 | V3.9.15 GPT Toolbelt              | #94–#100 | `tickets/v3.9.15_gpt_toolbelt.json`              | **Shipped**  |
 | V3.9.16 Workflow Enforcement      | #101–#111 | `tickets/v3.9.16_workflow_enforcement.json`   | **Shipped**  |
 | V3.9.17 Trust Control and Clarity | #112–#130 | —                                             | **Shipped**  |
+| V3.9.18 Agent Retrieval Enforcement | #131–#135 | —                                             | **Shipped**  |
 | V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
 | V4.0 Spark Lanes           | TBD     | `tickets/v4.0_spark_lanes.json`           | Planned · not minted            |
@@ -47,7 +48,8 @@ See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · 
 | V3.9.13 Secure ChatGPT Actions API               | **Shipped on `main`** — bearer `/api/actions/*` + bridge |
 | V3.9.16 Workflow Enforcement (#101–#111)         | **Shipped** — boot gate, QA pipeline, core tools |
 | V3.9.17 Trust Control and Clarity (#112–#130)  | **Shipped** — attribution, audit, tiers, agent behavior |
-| V4.0 Spark Lanes                               | Planned after V3.9.17                       |
+| V3.9.18 Agent Retrieval Enforcement (#131–#135) | **Shipped** — gating, domain triggers, handoff tickets |
+| V4.0 Spark Lanes                               | Planned after V3.9.18                       |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
 

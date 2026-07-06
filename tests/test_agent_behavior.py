@@ -119,11 +119,52 @@ class AgentBehaviorIntegrationTests(IsolatedDbTestCase):
 
     def test_observability_log(self) -> None:
         agent_behavior.reset_request_cycle("obs-test")
-        agent_behavior.record_tool_call("obs-test", "agent.sync", reason="boot")
-        agent_behavior.record_tool_call("obs-test", "ticket.list", reason="tickets open")
+        agent_behavior.record_tool_call(
+            "obs-test", "agent.sync", reason="boot", triggering_rule="sync"
+        )
+        agent_behavior.record_tool_call(
+            "obs-test", "ticket.list", reason="tickets open", triggering_rule="domain_trigger"
+        )
         obs = agent_behavior.retrieval_observability("obs-test")
         self.assertEqual(len(obs["log"]), 2)
-        self.assertGreaterEqual(int(obs["chain_depth"]), 0)
+        entry = obs["log"][-1]
+        assert isinstance(entry, dict)
+        self.assertIn("tool_called", entry)
+        self.assertIn("triggering_rule", entry)
+        self.assertIn("reason_for_call", entry)
+
+    def test_domain_retrieval_gate_blocks_secondary_tool(self) -> None:
+        agent_behavior.reset_request_cycle("domain-gate")
+        agent_behavior.record_tool_call("domain-gate", "agent.sync")
+        ok, msg, extra = agent_behavior.check_domain_retrieval_gate(
+            "domain-gate",
+            "qa.bundle",
+            query_text="what tickets are open",
+        )
+        self.assertFalse(ok)
+        self.assertIn("domain_retrieval_required", msg or "")
+        self.assertIn("required_tools", extra)
+
+    def test_pre_response_gate_blocks_write_when_not_ready(self) -> None:
+        agent_behavior.reset_request_cycle("pre-gate")
+        agent_behavior.record_tool_call("pre-gate", "agent.sync")
+        ok, msg, extra = agent_behavior.check_pre_response_gate(
+            "pre-gate",
+            "note.ingest",
+            query_text="what tickets are open",
+            kind="write",
+        )
+        self.assertFalse(ok)
+        self.assertIn("context_not_ready", msg or "")
+        self.assertIn("retry_path", extra)
+
+    def test_complex_query_requires_proactive_chain(self) -> None:
+        agent_behavior.reset_request_cycle("complex")
+        agent_behavior.record_tool_call("complex", "agent.sync")
+        agent_behavior._note_query_context("complex", "audit system consistency")
+        result = agent_behavior.validate_retrieval_state("complex", intent="system")
+        self.assertFalse(result["ready"])
+        self.assertTrue(result["missing_requirements"])
 
 
 if __name__ == "__main__":

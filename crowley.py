@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.17"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.17 Trust Control and Clarity"
+CROWLEY_VERSION = "3.9.18"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.18 Agent Retrieval Enforcement"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -8718,12 +8718,26 @@ def ingest_handoff(
         skipped.extend(memory_items_rejected)
 
     record_system_metric("ingest_ok", label=source)
-    return {
+    result: dict[str, object] = {
         "status": "ok",
         "memory_item_id": memory_item_id,
         "applied": applied,
         "skipped": skipped,
     }
+
+    if handoff_type in {"builder_handoff", "architect_handoff"}:
+        import handoff_ticket_bridge
+
+        bridge = handoff_ticket_bridge.persist_handoff_as_ticket(
+            int(memory_item_id),
+            trimmed_content,
+            source=source,
+            handoff_type=handoff_type,
+            project_id=project_id,
+        )
+        result["handoff_ticket"] = bridge
+
+    return result
 
 
 def bus_health() -> dict[str, object]:

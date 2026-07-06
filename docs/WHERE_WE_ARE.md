@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.17 · V4 next · **2026-07-06**
+**As of:** V3.9.18 · V4 next · **2026-07-06**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.17 Trust Control and Clarity shipped (#112–#130). Restart bus after version bumps so `/api/health` matches constants.
+**Git note:** V3.9.18 Agent Retrieval Enforcement shipped (#131–#135). Restart bus after version bumps so `/api/health` matches constants.
 
 ---
 
@@ -49,12 +49,13 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
 | **V3.9.16** | **Shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | **V3.9.17** | **Shipped** — Trust Control and Clarity: attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
+| **V3.9.18** | **Shipped** — Agent Retrieval Enforcement: handoff tickets, gating, domain triggers, observability (#131–#135) |
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.17"` (`Crowley V3.9.17 Trust Control and Clarity`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.18"` (`Crowley V3.9.18 Agent Retrieval Enforcement`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -164,6 +165,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
 | **V3.9.16 Workflow Enforcement** | Cursor | **Shipped** · #101–#111 · boot gate, QA pipeline handoffs |
 | **V3.9.17 Trust Control and Clarity** | Cursor | **Shipped** · #112–#130 · attribution, audit, tiers, agent behavior |
+| **V3.9.18 Agent Retrieval Enforcement** | Cursor | **Shipped** · #131–#135 · gating, domain triggers, handoff tickets |
 | **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
 **Resume workflow:** Plan or mint **V4.0 Spark Lanes** when D directs.
@@ -186,7 +188,8 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `memory_tiers.py` | Memory tiers, promotion, decay (V3.9.17) |
 | `conflict_engine.py` | Conflict detection + resolution (V3.9.17) |
 | `agent_behavior.py` | Agent retrieval policy, chaining, validation (V3.9.17) |
-| `docs/V3.9.17_TRUST_CONTROL_CLARITY.md` | V3.9.17 release spec |
+| `handoff_ticket_bridge.py` | Handoff → ticket persistence bridge (V3.9.18) |
+| `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | V3.9.18 release spec |
 | `docs/V3.9.16_WORKFLOW_ENFORCEMENT.md` | V3.9.16 release spec |
 | `scripts/validate_workflow_e2e.py` | E2E workflow validation |
 | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md` | V3.9.13 release spec |

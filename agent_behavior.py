@@ -94,6 +94,50 @@ PRE_RESPONSE_CHECKLIST: list[dict[str, object]] = [
     {"item": "relevant domain data retrieved", "state_key": "domain_retrieved"},
 ]
 
+COMPLEX_QUERY_KEYWORDS: tuple[str, ...] = (
+    "review system",
+    "system-wide",
+    "full arc",
+    "end to end",
+    "audit",
+    "consistency",
+    "cross-check",
+    "holistic",
+    "entire system",
+)
+
+PROACTIVE_CHAIN_POLICY: dict[str, object] = {
+    "min_chain_depth": 2,
+    "required_tool_groups": [
+        ["handoff.list", "agent.sync"],
+        ["github.status", "github.file", "github.search_code"],
+        ["context.get", "retrieve.search"],
+    ],
+    "triggers": list(COMPLEX_QUERY_KEYWORDS),
+}
+
+GATE_EXEMPT_TOOLS = frozenset({
+    "agent.sync",
+    "inspect.retrieval_observability",
+    "context.get",
+    "portable.packet",
+})
+
+RETRIEVAL_TOOL_PREFIXES = (
+    "ticket.",
+    "handoff.",
+    "github.",
+    "memory.",
+    "context.",
+    "retrieve.",
+    "inspect.recent",
+    "agent.sync",
+    "planning.ticket",
+    "qa.bundle",
+)
+
+PRE_RESPONSE_ENFORCED = True
+
 QA_CROWLEY_CONTEXT_VALIDATION: dict[str, object] = {
     "required_checks": [
         "verify against recent handoffs (handoff.list or sync bundle feed)",
@@ -130,6 +174,8 @@ def _get_state(session_key: str) -> dict[str, object]:
                 "tools_called": [],
                 "chain_depth": 0,
                 "intents_seen": [],
+                "pending_query": None,
+                "complex_query": False,
             }
             _session_state[session_key] = state
         return state
@@ -170,6 +216,129 @@ def is_system_level_query(text: str | None) -> bool:
     return any(kw in lower for kw in SYSTEM_QUERY_KEYWORDS)
 
 
+def is_complex_query(text: str | None) -> bool:
+    """#134 — heuristic for proactive multi-step retrieval."""
+    if not text:
+        return False
+    lower = str(text).lower()
+    return any(kw in lower for kw in COMPLEX_QUERY_KEYWORDS)
+
+
+def is_retrieval_tool(tool_name: str) -> bool:
+    if tool_name in GATE_EXEMPT_TOOLS:
+        return True
+    return any(
+        tool_name == prefix.rstrip(".") or tool_name.startswith(prefix.rstrip("."))
+        for prefix in RETRIEVAL_TOOL_PREFIXES
+    )
+
+
+def _note_query_context(session_key: str, query_text: str | None) -> IntentDomain:
+    state = _get_state(session_key)
+    if query_text and str(query_text).strip():
+        intent = classify_intent(query_text)
+        state["pending_query"] = str(query_text).strip()
+        state["complex_query"] = is_complex_query(query_text)
+        intents: list[str] = list(state.get("intents_seen", []))  # type: ignore[arg-type]
+        if intent not in intents:
+            intents.append(intent)
+        state["intents_seen"] = intents
+        return intent
+    pending = state.get("pending_query")
+    if pending:
+        return classify_intent(str(pending))
+    intents = state.get("intents_seen", [])
+    if intents:
+        return str(intents[0])  # type: ignore[return-value]
+    return "general"
+
+
+def _domain_retrieval_satisfied(session_key: str, domain: str) -> bool:
+    validation = validate_retrieval_state(session_key, intent=domain)
+    return not validation.get("missing_requirements")
+
+
+def tool_satisfies_intent(tool_name: str, intent: str) -> bool:
+    for required in tools_for_intent(intent):
+        if tool_name == required:
+            return True
+        if required.endswith(".") and tool_name.startswith(required.rstrip(".")):
+            return True
+    if intent == "code" and tool_name.startswith("github."):
+        return True
+    if intent == "memory" and tool_name.startswith(("memory.", "context.", "retrieve.")):
+        return True
+    return False
+
+
+def check_domain_retrieval_gate(
+    session_key: str,
+    tool_name: str,
+    *,
+    query_text: str | None = None,
+) -> tuple[bool, str | None, dict[str, object]]:
+    """#133 — deterministic domain triggers; block until required reads fire."""
+    intent = _note_query_context(session_key, query_text)
+    if intent == "general":
+        return True, None, {}
+    if tool_name in GATE_EXEMPT_TOOLS or tool_name == "agent.sync":
+        return True, None, {}
+    if tool_satisfies_intent(tool_name, intent):
+        return True, None, {"intent": intent, "trigger": "domain_retrieval"}
+    if _domain_retrieval_satisfied(session_key, intent):
+        return True, None, {"intent": intent}
+    required = tools_for_intent(intent)
+    return (
+        False,
+        f"domain_retrieval_required: {intent} queries require {required[0]} before {tool_name}",
+        {
+            "intent": intent,
+            "required_tools": required,
+            "triggering_rule": "domain_trigger",
+        },
+    )
+
+
+def check_pre_response_gate(
+    session_key: str,
+    tool_name: str,
+    *,
+    query_text: str | None = None,
+    kind: str = "read",
+) -> tuple[bool, str | None, dict[str, object]]:
+    """#132 — enforced pre-response gating with explicit retry path."""
+    if not PRE_RESPONSE_ENFORCED:
+        return True, None, {}
+    if tool_name in GATE_EXEMPT_TOOLS or tool_name == "agent.sync":
+        return True, None, {}
+    if tool_name in {"handoff.ingest", "writeback.ingest", "writeback.parse", "audit.rollback"}:
+        return True, None, {}
+    if is_retrieval_tool(tool_name):
+        return True, None, {}
+
+    intent = _note_query_context(session_key, query_text)
+    validation = validate_retrieval_state(session_key, intent=intent)
+    if validation.get("ready"):
+        return True, None, {}
+
+    retry_path = list(tools_for_intent(intent))
+    if not validation.get("checklist", [{}])[0].get("passed"):
+        retry_path.insert(0, "agent.sync")
+    if not any(c.get("passed") for c in validation.get("checklist", []) if c.get("item") == "recent handoffs loaded"):
+        if "handoff.list" not in retry_path:
+            retry_path.append("handoff.list")
+
+    return (
+        False,
+        "context_not_ready: complete required retrieval before this action",
+        {
+            "pre_response_validation": validation,
+            "retry_path": retry_path,
+            "triggering_rule": "pre_response_gate",
+        },
+    )
+
+
 def check_sync_for_system_query(
     session_key: str,
     *,
@@ -201,18 +370,31 @@ def record_tool_call(
     *,
     reason: str | None = None,
     intent: str | None = None,
+    triggering_rule: str | None = None,
 ) -> dict[str, object]:
-    """#130 — log retrieval/chaining decisions per session."""
+    """#130/#135 — structured retrieval observability log."""
     state = _get_state(session_key)
     tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
     chain_depth = 0
     if tool_name != "agent.sync" and tools:
         chain_depth = min(len([t for t in tools if t != "agent.sync"]), 3)
 
-    entry = {
+    rule = triggering_rule or "manual"
+    if tool_name == "agent.sync":
+        rule = "sync"
+    elif tool_satisfies_intent(tool_name, str(intent or _note_query_context(session_key, reason))):
+        rule = "domain_trigger"
+    elif chain_depth > 0:
+        rule = "chaining"
+
+    reason_for_call = reason or f"intent:{intent or classify_intent(reason)}"
+    entry: dict[str, object] = {
+        "tool_called": tool_name,
         "tool": tool_name,
         "chain_depth": chain_depth,
-        "reason": reason or f"intent:{intent or classify_intent(reason)}",
+        "reason_for_call": reason_for_call,
+        "reason": reason_for_call,
+        "triggering_rule": rule,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
@@ -278,8 +460,31 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
             }
         )
 
+    checklist_ready = all(
+        c["passed"]
+        for c in checklist
+        if c["item"] != "relevant domain data retrieved" or domain != "general"
+    )
+    ready = not missing and checklist_ready
+
+    if state.get("complex_query"):
+        min_depth = int(PROACTIVE_CHAIN_POLICY.get("min_chain_depth", 2))
+        if int(state.get("chain_depth", 0)) < min_depth:
+            missing.append(
+                f"Complex query requires proactive chaining (min depth {min_depth})"
+            )
+            ready = False
+        has_feed = bool(state.get("handoffs_loaded"))
+        has_repo = any(t.startswith("github.") for t in tools)
+        has_memory = any(t.startswith(("context.", "retrieve.", "memory.")) for t in tools)
+        if not (has_feed and (has_repo or has_memory)):
+            missing.append(
+                "Complex query requires handoff feed plus repo or memory retrieval"
+            )
+            ready = False
+
     return {
-        "ready": not missing and all(c["passed"] for c in checklist if c["item"] != "relevant domain data retrieved" or domain != "general"),
+        "ready": ready,
         "domain": domain,
         "tools_called": tools,
         "chain_depth": state.get("chain_depth", 0),
@@ -321,7 +526,7 @@ def build_auto_handoff_feed(*, limit: int = 8) -> dict[str, object]:
 def behavior_payload() -> dict[str, object]:
     """Full agent behavior instructions for sync/catalog."""
     return {
-        "version": "3.9.17",
+        "version": "3.9.18",
         "system_query_policy": {
             "requires_agent_sync": True,
             "dedupe_sync_per_request_cycle": True,
@@ -336,7 +541,13 @@ def behavior_payload() -> dict[str, object]:
         "chaining_policy": CHAINING_POLICY,
         "mandatory_retrieval": MANDATORY_RETRIEVAL_RULES,
         "pre_response_checklist": PRE_RESPONSE_CHECKLIST,
+        "pre_response_enforced": PRE_RESPONSE_ENFORCED,
+        "domain_retrieval_triggers": MANDATORY_RETRIEVAL_RULES,
+        "proactive_chaining": PROACTIVE_CHAIN_POLICY,
         "qa_crowley_context": QA_CROWLEY_CONTEXT_VALIDATION,
+        "observability_schema": {
+            "fields": ["tool_called", "reason_for_call", "chain_depth", "triggering_rule", "timestamp"],
+        },
     }
 
 
