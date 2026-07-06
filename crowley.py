@@ -8728,12 +8728,20 @@ def ingest_handoff(
     if handoff_type in {"builder_handoff", "architect_handoff"}:
         import handoff_ticket_bridge
 
+        closed_ticket = ingest_metadata.get("closed_work_ticket_id")
+        if closed_ticket is not None:
+            try:
+                closed_ticket = int(closed_ticket)
+            except (TypeError, ValueError):
+                closed_ticket = None
         bridge = handoff_ticket_bridge.persist_handoff_as_ticket(
             int(memory_item_id),
             trimmed_content,
             source=source,
             handoff_type=handoff_type,
             project_id=project_id,
+            closed_work_ticket_id=closed_ticket,
+            metadata=ingest_metadata,
         )
         result["handoff_ticket"] = bridge
 

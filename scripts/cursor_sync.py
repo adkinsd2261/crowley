@@ -373,6 +373,11 @@ def after(args: argparse.Namespace) -> int:
         return 0
 
     if args.summary and args.next_action:
+        context_basis = list(args.context_basis or [])
+        if getattr(args, "ticket", None):
+            ticket_ref = f"ticket #{int(args.ticket)}"
+            if not any(ticket_ref in str(item) for item in context_basis):
+                context_basis.insert(0, ticket_ref)
         _autofill_handoff(
             handoff,
             handoff_type=args.handoff_type,
@@ -385,7 +390,7 @@ def after(args: argparse.Namespace) -> int:
             open_loops=args.open_loop,
             qa_results=args.qa_result,
             known_issues=args.known_issue,
-            context_basis=args.context_basis,
+            context_basis=context_basis,
             self_check=args.self_check,
             confidence=args.confidence or "medium",
             approval_rationale=args.approval_rationale or "",
