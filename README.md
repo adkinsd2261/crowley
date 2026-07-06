@@ -4,7 +4,7 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
-**v3.9.18 (Stable — July 6, 2026)** enforces agent retrieval at the Actions gateway: handoff→ticket persistence, pre-response gating, domain triggers, and structured observability.
+**v3.9.19 (Stable — July 6, 2026)** improves memory quality (ingest dedup, lifecycle cleanup) and wires pre-response validation on all sync paths including `/api/agent/sync`.
 
 ---
 
@@ -20,6 +20,7 @@ Crowley is a **unified context hub** for multi-agent AI workflows. Instead of re
 - **ChatGPT hybrid Actions gateway** — Bearer-authenticated read/write tool dispatch with boot-sequence enforcement
 - **Workflow enforcement (V3.9.16+)** — Boot gate, truth hierarchy, core tool tiers, structured builder handoffs
 - **Trust & control (V3.9.17)** — Write attribution, permissions, audit/rollback, memory tiers, conflict resolution
+- **Memory quality (V3.9.19)** — Ingest dedup, retrieval strength, lifecycle cleanup, observability-backed validation
 - **Agent retrieval enforcement (V3.9.18)** — Gateway gating, domain triggers, handoff→ticket bridge, proactive chaining
 - **Context packets** — Export portable bundles for external agents or human review
 - **Zero context window math** — Memory layer handles retrieval; agents get what they need
@@ -30,15 +31,16 @@ Think of it as a **local-first memory server** that lets you coordinate multiple
 
 ## Status
 
-**v3.9.18 (Stable — July 6, 2026)**
+**v3.9.19 (Stable — July 6, 2026)**
 
-- **430 unit tests** locally; GitHub Actions regression gate on `main`
+- **471 unit tests** locally; GitHub Actions regression gate on `main`
+- **Memory quality:** constraint/semantic ingest dedup, lifecycle cleanup, validation runtime wiring on Actions + sync API
 - **Retrieval enforcement:** pre-response gating, domain triggers, proactive chaining on complex queries
 - **Handoff persistence:** completed handoffs auto-create durable done tickets
 - **Trust & control (V3.9.17):** write attribution, permissions, audit, memory tiers, conflict resolution
 - **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, ChatGPT Actions API
 
-Release spec: [docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md](./docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md)
+Release spec: [docs/V3.9.19_MEMORY_QUALITY.md](./docs/V3.9.19_MEMORY_QUALITY.md)
 
 Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
@@ -367,7 +369,7 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-**Current:** v3.9.18 (Stable)
+**Current:** v3.9.19 (Stable)
 
 - [x] Persistent semantic memory + retrieval
 - [x] Model hotswapping (OpenAI, Anthropic, Ollama)

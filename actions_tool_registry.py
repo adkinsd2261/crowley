@@ -145,6 +145,9 @@ def dispatch(
         normalized_args["session_key"] = session
     if name == "inspect.retrieval_observability" and "session_key" not in normalized_args:
         normalized_args["session_key"] = session
+    dispatch_id = system_integrity.next_dispatch_id()
+    agent_behavior.begin_dispatch(session, dispatch_id)
+
     try:
         body, status = defn.handler(normalized_args)
     except ValueError as exc:
@@ -154,10 +157,10 @@ def dispatch(
     if not isinstance(body, dict):
         body = {"result": body}
     intent = normalized_args.get("intent")
-    dispatch_id = system_integrity.next_dispatch_id()
     trigger_rule = None
     if isinstance(gate_extra, dict) and gate_extra.get("triggering_rule"):
         trigger_rule = str(gate_extra.get("triggering_rule"))
+    resolved_status = 200 if status is None else int(status)
     system_integrity.record_dispatch_observability(
         session,
         name,
@@ -165,10 +168,16 @@ def dispatch(
         query_text=query_text,
         intent=str(intent) if intent else None,
         triggering_rule=trigger_rule,
-        http_status=http_status,
+        http_status=resolved_status,
     )
-    http_status = 200 if status is None else int(status)
-    return body, http_status
+    if name == "agent.sync" and isinstance(body, dict):
+        body = agent_behavior.attach_agent_sync_runtime(
+            session,
+            dispatch_id,
+            body,
+            tool_names=sorted(_TOOLS.keys()),
+        )
+    return body, resolved_status
 
 
 def _error(code: str, message: str, status: int, **extra: object) -> tuple[dict[str, object], int]:
@@ -766,28 +775,9 @@ def _register_inspect_tools() -> None:
 
 def _register_planning_tools() -> None:
     def _handle_agent_sync(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-        import workflow
-
         agent = _optional_str(args, "agent") or "chatgpt"
         limit = min(_optional_int(args, "limit", 20), 50)
-        session_key = workflow.normalize_session_key(_optional_str(args, "session_key"))
-        bundle = crowley.build_agent_sync_bundle(agent=agent, limit=limit)
-        tool_names = sorted(_TOOLS.keys())
-        bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
-        import agent_behavior
-
-        agent_behavior.apply_agent_sync_completion(session_key)
-        bundle["agent_behavior"] = agent_behavior.behavior_payload()
-        bundle["pre_response_validation"] = agent_behavior.validate_retrieval_state(session_key)
-        import system_integrity
-        import memory_quality
-
-        bundle["system_integrity"] = system_integrity.integrity_payload()
-        bundle["memory_quality"] = memory_quality.quality_payload()
-        bundle["invariant_checks"] = system_integrity.run_invariant_checks(
-            "sync", session_key=session_key
-        )
-        return bundle, None
+        return crowley.build_agent_sync_bundle(agent=agent, limit=limit), None
 
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
         project = crowley.get_active_project()

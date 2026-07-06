@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.18"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.18 Agent Retrieval Enforcement"
+CROWLEY_VERSION = "3.9.19"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.19 Memory Quality"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME

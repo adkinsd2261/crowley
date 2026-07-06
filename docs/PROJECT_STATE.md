@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.18 · V4 planned
-**Last doc sync:** 2026-07-06 (V3.9.18 integrity patch doc lock #151)
+**As of:** V3.9.19 · V4 planned
+**Last doc sync:** 2026-07-06 (V3.9.19 Memory Quality doc lock #166)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -36,6 +36,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
 - **V3.9.16 shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tool tiers, QA pipeline handoffs (#101–#111)
 - **V3.9.17 shipped** — Trust Control and Clarity: write attribution, permissions, audit/rollback, memory tiers, conflict engine, agent behavior layer (#112–#130)
+- **V3.9.19 shipped** — Memory Quality: ingest dedup, retrieval strength, lifecycle cleanup, observability-backed validation runtime wiring (#152–#166)
 - **V3.9.18 shipped** — Agent Retrieval Enforcement + integrity patch: handoff→ticket bridge, gating, system integrity, parity reconcile (#131–#151)
 - **V3.9.15 shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100)
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
@@ -66,6 +67,9 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `handoff_ticket_bridge.py` | **Active** | Handoff → ticket persistence (V3.9.18) |
 | `scripts/backfill_handoff_tickets.py` | **Active** | Backfill handoffs as tickets (V3.9.18) |
 | `scripts/reconcile_handoff_ticket_parity.py` | **Active** | Parity audit/fix + unique index (V3.9.18 #151) |
+| `memory_quality.py` | **Active** | Ingest dedup, retrieval strength, lifecycle cleanup (V3.9.19) |
+| `scripts/backfill_constraint_deduplication.py` | **Active** | Constraint dedup backfill (V3.9.19 #163) |
+| `docs/V3.9.19_MEMORY_QUALITY.md` | **Active** | V3.9.19 release spec |
 | `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | **Active** | V3.9.18 release spec |
 | `docs/V3.9.16_WORKFLOW_ENFORCEMENT.md` | **Active** | V3.9.16 release spec |
 | `chatgpt_actions.py` | **Active** | Bearer-auth `/api/actions/*` for Custom GPT (V3.9.13+) |

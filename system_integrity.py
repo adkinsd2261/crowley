@@ -463,8 +463,8 @@ def record_dispatch_observability(
         reason=query_text,
         intent=intent,
         triggering_rule=triggering_rule or "dispatch",
+        dispatch_id=dispatch_id,
     )
-    entry["dispatch_id"] = dispatch_id
     entry["http_status"] = http_status
     entry["bound_to_dispatch"] = True
     with agent_behavior._lock:  # noqa: SLF001

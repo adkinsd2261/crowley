@@ -70,6 +70,23 @@ class PreResponseValidationTests(unittest.TestCase):
         tools = agent_behavior._observed_tools("pre-merge")  # noqa: SLF001
         self.assertIn("context.get", tools)
 
+    def test_dispatch_id_scoped_observability(self) -> None:
+        agent_behavior.reset_request_cycle("pre-dispatch")
+        agent_behavior.begin_dispatch("pre-dispatch", 7)
+        agent_behavior.record_tool_call(
+            "pre-dispatch",
+            "agent.sync",
+            triggering_rule="sync",
+            dispatch_id=7,
+        )
+        result = agent_behavior.validate_retrieval_state("pre-dispatch", dispatch_id=7)
+        obs = result.get("observability", {})
+        assert isinstance(obs, dict)
+        self.assertEqual(obs.get("dispatch_id"), 7)
+        self.assertIn("agent.sync", obs.get("dispatch_tools_called", []))
+        items = _checklist_map(result)
+        self.assertTrue(items["agent.sync executed"])
+
 
 class PreResponseActionsIntegrationTests(IsolatedDbTestCase):
     def test_agent_sync_response_validation_ready(self) -> None:
@@ -87,6 +104,27 @@ class PreResponseActionsIntegrationTests(IsolatedDbTestCase):
         items = _checklist_map(validation)
         self.assertTrue(items["agent.sync executed"])
         self.assertTrue(items["recent handoffs loaded"])
+        obs = validation.get("observability", {})
+        assert isinstance(obs, dict)
+        self.assertEqual(body.get("dispatch_id"), obs.get("dispatch_id"))
+
+    def test_api_agent_sync_runtime_wiring(self) -> None:
+        import app as crowley_app
+        from fastapi.testclient import TestClient
+
+        session = "agent:cursor"
+        agent_behavior.reset_request_cycle(session)
+        with TestClient(crowley_app.app) as client:
+            res = client.get("/api/agent/sync", params={"agent": "cursor", "limit": 5})
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        validation = body.get("pre_response_validation")
+        assert isinstance(validation, dict)
+        items = _checklist_map(validation)
+        self.assertTrue(items["agent.sync executed"])
+        self.assertTrue(items["recent handoffs loaded"])
+        self.assertEqual(body.get("session_key"), session)
+        self.assertIsNotNone(body.get("dispatch_id"))
 
 
 if __name__ == "__main__":

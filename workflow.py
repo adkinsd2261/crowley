@@ -200,7 +200,7 @@ def secondary_tool_names(all_tools: list[str]) -> list[str]:
 def workflow_enforcement_payload(*, tool_names: list[str] | None = None) -> dict[str, object]:
     names = tool_names or []
     return {
-        "version": "3.9.18",
+        "version": "3.9.19",
         "truth_hierarchy": TRUTH_HIERARCHY,
         "canonical_loop": CANONICAL_WORKFLOW_LOOP,
         "boot_sequence": {

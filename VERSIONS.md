@@ -2,7 +2,7 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.18 (`Crowley V3.9.18 Agent Retrieval Enforcement`)
+**Current:** V3.9.19 (`Crowley V3.9.19 Memory Quality`)
 **Next planned:** V4 Spark Lanes
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
@@ -40,6 +40,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.15 | shipped  | 2026-07-05 | GPT Toolbelt — hybrid gateway, tool registry, Codex-parity writes, GitHub read proxy (#94–#100) |
 | V3.9.16 | shipped  | 2026-07-06 | Workflow Enforcement — boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | V3.9.17 | shipped  | 2026-07-06 | Trust Control and Clarity — attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
+| V3.9.19 | shipped  | 2026-07-06 | Memory Quality — ingest dedup, lifecycle cleanup, validation runtime wiring (#152–#157, #162–#166) |
 | V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
@@ -519,6 +520,23 @@ Plan: [docs/V3.9.17_TRUST_CONTROL_CLARITY.md](./docs/V3.9.17_TRUST_CONTROL_CLARI
 | Observability | `inspect.retrieval_observability` per-session tool log |
 | QA | `crowley_context_validation` in QA pipeline schema |
 | Tests | **424 tests** with `CROWLEY_TEST_MODE=1` |
+
+---
+
+## V3.9.19 — Memory Quality
+
+**Version:** `CROWLEY_VERSION = "3.9.19"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.19 Memory Quality"`
+
+Plan: [docs/V3.9.19_MEMORY_QUALITY.md](./docs/V3.9.19_MEMORY_QUALITY.md) · Tickets `#152–#157` · follow-up `#162–#166`
+
+| Area | Detail |
+|------|--------|
+| Ingest dedup | `memory_quality.find_ingest_duplicate()` — constraint + semantic-type similarity |
+| Retrieval strength | `assess_retrieval_strength()` on `/api/retrieve`; rebalanced hybrid weights |
+| Lifecycle | `run_minimal_lifecycle_cleanup()` + `memory.lifecycle_cleanup` tool + metrics |
+| Backfill | `scripts/backfill_constraint_deduplication.py` |
+| Validation | Observability-backed checklist (#162); runtime wiring on Actions + `/api/agent/sync` (#166) |
+| Tests | **471 tests** with `CROWLEY_TEST_MODE=1` |
 
 ---
 

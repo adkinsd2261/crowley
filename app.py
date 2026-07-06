@@ -275,7 +275,30 @@ def api_agent_sync(
     limit: int = Query(20, ge=1, le=50),
 ) -> JSONResponse:
     try:
-        return JSONResponse(crowley.build_agent_sync_bundle(agent=agent, limit=limit))
+        import actions_tool_registry
+        import agent_behavior
+        import system_integrity
+        import workflow
+
+        session_key = f"agent:{agent}"
+        dispatch_id = system_integrity.next_dispatch_id()
+        agent_behavior.begin_dispatch(session_key, dispatch_id)
+        workflow.record_boot_sync(session_key)
+        bundle = crowley.build_agent_sync_bundle(agent=agent, limit=limit)
+        agent_behavior.record_agent_sync_dispatch(
+            session_key,
+            dispatch_id,
+            reason=f"sync:{agent}",
+        )
+        actions_tool_registry.ensure_registry()
+        tool_names = sorted(tool.name for tool in actions_tool_registry.list_tools())
+        bundle = agent_behavior.attach_agent_sync_runtime(
+            session_key,
+            dispatch_id,
+            bundle,
+            tool_names=tool_names,
+        )
+        return JSONResponse(bundle)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
 

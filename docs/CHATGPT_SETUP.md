@@ -1,8 +1,8 @@
-# ChatGPT Custom GPT Setup — Crowley V3.9.18
+# ChatGPT Custom GPT Setup — Crowley V3.9.19
 
 Step-by-step guide to expose Crowley's **Actions API only** to a Custom GPT over HTTPS.
 
-**Prerequisites:** Crowley V3.9.18+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
+**Prerequisites:** Crowley V3.9.19+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
 
 **Do not** expose the full `/api/*` surface. Use only `/api/actions/*`.
 
@@ -67,7 +67,7 @@ chmod +x scripts/start_chatgpt_bridge.sh
 curl -s http://127.0.0.1:8765/api/health | python3 -m json.tool | grep version
 ```
 
-Expect `"version": "3.9.18"`. If you still see an older version, something else is holding the listener — use `lsof -i tcp:8765 -sTCP:LISTEN` and kill that PID (not `lsof -ti tcp:8765`, which can match client connections).
+Expect `"version": "3.9.19"`. If you still see an older version, something else is holding the listener — use `lsof -i tcp:8765 -sTCP:LISTEN` and kill that PID (not `lsof -ti tcp:8765`, which can match client connections).
 
 This script:
 
@@ -263,14 +263,14 @@ There's no fixed ritual — use judgment. Typical patterns that work well:
 
 Be direct with D. When you're uncertain, call a tool rather than invent. When something worth keeping emerges, say so and offer to write it back — don't silently assume it persisted.
 
-Version in health/catalog responses is live truth; current release is V3.9.18 Agent Retrieval Enforcement unless health says otherwise.
+Version in health/catalog responses is live truth; current release is V3.9.19 Memory Quality unless health says otherwise.
 ```
 
 ### D. Test in the GPT builder
 
 Ask: *"Call actionsHealth, then actionsRead with tool agent.sync, and tell me the Crowley version and current focus."*
 
-Expected: version `3.9.18` (or current) and project state from the live bridge.
+Expected: version `3.9.19` (or current) and project state from the live bridge.
 
 ---
 

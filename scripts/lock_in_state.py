@@ -87,10 +87,10 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.15 ship."""
+    """Current world-model fields after V3.9.19 ship."""
     return {
-        "phase": "V3.9.15 shipped — GPT Toolbelt",
-        "focus": "GPT Toolbelt gateway live — re-import Custom GPT OpenAPI",
+        "phase": "V3.9.19 shipped — Memory Quality",
+        "focus": "Memory quality live — ingest dedup, lifecycle cleanup, validation runtime wiring",
         "current_risk": (
             "Restart bus after version bumps so /api/health matches constants."
         ),
@@ -98,8 +98,8 @@ def project_state_updates() -> dict[str, str]:
             f"Mint or plan V4.0 Spark Lanes when {crowley.USER_NAME} directs."
         ),
         "what_changed": (
-            "V3.9.15 GPT Toolbelt: hybrid gateway (catalog/read/write), tool registry, "
-            "inspect/planning tools, Codex-parity writes, GitHub read proxy (#94–#100)."
+            "V3.9.19 Memory Quality: ingest dedup, retrieval strength, lifecycle cleanup, "
+            "observability-backed pre_response_validation on Actions + /api/agent/sync (#152–#166)."
         ),
     }
 

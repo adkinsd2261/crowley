@@ -154,6 +154,7 @@ QA_CROWLEY_CONTEXT_VALIDATION: dict[str, object] = {
 _lock = threading.Lock()
 _session_state: dict[str, dict[str, object]] = {}
 _retrieval_log: dict[str, list[dict[str, object]]] = {}
+_current_dispatch_id: dict[str, int] = {}
 _REQUEST_CYCLE_TTL = 300
 
 
@@ -185,28 +186,112 @@ def reset_request_cycle(session_key: str) -> None:
     with _lock:
         _session_state.pop(session_key, None)
         _retrieval_log.pop(session_key, None)
+        _current_dispatch_id.pop(session_key, None)
+
+
+def begin_dispatch(session_key: str, dispatch_id: int) -> None:
+    """#166 — bind observability reads to the active dispatch for this session."""
+    with _lock:
+        _current_dispatch_id[session_key] = int(dispatch_id)
+    state = _get_state(session_key)
+    state["current_dispatch_id"] = int(dispatch_id)
+
+
+def current_dispatch_id(session_key: str) -> int | None:
+    with _lock:
+        active = _current_dispatch_id.get(session_key)
+    if active is not None:
+        return int(active)
+    state = _get_state(session_key)
+    raw = state.get("current_dispatch_id")
+    return int(raw) if raw is not None else None
+
+
+def _tools_from_log(session_key: str, *, dispatch_id: int | None = None) -> list[str]:
+    with _lock:
+        log = list(_retrieval_log.get(session_key, []))
+    tools: list[str] = []
+    for entry in log:
+        if not isinstance(entry, dict):
+            continue
+        if dispatch_id is not None and entry.get("dispatch_id") != dispatch_id:
+            continue
+        tool = str(entry.get("tool_called") or entry.get("tool") or "").strip()
+        if tool:
+            tools.append(tool)
+    return tools
 
 
 def mark_synced(session_key: str) -> None:
     apply_agent_sync_completion(session_key)
 
 
-def apply_agent_sync_completion(session_key: str) -> None:
-    """#152/#162 — propagate agent.sync into observability-backed checklist."""
-    record_tool_call(session_key, "agent.sync", triggering_rule="sync")
+def apply_agent_sync_completion(session_key: str, *, dispatch_id: int | None = None) -> None:
+    """Legacy helper — prefer record_agent_sync_dispatch after #166."""
+    record_tool_call(
+        session_key,
+        "agent.sync",
+        triggering_rule="sync",
+        dispatch_id=dispatch_id,
+    )
 
 
-def _observed_tools(session_key: str) -> list[str]:
-    """#162 — merge tools from retrieval observability log and session state."""
-    with _lock:
-        log = list(_retrieval_log.get(session_key, []))
-    from_log: list[str] = []
-    for entry in log:
-        if not isinstance(entry, dict):
-            continue
-        tool = str(entry.get("tool_called") or entry.get("tool") or "").strip()
-        if tool:
-            from_log.append(tool)
+def record_agent_sync_dispatch(
+    session_key: str,
+    dispatch_id: int,
+    *,
+    reason: str | None = None,
+) -> dict[str, object]:
+    """Register agent.sync in the shared observability buffer for this dispatch."""
+    import system_integrity
+
+    return system_integrity.record_dispatch_observability(
+        session_key,
+        "agent.sync",
+        dispatch_id=dispatch_id,
+        query_text=reason,
+        triggering_rule="sync",
+        http_status=200,
+    )
+
+
+def attach_agent_sync_runtime(
+    session_key: str,
+    dispatch_id: int,
+    bundle: dict[str, object],
+    *,
+    tool_names: list[str] | None = None,
+) -> dict[str, object]:
+    """Attach runtime validation after agent.sync is registered in observability."""
+    import memory_quality
+    import system_integrity
+    import workflow
+
+    bundle["agent_behavior"] = behavior_payload()
+    bundle["pre_response_validation"] = validate_retrieval_state(
+        session_key,
+        dispatch_id=dispatch_id,
+    )
+    bundle["system_integrity"] = system_integrity.integrity_payload()
+    bundle["memory_quality"] = memory_quality.quality_payload()
+    bundle["invariant_checks"] = system_integrity.run_invariant_checks(
+        "sync",
+        session_key=session_key,
+    )
+    if tool_names is not None:
+        bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
+    bundle["dispatch_id"] = dispatch_id
+    bundle["session_key"] = session_key
+    return bundle
+
+
+def _observed_tools(session_key: str, dispatch_id: int | None = None) -> list[str]:
+    """#162/#166 — session cycle tools; optional dispatch filter for log fallback."""
+    from_log = _tools_from_log(session_key)
+    if dispatch_id is not None:
+        dispatch_log_tools = _tools_from_log(session_key, dispatch_id=dispatch_id)
+        if dispatch_log_tools:
+            from_log = dispatch_log_tools + [t for t in from_log if t not in dispatch_log_tools]
     state = _get_state(session_key)
     from_state: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
     merged: list[str] = []
@@ -234,9 +319,9 @@ def _checklist_from_observed_tools(tools: list[str]) -> dict[str, bool]:
     }
 
 
-def _refresh_checklist_from_tools(session_key: str) -> None:
+def _refresh_checklist_from_tools(session_key: str, *, dispatch_id: int | None = None) -> None:
     """Sync legacy state flags from observed execution trace."""
-    tools = _observed_tools(session_key)
+    tools = _observed_tools(session_key, dispatch_id=dispatch_id)
     observed = _checklist_from_observed_tools(tools)
     state = _get_state(session_key)
     state["tools_called"] = tools
@@ -467,9 +552,11 @@ def record_tool_call(
     reason: str | None = None,
     intent: str | None = None,
     triggering_rule: str | None = None,
+    dispatch_id: int | None = None,
 ) -> dict[str, object]:
     """#130/#135 — structured retrieval observability log."""
     state = _get_state(session_key)
+    resolved_dispatch = dispatch_id if dispatch_id is not None else current_dispatch_id(session_key)
     tools: list[str] = list(state.get("tools_called", []))  # type: ignore[arg-type]
     chain_depth = 0
     if tool_name != "agent.sync" and tools:
@@ -492,7 +579,10 @@ def record_tool_call(
         "reason": reason_for_call,
         "triggering_rule": rule,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "session_key": session_key,
     }
+    if resolved_dispatch is not None:
+        entry["dispatch_id"] = resolved_dispatch
 
     if tool_name == "agent.sync":
         state["synced"] = True
@@ -521,10 +611,22 @@ def record_tool_call(
     return entry
 
 
-def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> dict[str, object]:
-    """#127/#128/#162 — validation from observability trace before answering."""
-    tools = _observed_tools(session_key)
-    _refresh_checklist_from_tools(session_key)
+def validate_retrieval_state(
+    session_key: str,
+    *,
+    intent: str | None = None,
+    dispatch_id: int | None = None,
+) -> dict[str, object]:
+    """#127/#128/#162/#166 — validation from observability trace before answering."""
+    resolved_dispatch = dispatch_id if dispatch_id is not None else current_dispatch_id(session_key)
+    cycle_tools = _observed_tools(session_key)
+    dispatch_tools = (
+        _tools_from_log(session_key, dispatch_id=resolved_dispatch)
+        if resolved_dispatch is not None
+        else []
+    )
+    tools = cycle_tools
+    _refresh_checklist_from_tools(session_key, dispatch_id=resolved_dispatch)
     state = _get_state(session_key)
     observed = _checklist_from_observed_tools(tools)
     domain = intent or (state.get("intents_seen", ["general"])[0] if state.get("intents_seen") else "general")
@@ -589,13 +691,17 @@ def validate_retrieval_state(session_key: str, *, intent: str | None = None) -> 
     return {
         "ready": ready,
         "domain": domain,
-        "tools_called": tools,
+        "tools_called": dispatch_tools or tools,
+        "cycle_tools_called": tools,
         "chain_depth": state.get("chain_depth", 0),
         "missing_requirements": missing,
         "checklist": checklist,
         "observability": {
             "log_entries": log_len,
             "source": "retrieval_log",
+            "session_key": session_key,
+            "dispatch_id": resolved_dispatch,
+            "dispatch_tools_called": dispatch_tools,
         },
     }
 
@@ -633,7 +739,7 @@ def build_auto_handoff_feed(*, limit: int = 8) -> dict[str, object]:
 def behavior_payload() -> dict[str, object]:
     """Full agent behavior instructions for sync/catalog."""
     return {
-        "version": "3.9.18",
+        "version": "3.9.19",
         "system_query_policy": {
             "requires_agent_sync": True,
             "dedupe_sync_per_request_cycle": True,
