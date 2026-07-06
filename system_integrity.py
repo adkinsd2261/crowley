@@ -572,30 +572,9 @@ def run_enforcement_gates(
 
     invariant_result = run_invariant_checks("dispatch", session_key=session_key)
     extra["invariant_checks"] = invariant_result
-    blocking = [
-        violation
-        for violation in invariant_result.get("violations", [])
-        if isinstance(violation, dict) and violation.get("severity") == "error"
-    ]
+    blocking = _blocking_violations(invariant_result)
     if blocking:
-        try:
-            import crowley
-
-            crowley.record_system_metric(
-                "dispatch_blocked",
-                label="invariant_violation",
-                payload={
-                    "tool": tool_name,
-                    "session_key": session_key[:32],
-                    "violations": [
-                        str(v.get("invariant"))
-                        for v in blocking
-                        if isinstance(v, dict) and v.get("invariant")
-                    ],
-                },
-            )
-        except Exception:
-            pass
+        _record_dispatch_blocked(tool_name, session_key, blocking)
         return (
             False,
             "invariant_violation",
@@ -608,6 +587,69 @@ def run_enforcement_gates(
         )
 
     return True, None, 200, extra
+
+
+def _blocking_violations(invariant_result: dict[str, object]) -> list[dict[str, object]]:
+    """Error-severity violations that must halt execution."""
+    return [
+        violation
+        for violation in invariant_result.get("violations", [])  # type: ignore[union-attr]
+        if isinstance(violation, dict) and violation.get("severity") == "error"
+    ]
+
+
+def _record_dispatch_blocked(
+    tool_name: str,
+    session_key: str,
+    blocking: list[dict[str, object]],
+) -> None:
+    """Emit a dispatch_blocked metric with violation details (#190)."""
+    try:
+        import crowley
+
+        crowley.record_system_metric(
+            "dispatch_blocked",
+            label="invariant_violation",
+            payload={
+                "tool": tool_name,
+                "session_key": (session_key or "direct")[:32],
+                "violations": [
+                    str(v.get("invariant"))
+                    for v in blocking
+                    if isinstance(v, dict) and v.get("invariant")
+                ],
+            },
+        )
+    except Exception:
+        pass
+
+
+def enforce_dispatch_invariants(
+    tool_name: str,
+    *,
+    session_key: str | None = None,
+) -> tuple[bool, dict[str, object]]:
+    """
+    #196 — standalone dispatch invariant gate for non-gateway write entrypoints.
+
+    The Actions gateway enforces invariants inside run_enforcement_gates, but direct
+    localhost mutation endpoints (e.g. POST /api/ingest) bypass that path. This closes
+    the coverage gap so no write path proceeds under an error-severity violation.
+
+    Returns (ok, payload). When blocked, payload carries the structured error.
+    """
+    invariant_result = run_invariant_checks("dispatch", session_key=session_key)
+    blocking = _blocking_violations(invariant_result)
+    if not blocking:
+        return True, {"invariant_checks": invariant_result}
+    _record_dispatch_blocked(tool_name, session_key or "direct", blocking)
+    return False, {
+        "status": "error",
+        "error": "invariant_violation",
+        "message": "execution blocked by invariant violation",
+        "violations": blocking,
+        "invariant_checks": invariant_result,
+    }
 
 
 def record_dispatch_observability(

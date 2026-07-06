@@ -223,5 +223,45 @@ class IntegrityFailSafeTests(unittest.TestCase):
         self.assertEqual(metric.call_args.args[0], "dispatch_blocked")
 
 
+class DirectEntrypointEnforcementTests(unittest.TestCase):
+    """#196 — direct (non-gateway) write entrypoints cannot bypass invariants."""
+
+    def test_enforce_dispatch_invariants_blocks_on_error(self) -> None:
+        invariant = {
+            "context": "dispatch",
+            "ok": False,
+            "violations": [
+                {"invariant": "handoff_ticket_parity", "severity": "error"},
+            ],
+        }
+        with mock.patch.object(system_integrity, "run_invariant_checks", return_value=invariant):
+            with mock.patch("crowley.record_system_metric") as metric:
+                ok, payload = system_integrity.enforce_dispatch_invariants("ingest.handoff")
+        self.assertFalse(ok)
+        self.assertEqual(payload.get("error"), "invariant_violation")
+        self.assertTrue(payload.get("violations"))
+        metric.assert_called_once()
+        self.assertEqual(metric.call_args.args[0], "dispatch_blocked")
+
+    def test_enforce_dispatch_invariants_allows_when_clean(self) -> None:
+        clean = {"context": "dispatch", "ok": True, "violations": []}
+        with mock.patch.object(system_integrity, "run_invariant_checks", return_value=clean):
+            ok, payload = system_integrity.enforce_dispatch_invariants("ingest.handoff")
+        self.assertTrue(ok)
+        self.assertIn("invariant_checks", payload)
+
+    def test_enforce_dispatch_invariants_ignores_warning(self) -> None:
+        warning = {
+            "context": "dispatch",
+            "ok": False,
+            "violations": [
+                {"invariant": "context_before_response", "severity": "warning"},
+            ],
+        }
+        with mock.patch.object(system_integrity, "run_invariant_checks", return_value=warning):
+            ok, _ = system_integrity.enforce_dispatch_invariants("writeback.ingest")
+        self.assertTrue(ok)
+
+
 if __name__ == "__main__":
     unittest.main()

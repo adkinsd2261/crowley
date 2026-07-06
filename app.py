@@ -213,6 +213,11 @@ def api_portable_writeback_ingest(
     body: PortableWritebackParseRequest,
     project: str = Query("crowley", min_length=1),
 ) -> JSONResponse:
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("writeback.ingest")
+    if not ok:
+        return JSONResponse(block, status_code=428)
     try:
         if body.writeback is not None:
             result = crowley.ingest_terminal_writeback(body.writeback, project=project)
@@ -322,6 +327,11 @@ def api_activity_pulse(body: ActivityPulseRequest) -> JSONResponse:
 
 @app.post("/api/ingest")
 def api_ingest(body: IngestRequest) -> JSONResponse:
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("ingest.handoff")
+    if not ok:
+        return JSONResponse(block, status_code=428)
     try:
         result = crowley.ingest_handoff(
             source=body.source,
