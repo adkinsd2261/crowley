@@ -55,11 +55,15 @@ def list_tools(*, kind: ToolKind | None = None) -> list[ToolDefinition]:
 
 def catalog_payload() -> dict[str, object]:
     ensure_registry()
+    import workflow
+
+    tool_names = sorted(_TOOLS.keys())
     return {
         "tools": [
             {
                 "name": tool.name,
                 "kind": tool.kind,
+                "tier": workflow.tool_tier(tool.name),
                 "description": tool.description,
                 "args_schema": tool.args_schema,
             }
@@ -69,14 +73,22 @@ def catalog_payload() -> dict[str, object]:
             "read": "POST /api/actions/read {\"tool\": \"...\", \"args\": {...}}",
             "write": "POST /api/actions/write {\"tool\": \"...\", \"args\": {...}}",
         },
+        "workflow": workflow.workflow_enforcement_payload(tool_names=tool_names),
     }
 
 
-def dispatch(kind: ToolKind, tool: str, args: object | None) -> tuple[dict[str, object], int]:
+def dispatch(
+    kind: ToolKind,
+    tool: str,
+    args: object | None,
+    *,
+    session_key: str | None = None,
+) -> tuple[dict[str, object], int]:
     ensure_registry()
     name = str(tool or "").strip()
     if not name:
         return _error("tool_required", "tool name is required", 400)
+
     defn = _TOOLS.get(name)
     if defn is None:
         return _error("unknown_tool", f"unknown tool: {name}", 404)
@@ -86,6 +98,14 @@ def dispatch(kind: ToolKind, tool: str, args: object | None) -> tuple[dict[str, 
             f"tool {name} must be invoked via POST /api/actions/{defn.kind}",
             400,
         )
+
+    import workflow
+
+    session = workflow.normalize_session_key(session_key)
+    allowed, boot_message = workflow.check_boot_gate(session, name)
+    if not allowed and boot_message:
+        return _error("boot_required", boot_message, 428)
+
     if args is not None and not isinstance(args, dict):
         return _error("invalid_args", "args must be a JSON object", 400)
     normalized_args: dict[str, Any] = dict(args) if isinstance(args, dict) else {}
@@ -574,9 +594,14 @@ def _register_inspect_tools() -> None:
 
 def _register_planning_tools() -> None:
     def _handle_agent_sync(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+        import workflow
+
         agent = _optional_str(args, "agent") or "chatgpt"
         limit = min(_optional_int(args, "limit", 20), 50)
-        return crowley.build_agent_sync_bundle(agent=agent, limit=limit), None
+        bundle = crowley.build_agent_sync_bundle(agent=agent, limit=limit)
+        tool_names = sorted(_TOOLS.keys())
+        bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
+        return bundle, None
 
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
         project = crowley.get_active_project()
@@ -681,12 +706,20 @@ def _register_write_tools() -> None:
         return {"ok": True, **result}, None
 
     def _handle_handoff_ingest(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+        import workflow
+
         content = _optional_str(args, "content")
         if not content:
             raise ValueError("content is required")
         handoff_type = _optional_str(args, "handoff_type") or "architect_handoff"
         if handoff_type not in {"architect_handoff", "note"}:
             raise ValueError("handoff_type must be architect_handoff or note")
+        if handoff_type == "note" and workflow.is_low_signal_note(content):
+            return {
+                "status": "error",
+                "error": "low_signal_note",
+                "message": "Note rejected: too short or low-signal for memory ingest",
+            }, 400
         project = _optional_str(args, "project") or "crowley"
         try:
             result = crowley.ingest_handoff(

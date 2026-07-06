@@ -40,8 +40,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.15"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.15 GPT Toolbelt"
+CROWLEY_VERSION = "3.9.16"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.16 Workflow Enforcement"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -8075,6 +8075,11 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
     return {
         "agent": normalized_agent,
         "role": get_agent_role(normalized_agent),
+        "boot_sequence": {
+            "required_first_tool": "agent.sync",
+            "status": "complete",
+            "message": "This bundle satisfies fresh-session boot when agent.sync is the first tool call.",
+        },
         "pipeline": {
             "hub": "crowley",
             "crowley": "running local OS — memory, world model, extraction, bus, this chat",
@@ -8696,7 +8701,8 @@ When asked what work is open, assigned, or blocked, answer from the Tickets bloc
 When a fact about the project matters:
 1. Filesystem truth first — then tickets — then agent activity — then live DB state — then canon — then supporting memory (hybrid retrieval).
 2. On conflict: filesystem and source-of-truth files win; then tickets; then agent activity timestamps; then live DB state; then canon; then hybrid retrieval.
-3. Use what you find. If it isn't there, say you don't have it stored — then stay in the conversation.
+3. For what changed and what now: agent activity beats project_state and beats supporting memory — never answer from stale memory when fresher handoff timestamps exist.
+4. Use what you find. If it isn't there, say you don't have it stored — then stay in the conversation.
 
 Do not invent project history, release versions, or personal details."""
 
@@ -8753,13 +8759,13 @@ def build_prompt(
     knowledge_entries = load_knowledge_files_context(user_message)
     system_parts.append(_format_knowledge_files_prompt_section(knowledge_entries))
 
-    world_ctx = get_active_world_context()
-    if world_ctx:
-        system_parts.append(_format_world_context_section(world_ctx))
+    system_parts.append(_format_tickets_prompt_section(active_project_id))
 
     system_parts.append(_format_agent_activity_prompt_section(active_project_id))
 
-    system_parts.append(_format_tickets_prompt_section(active_project_id))
+    world_ctx = get_active_world_context()
+    if world_ctx:
+        system_parts.append(_format_world_context_section(world_ctx))
 
     task_frame_section = _format_task_frame_prompt_section(active_project_id)
     if task_frame_section:

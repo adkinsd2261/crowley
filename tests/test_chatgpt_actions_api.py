@@ -15,11 +15,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import app as crowley_app  # noqa: E402
 import crowley  # noqa: E402
+from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 ACTIONS_KEY = "test-secret"
-AUTH_HEADER = {"Authorization": f"Bearer {ACTIONS_KEY}"}
+AUTH_HEADER = actions_headers(ACTIONS_KEY, session="chatgpt-actions-api")
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
@@ -117,6 +118,7 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
 
     def test_authorized_retrieve_succeeds(self) -> None:
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             res = client.get(
                 "/api/actions/retrieve",
                 headers=AUTH_HEADER,
@@ -146,6 +148,7 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
             }
         }
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             res = client.post(
                 "/api/actions/writeback/parse",
                 headers=AUTH_HEADER,
@@ -157,6 +160,7 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
     def test_authorized_writeback_parse_matches_fixture(self) -> None:
         payload = json.loads((FIXTURES / "portable_writeback_valid.json").read_text())
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             res = client.post(
                 "/api/actions/writeback/parse",
                 headers=AUTH_HEADER,
@@ -196,6 +200,7 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
             }
         }
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             legacy = client.post(
                 "/api/actions/writeback/parse",
                 headers=AUTH_HEADER,

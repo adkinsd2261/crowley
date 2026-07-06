@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 import actions_tool_registry as registry
 import crowley
+import workflow
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -99,8 +100,25 @@ def _safe_runtime_block() -> dict[str, object]:
     return safe
 
 
-def _invoke_response(kind: registry.ToolKind, tool: str, args: dict[str, object] | None) -> JSONResponse:
-    body, status = registry.dispatch(kind, tool, args)
+def _resolve_session_key(
+    x_crowley_session: Annotated[str | None, Header(alias="X-Crowley-Session")] = None,
+    authorization: Annotated[str | None, Header()] = None,
+) -> str:
+    token: str | None = None
+    if authorization:
+        _, _, token = authorization.partition(" ")
+        token = token.strip() or None
+    return workflow.normalize_session_key(x_crowley_session, bearer_token=token)
+
+
+def _invoke_response(
+    kind: registry.ToolKind,
+    tool: str,
+    args: dict[str, object] | None,
+    *,
+    session_key: str,
+) -> JSONResponse:
+    body, status = registry.dispatch(kind, tool, args, session_key=session_key)
     return JSONResponse(body, status_code=status)
 
 
@@ -130,17 +148,19 @@ def actions_catalog(_auth: None = Depends(require_actions_bearer)) -> JSONRespon
 @router.post("/read")
 def actions_read(
     body: ActionsInvokeRequest,
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
-    return _invoke_response("read", body.tool, body.args)
+    return _invoke_response("read", body.tool, body.args, session_key=session_key)
 
 
 @router.post("/write")
 def actions_write(
     body: ActionsInvokeRequest,
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
-    return _invoke_response("write", body.tool, body.args)
+    return _invoke_response("write", body.tool, body.args, session_key=session_key)
 
 
 # --- Legacy V3.9.13 aliases (deprecated; delegate to registry) ---
@@ -148,34 +168,40 @@ def actions_write(
 
 @router.get("/context")
 def actions_context(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
     q: str = Query(crowley.CONTEXT_DEFAULT_QUERY),
     limit: int = Query(8, ge=1, le=50),
     project: str | None = Query(None),
 ) -> JSONResponse:
-    return _invoke_response("read", "context.get", {"q": q, "limit": limit, "project": project})
+    return _invoke_response(
+        "read", "context.get", {"q": q, "limit": limit, "project": project}, session_key=session_key
+    )
 
 
 @router.get("/retrieve")
 def actions_retrieve(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
     q: str = Query(..., min_length=1),
     limit: int = Query(8, ge=1, le=50),
 ) -> JSONResponse:
-    return _invoke_response("read", "retrieve.search", {"q": q, "limit": limit})
+    return _invoke_response("read", "retrieve.search", {"q": q, "limit": limit}, session_key=session_key)
 
 
 @router.get("/portable/packet")
 def actions_portable_packet(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
     project: str | None = Query(None),
 ) -> JSONResponse:
-    return _invoke_response("read", "portable.packet", {"project": project})
+    return _invoke_response("read", "portable.packet", {"project": project}, session_key=session_key)
 
 
 @router.post("/writeback/parse")
 def actions_writeback_parse(
     body: ActionsWritebackRequest,
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
 ) -> JSONResponse:
     payload: dict[str, object] = {}
@@ -183,12 +209,13 @@ def actions_writeback_parse(
         payload["writeback"] = body.writeback
     if body.text:
         payload["text"] = body.text
-    return _invoke_response("write", "writeback.parse", payload)
+    return _invoke_response("write", "writeback.parse", payload, session_key=session_key)
 
 
 @router.post("/writeback/ingest")
 def actions_writeback_ingest(
     body: ActionsWritebackRequest,
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
     project: str = Query("crowley", min_length=1),
 ) -> JSONResponse:
@@ -197,11 +224,12 @@ def actions_writeback_ingest(
         payload["writeback"] = body.writeback
     if body.text:
         payload["text"] = body.text
-    return _invoke_response("write", "writeback.ingest", payload)
+    return _invoke_response("write", "writeback.ingest", payload, session_key=session_key)
 
 
 @router.get("/writeback/acceptance")
 def actions_writeback_acceptance(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
     _auth: None = Depends(require_actions_bearer),
     refresh: bool = Query(False),
     apply: bool = Query(False),
@@ -210,4 +238,5 @@ def actions_writeback_acceptance(
         "read",
         "writeback.acceptance",
         {"refresh": refresh, "apply": apply},
+        session_key=session_key,
     )

@@ -14,11 +14,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import app as crowley_app  # noqa: E402
 import crowley  # noqa: E402
+from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 ACTIONS_KEY = "test-secret"
-AUTH_HEADER = {"Authorization": f"Bearer {ACTIONS_KEY}"}
+AUTH_HEADER = actions_headers(ACTIONS_KEY, session="domain-read-tools")
 
 
 class DomainReadToolTests(IsolatedDbTestCase):
@@ -44,6 +45,7 @@ class DomainReadToolTests(IsolatedDbTestCase):
 
     def _read(self, tool: str, args: dict) -> dict:
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             res = client.post(
                 "/api/actions/read",
                 headers=AUTH_HEADER,
@@ -61,6 +63,7 @@ class DomainReadToolTests(IsolatedDbTestCase):
 
     def test_memory_get_not_found(self) -> None:
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             res = client.post(
                 "/api/actions/read",
                 headers=AUTH_HEADER,

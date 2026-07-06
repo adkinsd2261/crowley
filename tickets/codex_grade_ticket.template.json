@@ -1,0 +1,25 @@
+{
+  "title": "V3.x.x: Short ticket title",
+  "assignee": "cursor",
+  "priority": 1,
+  "description": "Problem statement and outcome in plain language.",
+  "acceptance": [
+    "Measurable check 1",
+    "Measurable check 2"
+  ],
+  "implementation_steps": [
+    "Step 1 — concrete file/function change",
+    "Step 2 — test or verify command"
+  ],
+  "files_touched": [
+    "path/to/module.py",
+    "tests/test_feature.py"
+  ],
+  "data_flow": "Input → handler → DB/API → output shape",
+  "dependencies": {
+    "blocked_by_ticket_id": null,
+    "parent_id": null,
+    "notes": "e.g. #101 must ship before #104"
+  },
+  "qa_expectations": "CROWLEY_TEST_MODE=1 unittest; live API smoke if applicable"
+}

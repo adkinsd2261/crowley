@@ -15,11 +15,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import app as crowley_app  # noqa: E402
 import crowley  # noqa: E402
+from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 ACTIONS_KEY = "test-secret"
-AUTH_HEADER = {"Authorization": f"Bearer {ACTIONS_KEY}"}
+AUTH_HEADER = actions_headers(ACTIONS_KEY, session="inspect-tools")
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
@@ -39,6 +40,7 @@ class InspectToolTests(IsolatedDbTestCase):
     def test_ingest_then_inspect_round_trip(self) -> None:
         payload = json.loads((FIXTURES / "portable_writeback_valid.json").read_text())
         with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
             ingest = client.post(
                 "/api/actions/write",
                 headers=AUTH_HEADER,

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
+
+import certifi
 
 
 DEFAULT_REPO = "adkinsd2261/crowley"
@@ -25,6 +28,10 @@ def configured_token() -> str | None:
 
 def default_repo() -> str:
     return os.environ.get("CROWLEY_GITHUB_REPO", DEFAULT_REPO).strip() or DEFAULT_REPO
+
+
+def _ssl_context() -> ssl.SSLContext:
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def github_status() -> dict[str, object]:
@@ -58,11 +65,13 @@ def github_get(path: str, *, params: dict[str, str] | None = None) -> Any:
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=20, context=_ssl_context()) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"GitHub HTTP {exc.code}: {body[:500]}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"GitHub request failed: {exc.reason}") from exc
 
 
 def read_file(*, path: str, ref: str | None = None) -> dict[str, object]:

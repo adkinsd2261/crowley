@@ -1,0 +1,112 @@
+{
+  "objective": "V3.9.16 — Workflow Enforcement: boot sequence, truth hierarchy, core tools, canonical loop, QA pipeline, and Cursor rehydration guarantees.",
+  "context": "V3.9.15 GPT Toolbelt shipped hybrid Actions gateway (#94–#100). ChatGPT minted V3.9.16 initiative (#101–#111) to enforce daily-usable workflow stability across fresh chats.",
+  "decisions": [
+    "Runtime boot gate on Actions read/write until agent.sync",
+    "Truth hierarchy: activity beats state and memory for what changed / what now",
+    "Core vs secondary tool tiers in catalog",
+    "Builder handoffs include Context Basis, Build Complete, Approval sections",
+    "Codex-grade ticket template with implementation_steps and dependencies"
+  ],
+  "non_goals": [
+    "V4 Spark Lanes",
+    "GitHub writes",
+    "Per-tool public REST paths"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 full unittest; validate_workflow_e2e.py; verify_chatgpt_bridge if Actions key set.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "Mr. Go",
+    "approved_at": "2026-07-06"
+  },
+  "tickets": [
+    {
+      "title": "V3.9.16: Enforce agent.sync boot sequence for all fresh chats",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Ensure every new ChatGPT session begins with agent.sync grounding. Runtime gate + instructions.",
+      "acceptance": ["428 boot_required without prior sync", "agent.sync clears gate", "boot_sequence in sync bundle"],
+      "dependencies": {"notes": "Foundation — no blockers"}
+    },
+    {
+      "title": "V3.9.16: Define and enforce truth hierarchy (activity > state > memory)",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Agent activity overrides stale project_state and memory for what changed / what now.",
+      "acceptance": ["Prompt order tickets → activity → state", "_ground_truth_prompt activity rule"],
+      "dependencies": {"blocked_by_ticket_id": 101}
+    },
+    {
+      "title": "V3.9.16: Tool surface reduction to core set",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Tag core vs secondary tools in catalog.",
+      "acceptance": ["catalog tools have tier field", "core set documented in workflow payload"],
+      "dependencies": {"blocked_by_ticket_id": 101}
+    },
+    {
+      "title": "V3.9.16: Canonical workflow loop definition and enforcement",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Formalize sync → read → decide → write → state_update.",
+      "acceptance": ["CANONICAL_WORKFLOW_LOOP in workflow.py", "included in agent.sync workflow block"],
+      "dependencies": {"blocked_by_ticket_id": 102}
+    },
+    {
+      "title": "V3.9.16: Fresh chat stability test suite",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Test repeated agent.sync structural stability.",
+      "acceptance": ["≥95% key-set consistency over 20 runs"],
+      "dependencies": {"blocked_by_ticket_id": 101}
+    },
+    {
+      "title": "V3.9.16: Redundancy audit across tools and concepts",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Document overlapping tools and usage guidance.",
+      "acceptance": ["REDUNDANCY_AUDIT in workflow payload"],
+      "dependencies": {"blocked_by_ticket_id": 103}
+    },
+    {
+      "title": "V3.9.16: Noise reduction in memory ingestion",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Reject low-signal note.ingest content.",
+      "acceptance": ["low_signal_note error for test note", "substantive notes pass"],
+      "dependencies": {"blocked_by_ticket_id": 101}
+    },
+    {
+      "title": "V3.9.16: End-to-end workflow validation (real usage)",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "validate_workflow_e2e.py against live bus.",
+      "acceptance": ["Script exits 0 on healthy 3.9.16 bus"],
+      "dependencies": {"blocked_by_ticket_id": 104}
+    },
+    {
+      "title": "V3.9.16: Codex role stability and ticket spec hardening",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Codex-grade ticket template with implementation steps and dependencies.",
+      "acceptance": ["codex_grade_ticket.template.json exists", "v3.9.16 release json has dependency chain"],
+      "dependencies": {"blocked_by_ticket_id": 104}
+    },
+    {
+      "title": "V3.9.16: QA pipeline enforcement (Cursor→Codex→Approval)",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Builder handoff schema with Build Complete and Approval sections.",
+      "acceptance": ["cursor_sync --confidence flag", "Build Complete + Approval in handoff markdown"],
+      "dependencies": {"blocked_by_ticket_id": 104}
+    },
+    {
+      "title": "V3.9.16: Cursor context matching ownership & rehydration guarantees",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Context Basis section in builder handoffs listing sources used.",
+      "acceptance": ["--context-basis flag", "Context Basis section in handoff template"],
+      "dependencies": {"blocked_by_ticket_id": 101}
+    }
+  ]
+}

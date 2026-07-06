@@ -15,11 +15,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import app as crowley_app  # noqa: E402
 import github_read  # noqa: E402
+from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 ACTIONS_KEY = "test-secret"
-AUTH_HEADER = {"Authorization": f"Bearer {ACTIONS_KEY}"}
+AUTH_HEADER = actions_headers(ACTIONS_KEY, session="github-read")
 
 
 class GitHubReadTests(unittest.TestCase):
@@ -28,6 +29,7 @@ class GitHubReadTests(unittest.TestCase):
         os.environ["CROWLEY_ACTION_KEY"] = ACTIONS_KEY
         try:
             with TestClient(crowley_app.app) as client:
+                boot_actions_session(client, AUTH_HEADER)
                 res = client.post(
                     "/api/actions/read",
                     headers=AUTH_HEADER,
@@ -50,6 +52,7 @@ class GitHubReadTests(unittest.TestCase):
         os.environ["CROWLEY_ACTION_KEY"] = ACTIONS_KEY
         try:
             with TestClient(crowley_app.app) as client:
+                boot_actions_session(client, AUTH_HEADER)
                 res = client.post(
                     "/api/actions/read",
                     headers=AUTH_HEADER,

@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.15 · V4 next · **2026-07-05**
+**As of:** V3.9.16 · V4 next · **2026-07-06**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.15 GPT Toolbelt shipped. Re-import OpenAPI into Custom GPT; optional `CROWLEY_GITHUB_TOKEN` for github.* tools.
+**Git note:** V3.9.16 Workflow Enforcement shipped (#101–#111). Fresh ChatGPT sessions must call `agent.sync` first; re-import OpenAPI if Custom GPT instructions change.
 
 ---
 
@@ -47,12 +47,13 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.10** | **Shipped on `main`** — Task-Frame Context: task frame API, ticket-narrative retrieval, sync/UI/prompt brief (#64–#69) |
 | **V3.9.11** | **Shipped on `main`** — Live Wire: pulses, compose wire UI, brain switcher (#70–#75) |
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
+| **V3.9.16** | **Shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.15"` (`Crowley V3.9.15 GPT Toolbelt`)
+**Current constants (local code):** `CROWLEY_VERSION = "3.9.16"` (`Crowley V3.9.16 Workflow Enforcement`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
@@ -134,8 +135,8 @@ Hooks run `--before` automatically. After shipping:
 - Multi-agent hub: `codex_sync.py`, `cursor_sync.py`, `agent_sync_lib.py` (mint, claim, close, **cancel**)
 - Cursor hooks: sessionStart, beforeSubmitPrompt, stop (handoff nudge)
 - Portable context terminal — `GET /api/portable/packet`, writeback parse/ingest, CLI scripts
-- ChatGPT Actions API — bearer `/api/actions/*` when `CROWLEY_ACTION_KEY` is set ([CHATGPT_ACTIONS_API.md](./CHATGPT_ACTIONS_API.md))
-- **333 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` runs the same gate
+- ChatGPT Actions API — bearer `/api/actions/*` when `CROWLEY_ACTION_KEY` is set; **boot gate** requires `agent.sync` on fresh sessions ([CHATGPT_SETUP.md](./CHATGPT_SETUP.md))
+- **389 unit tests** locally (`CROWLEY_TEST_MODE=1`); CI on `main` runs the same gate
 - Personality: Crowley = the running system; co-founder voice; inferred mode/depth; filesystem-first answers
 - Git — [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley); `cursor_sync --after` and `crowley_handoff --from-git` populate file lists
 
@@ -160,6 +161,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.12 Portable Context Terminal** | Cursor | **Shipped on `main`** · #76–#80 · packet-in/writeback-out |
 | **V3.9.13 ChatGPT Actions API** | Cursor | **Shipped on `main`** · bearer `/api/actions/*` + bridge tooling |
 | **#81 Sync parity** | Cursor | **Shipped on `main`** · codex_sync `--known-issue` |
+| **V3.9.16 Workflow Enforcement** | Cursor | **Shipped** · #101–#111 · boot gate, QA pipeline handoffs |
 | **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
 
 **Resume workflow:** Plan or mint **V4.0 Spark Lanes** when D directs.
@@ -176,6 +178,9 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `app.py` | HTTP transport |
 | `.github/workflows/tests.yml` | CI regression gate (core deps) |
 | `scripts/preflight.py` | Release preflight |
+| `workflow.py` | Workflow enforcement module (V3.9.16) |
+| `docs/V3.9.16_WORKFLOW_ENFORCEMENT.md` | V3.9.16 release spec |
+| `scripts/validate_workflow_e2e.py` | E2E workflow validation |
 | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md` | V3.9.13 release spec |
 | `docs/CHATGPT_ACTIONS_API.md` | V3.9.13 operator guide |
 | `docs/CHATGPT_SETUP.md` | Custom GPT + tunnel bridge setup |

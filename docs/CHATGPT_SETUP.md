@@ -1,8 +1,8 @@
-# ChatGPT Custom GPT Setup — Crowley V3.9.15
+# ChatGPT Custom GPT Setup — Crowley V3.9.16
 
 Step-by-step guide to expose Crowley's **Actions API only** to a Custom GPT over HTTPS.
 
-**Prerequisites:** Crowley V3.9.15+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
+**Prerequisites:** Crowley V3.9.16+, `CROWLEY_ACTION_KEY` in `.env`, macOS or Linux.
 
 **Do not** expose the full `/api/*` surface. Use only `/api/actions/*`.
 
@@ -67,7 +67,7 @@ chmod +x scripts/start_chatgpt_bridge.sh
 curl -s http://127.0.0.1:8765/api/health | python3 -m json.tool | grep version
 ```
 
-Expect `"version": "3.9.15"`. If you still see an older version, something else is holding the listener — use `lsof -i tcp:8765 -sTCP:LISTEN` and kill that PID (not `lsof -ti tcp:8765`, which can match client connections).
+Expect `"version": "3.9.16"`. If you still see an older version, something else is holding the listener — use `lsof -i tcp:8765 -sTCP:LISTEN` and kill that PID (not `lsof -ti tcp:8765`, which can match client connections).
 
 This script:
 
@@ -221,6 +221,14 @@ Planning writes (Codex-parity — you plan, Cursor builds):
 Session writeback (end of substantive sessions):
 - writeback.parse then writeback.ingest — structured JSON per the portable packet contract; sparks stay staged until promoted, not auto-canon
 
+## Boot ritual (required — V3.9.16)
+
+**Every fresh ChatGPT conversation** must call `agent.sync` before any other read/write tool. The Actions gateway returns `428 boot_required` until sync completes.
+
+Allowed before sync: `agent.sync`, `context.get`, `portable.packet`.
+
+Recommended first message to D: *"Call actionsHealth, then actionsRead with tool agent.sync, and tell me version and focus."*
+
 ## Truth order
 
 When facts conflict, trust in this order:
@@ -255,14 +263,14 @@ There's no fixed ritual — use judgment. Typical patterns that work well:
 
 Be direct with D. When you're uncertain, call a tool rather than invent. When something worth keeping emerges, say so and offer to write it back — don't silently assume it persisted.
 
-Version in health/catalog responses is live truth; current release is V3.9.15 GPT Toolbelt unless health says otherwise.
+Version in health/catalog responses is live truth; current release is V3.9.16 Workflow Enforcement unless health says otherwise.
 ```
 
 ### D. Test in the GPT builder
 
 Ask: *"Call actionsHealth, then actionsRead with tool agent.sync, and tell me the Crowley version and current focus."*
 
-Expected: version `3.9.15` (or current) and project state from the live bridge.
+Expected: version `3.9.16` (or current) and project state from the live bridge.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.15 (`Crowley V3.9.15 GPT Toolbelt`)
+**Current:** V3.9.16 (`Crowley V3.9.16 Workflow Enforcement`)
 **Next planned:** V4 Spark Lanes
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
@@ -38,6 +38,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.12 | shipped  | 2026-07-03 | Portable Context Terminal — packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
 | V3.9.13 | shipped  | 2026-07-03 | Secure ChatGPT Actions API — bearer `/api/actions/*`, bridge scripts, Custom GPT setup |
 | V3.9.15 | shipped  | 2026-07-05 | GPT Toolbelt — hybrid gateway, tool registry, Codex-parity writes, GitHub read proxy (#94–#100) |
+| V3.9.16 | shipped  | 2026-07-06 | Workflow Enforcement — boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
@@ -474,6 +475,28 @@ Plan: [docs/V3.9.5_CONVERSATION_MODEL_BEHAVIOR.md](./docs/V3.9.5_CONVERSATION_MO
 **Version:** `CROWLEY_VERSION = "3.9.6"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.6 Workspace Polish"`
 
 Plan: [docs/V3.9.6_WORKSPACE_POLISH.md](./docs/V3.9.6_WORKSPACE_POLISH.md)
+
+---
+
+## V3.9.16 — Workflow Enforcement
+
+**Version:** `CROWLEY_VERSION = "3.9.16"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.16 Workflow Enforcement"`
+
+Plan: [docs/V3.9.16_WORKFLOW_ENFORCEMENT.md](./docs/V3.9.16_WORKFLOW_ENFORCEMENT.md) · Tickets `#101–#111`
+
+| Area | Detail |
+|------|--------|
+| Boot gate | Actions `428 boot_required` until `agent.sync`; `X-Crowley-Session` tracking |
+| Truth hierarchy | Prompt order: tickets → agent activity → project state; activity beats memory for what changed |
+| Core tools | `tier: core\|secondary` in `/api/actions/catalog` |
+| Canonical loop | `sync → read → decide → write → state_update` in workflow payload |
+| QA pipeline | Builder handoffs: Context Basis, Build Complete, Approval; `--confidence` flags |
+| Noise gate | `note.ingest` rejects low-signal content |
+| E2E | `scripts/validate_workflow_e2e.py` |
+| Codex templates | `tickets/codex_grade_ticket.template.json` |
+| Tests | **389 tests** with `CROWLEY_TEST_MODE=1` |
+
+Also: `github_read.py` certifi SSL fix for macOS Python 3.14.
 
 ---
 

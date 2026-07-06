@@ -123,6 +123,10 @@ def _section_content(
     open_loops: list[str],
     qa_results: list[str],
     known_issues: list[str],
+    context_basis: list[str] | None = None,
+    self_check: list[str] | None = None,
+    confidence: str = "",
+    approval_rationale: str = "",
 ) -> str:
     status_text = status or "Git status unavailable or clean."
     changed_lines = [line.strip() for line in changed.splitlines() if line.strip()]
@@ -137,6 +141,10 @@ def _section_content(
         else "- Not recorded."
     )
     qa_text = _bullets(qa_results) or qa_default
+    context_basis_text = _bullets(context_basis or []) or "- agent.sync via cursor_sync --before"
+    self_check_text = _bullets(self_check or []) or "- Not recorded."
+    confidence_text = confidence.strip() or "medium"
+    approval_text = approval_rationale.strip() or "Pending Codex QA pass."
 
     if handoff_type == "architect_handoff":
         files_section = "## Files Changed\n\n- None; planning-only architect handoff.\n\n"
@@ -164,15 +172,26 @@ def _section_content(
         "Project: Crowley\n\n"
         "## Summary\n\n"
         f"- {summary.strip()}\n\n"
+        "## Context Basis\n\n"
+        f"{context_basis_text}\n\n"
         "## What Changed\n\n"
         f"- {what_changed}\n\n"
         f"{files_section}"
+        "## Build Complete\n\n"
+        f"- confidence: {confidence_text}\n"
+        f"- approval_rationale: {approval_text}\n\n"
+        "### Self Check\n\n"
+        f"{self_check_text}\n\n"
         "## Decisions\n\n"
         f"{decisions_text}\n\n"
         f"{asl.feedback_section_markdown('Lessons', lessons)}"
         f"{asl.feedback_section_markdown('State Changed', state_changed)}"
         "## QA Results\n\n"
         f"{qa_text}\n\n"
+        "## Approval\n\n"
+        f"- Builder confidence: {confidence_text}\n"
+        f"- Rationale: {approval_text}\n"
+        "- Codex QA: pending review of this handoff\n\n"
         "## Known Issues\n\n"
         f"{known_issues_text}\n\n"
         "## Open Loops\n\n"
@@ -197,6 +216,10 @@ def _autofill_handoff(
     open_loops: list[str],
     qa_results: list[str],
     known_issues: list[str],
+    context_basis: list[str],
+    self_check: list[str],
+    confidence: str,
+    approval_rationale: str,
 ) -> None:
     status = _git(["status", "--short"])
     changed = _git(["diff", "--name-only"])
@@ -216,6 +239,10 @@ def _autofill_handoff(
             open_loops=open_loops,
             qa_results=qa_results,
             known_issues=known_issues,
+            context_basis=context_basis,
+            self_check=self_check,
+            confidence=confidence,
+            approval_rationale=approval_rationale,
         ),
         encoding="utf-8",
     )
@@ -358,6 +385,10 @@ def after(args: argparse.Namespace) -> int:
             open_loops=args.open_loop,
             qa_results=args.qa_result,
             known_issues=args.known_issue,
+            context_basis=args.context_basis,
+            self_check=args.self_check,
+            confidence=args.confidence or "medium",
+            approval_rationale=args.approval_rationale or "",
         )
 
     print(f"Handoff ready: {handoff.relative_to(ROOT)}")
@@ -518,6 +549,31 @@ def main() -> None:
     parser.add_argument("--qa-result", action="append", default=[], help="QA Result bullet; repeatable.")
     parser.add_argument(
         "--known-issue", action="append", default=[], help="Known Issue bullet; repeatable."
+    )
+    parser.add_argument(
+        "--context-basis",
+        action="append",
+        default=[],
+        dest="context_basis",
+        help="Context Basis bullet (sources used); repeatable.",
+    )
+    parser.add_argument(
+        "--self-check",
+        action="append",
+        default=[],
+        dest="self_check",
+        help="Build Complete self-check bullet; repeatable.",
+    )
+    parser.add_argument(
+        "--confidence",
+        choices=("high", "medium", "low"),
+        default="medium",
+        help="Builder approval confidence for Codex QA (default: medium).",
+    )
+    parser.add_argument(
+        "--approval-rationale",
+        dest="approval_rationale",
+        help="Why builder approves this slice for Codex QA.",
     )
     args = parser.parse_args()
 
