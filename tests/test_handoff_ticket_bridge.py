@@ -171,6 +171,94 @@ class HandoffTicketBridgeTests(IsolatedDbTestCase):
         self.assertEqual(first.get("mode"), "work_ticket_enriched")
         self.assertTrue(second.get("idempotent"))
 
+    def test_ingest_replay_does_not_create_duplicate_archival(self) -> None:
+        body = HANDOFF_BODY.replace("## Context Basis\n\n- ticket #131\n\n", "")
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            body,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        first = handoff_ticket_bridge.persist_handoff_as_ticket(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        second = handoff_ticket_bridge.persist_handoff_as_ticket(
+            int(mem_id),
+            body,
+            source="cursor",
+            handoff_type="builder_handoff",
+            project_id=self.project_id,
+        )
+        self.assertTrue(first.get("created"))
+        self.assertFalse(second.get("created"))
+        self.assertTrue(second.get("idempotent"))
+        self.assertEqual(second.get("mode"), "upsert_linked")
+        linked = handoff_ticket_bridge.list_tickets_for_handoff_memory(int(mem_id))
+        self.assertEqual(len(linked), 1)
+
+    def test_reconcile_cancels_duplicate_linked_tickets(self) -> None:
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            HANDOFF_BODY,
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        first_id = int(
+            crowley.create_ticket(
+                "Duplicate A",
+                assignee="cursor",
+                project_id=self.project_id,
+                linked_memory_id=int(mem_id),
+            )["ticket"]["id"]
+        )
+        second_id = int(
+            crowley.create_ticket(
+                "Duplicate B",
+                assignee="cursor",
+                project_id=self.project_id,
+            )["ticket"]["id"]
+        )
+        tickets.update_ticket(second_id, actor="cursor", linked_memory_id=int(mem_id))
+        report = handoff_ticket_bridge.reconcile_handoff_ticket_parity(
+            limit=50,
+            dry_run=False,
+        )
+        self.assertGreaterEqual(int(report.get("cancelled_duplicates", 0)), 1)
+        linked = handoff_ticket_bridge.list_tickets_for_handoff_memory(int(mem_id))
+        self.assertEqual(len(linked), 1)
+        remaining_id = int(linked[0]["id"])
+        self.assertIn(remaining_id, {first_id, second_id})
+        parity = handoff_ticket_bridge.verify_handoff_ticket_parity(limit=50)
+        self.assertTrue(parity.get("parity_ok"))
+
+    def test_create_ticket_rejects_duplicate_linked_memory(self) -> None:
+        mem_id = crowley.save_memory_item(
+            "project_update",
+            "handoff probe",
+            source="cursor",
+            project_id=self.project_id,
+        )
+        assert mem_id is not None
+        crowley.create_ticket(
+            "First link",
+            assignee="cursor",
+            project_id=self.project_id,
+            linked_memory_id=int(mem_id),
+        )
+        with self.assertRaises(ValueError):
+            tickets.create_ticket(
+                "Second link",
+                assignee="cursor",
+                project_id=self.project_id,
+                linked_memory_id=int(mem_id),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

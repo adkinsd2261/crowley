@@ -150,6 +150,142 @@ def _build_persisted_description(
     return f"{description}\n\n{provenance}".strip()
 
 
+def _upsert_linked_ticket_from_handoff(
+    ticket_id: int,
+    memory_id: int,
+    content: str,
+    *,
+    source: str,
+    handoff_type: str,
+    closed_work_ticket_id: int | None = None,
+) -> dict[str, object]:
+    """Refresh canonical linked ticket fields from handoff content."""
+    fields = parse_handoff_ticket_fields(content)
+    description = _build_persisted_description(
+        fields,
+        memory_id=memory_id,
+        handoff_type=handoff_type,
+        source=source,
+        closed_work_ticket_id=closed_work_ticket_id,
+    )
+    result = tickets.update_ticket(
+        ticket_id,
+        actor=source,
+        status="done",
+        linked_memory_id=int(memory_id),
+        description=description,
+        comment=f"Handoff #{memory_id} replay — ticket upserted",
+    )
+    tickets.append_ticket_event(
+        ticket_id,
+        "handoff_linked",
+        source,
+        {
+            "memory_item_id": memory_id,
+            "handoff_type": handoff_type,
+            "provenance": f"handoff #{memory_id}",
+            "mode": "upsert_linked",
+        },
+    )
+    return result["ticket"]
+
+
+def _cancel_duplicate_linked_tickets(
+    memory_id: int,
+    *,
+    keep_id: int,
+    actor: str = "system",
+    dry_run: bool = False,
+) -> list[int]:
+    """Cancel and unlink duplicate tickets for the same handoff memory."""
+    cancelled: list[int] = []
+    for ticket in list_tickets_for_handoff_memory(memory_id):
+        ticket_id = int(ticket["id"])
+        if ticket_id == keep_id:
+            continue
+        cancelled.append(ticket_id)
+        if dry_run:
+            continue
+        tickets.update_ticket(
+            ticket_id,
+            actor=actor,
+            status="cancelled",
+            clear_linked_memory=True,
+            comment=f"Reconcile: duplicate handoff #{memory_id} (kept ticket #{keep_id})",
+        )
+        tickets.append_ticket_event(
+            ticket_id,
+            "handoff_reconciled",
+            actor,
+            {
+                "memory_item_id": memory_id,
+                "kept_ticket_id": keep_id,
+                "action": "cancel_duplicate",
+            },
+        )
+    return cancelled
+
+
+def ensure_linked_memory_unique_index(conn) -> None:
+    """#151 — one ticket per handoff memory (partial unique index)."""
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_tickets_linked_memory_unique
+        ON tickets(linked_memory_id)
+        WHERE linked_memory_id IS NOT NULL
+        """
+    )
+
+
+def _handoff_context_for_memory(memory_id: int) -> dict[str, object] | None:
+    item = crowley.get_memory_item_api_by_id(memory_id)
+    if item is None:
+        return None
+    body = str(item.get("body", "") or item.get("content", "") or item.get("display", ""))
+    source = str(item.get("source", "cursor") or "cursor")
+    handoff_type = "builder_handoff"
+    if "architect" in body.lower():
+        handoff_type = "architect_handoff"
+    project_id = item.get("project_id")
+    metadata = item.get("metadata")
+    return {
+        "body": body,
+        "source": source,
+        "handoff_type": handoff_type,
+        "project_id": int(project_id) if project_id is not None else None,
+        "metadata": metadata if isinstance(metadata, dict) else {},
+    }
+
+
+def _list_duplicate_linked_memory_groups() -> list[dict[str, object]]:
+    conn = crowley.connect_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT linked_memory_id, COUNT(*) AS ticket_count
+            FROM tickets
+            WHERE linked_memory_id IS NOT NULL
+            GROUP BY linked_memory_id
+            HAVING ticket_count > 1
+            ORDER BY linked_memory_id ASC
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    groups: list[dict[str, object]] = []
+    for row in rows:
+        memory_id = int(row["linked_memory_id"])
+        linked = list_tickets_for_handoff_memory(memory_id)
+        groups.append(
+            {
+                "memory_id": memory_id,
+                "ticket_ids": [int(t["id"]) for t in linked],
+                "ticket_count": len(linked),
+            }
+        )
+    return groups
+
+
 def enrich_work_ticket_from_handoff(
     work_ticket_id: int,
     memory_id: int,
@@ -165,6 +301,7 @@ def enrich_work_ticket_from_handoff(
 
     existing_link = row["linked_memory_id"]
     if existing_link is not None and int(existing_link) == int(memory_id):
+        _cancel_duplicate_linked_tickets(memory_id, keep_id=work_ticket_id, actor=source)
         return {
             "created": False,
             "idempotent": True,
@@ -201,6 +338,7 @@ def enrich_work_ticket_from_handoff(
             "mode": "work_ticket_enriched",
         },
     )
+    _cancel_duplicate_linked_tickets(memory_id, keep_id=work_ticket_id, actor=source)
     return {
         "created": False,
         "idempotent": False,
@@ -242,13 +380,42 @@ def persist_handoff_as_ticket(
 
     if linked:
         canonical = get_ticket_for_handoff_memory(memory_id)
+        assert canonical is not None
+        keep_id = int(canonical["id"])
+        _cancel_duplicate_linked_tickets(memory_id, keep_id=keep_id, actor=source)
+        ticket = _upsert_linked_ticket_from_handoff(
+            keep_id,
+            memory_id,
+            content,
+            source=source,
+            handoff_type=handoff_type,
+            closed_work_ticket_id=work_ticket_id,
+        )
         return {
             "created": False,
             "idempotent": True,
-            "mode": "already_linked",
-            "ticket": canonical,
+            "mode": "upsert_linked",
+            "ticket": ticket,
             "memory_item_id": memory_id,
             "duplicate_count": len(linked),
+        }
+
+    existing = tickets.get_ticket_by_linked_memory_id(memory_id)
+    if existing is not None:
+        keep_id = int(existing["id"])
+        ticket = _upsert_linked_ticket_from_handoff(
+            keep_id,
+            memory_id,
+            content,
+            source=source,
+            handoff_type=handoff_type,
+        )
+        return {
+            "created": False,
+            "idempotent": True,
+            "mode": "upsert_linked",
+            "ticket": ticket,
+            "memory_item_id": memory_id,
         }
 
     fields = parse_handoff_ticket_fields(content)
@@ -287,6 +454,7 @@ def persist_handoff_as_ticket(
             "mode": "archival_created",
         },
     )
+    _cancel_duplicate_linked_tickets(memory_id, keep_id=ticket_id, actor="system")
     return {
         "created": True,
         "idempotent": False,
@@ -334,8 +502,101 @@ def verify_handoff_ticket_parity(*, limit: int = 50) -> dict[str, object]:
     return {
         "handoffs_checked": len(handoffs),
         "missing_tickets": missing,
+        "missing_count": len(missing),
         "duplicate_links": duplicates,
+        "duplicate_group_count": len(duplicates),
         "parity_ok": not missing and not duplicates,
+    }
+
+
+def reconcile_handoff_ticket_parity(
+    *,
+    limit: int = 200,
+    dry_run: bool = True,
+) -> dict[str, object]:
+    """
+    #151 — audit + fix handoff ↔ ticket parity.
+    Cancels duplicate links, backfills missing tickets, ensures unique index.
+    """
+    limit = max(1, min(int(limit), 500))
+    before = verify_handoff_ticket_parity(limit=limit)
+    actions: list[dict[str, object]] = []
+    cancelled = 0
+    backfilled = 0
+    merged = 0
+
+    for group in _list_duplicate_linked_memory_groups():
+        memory_id = int(group["memory_id"])
+        canonical = get_ticket_for_handoff_memory(memory_id)
+        if canonical is None:
+            continue
+        keep_id = int(canonical["id"])
+        dup_ids = _cancel_duplicate_linked_tickets(
+            memory_id,
+            keep_id=keep_id,
+            dry_run=dry_run,
+        )
+        for ticket_id in dup_ids:
+            actions.append(
+                {
+                    "action": "cancel_duplicate",
+                    "memory_id": memory_id,
+                    "ticket_id": ticket_id,
+                    "kept_ticket_id": keep_id,
+                }
+            )
+            cancelled += 1
+            merged += 1
+
+    for memory_id in list(before.get("missing_tickets", [])):
+        ctx = _handoff_context_for_memory(int(memory_id))
+        if ctx is None:
+            actions.append({"action": "skip_missing_memory", "memory_id": memory_id})
+            continue
+        handoff_type = str(ctx["handoff_type"])
+        if handoff_type not in HANDOFF_PERSIST_TYPES:
+            actions.append({"action": "skip_non_persisted_handoff", "memory_id": memory_id})
+            continue
+        actions.append({"action": "backfill", "memory_id": memory_id})
+        if dry_run:
+            backfilled += 1
+            continue
+        bridge = persist_handoff_as_ticket(
+            int(memory_id),
+            str(ctx["body"]),
+            source=str(ctx["source"]),
+            handoff_type=handoff_type,
+            project_id=ctx.get("project_id"),  # type: ignore[arg-type]
+            metadata=ctx.get("metadata"),  # type: ignore[arg-type]
+        )
+        if bridge.get("created") or bridge.get("mode") in {
+            "archival_created",
+            "work_ticket_enriched",
+            "upsert_linked",
+        }:
+            backfilled += 1
+
+    index_applied = False
+    if not dry_run:
+        conn = crowley.connect_db()
+        try:
+            ensure_linked_memory_unique_index(conn)
+            conn.commit()
+            index_applied = True
+        finally:
+            conn.close()
+
+    after = verify_handoff_ticket_parity(limit=limit) if not dry_run else before
+    return {
+        "dry_run": dry_run,
+        "before": before,
+        "after": after,
+        "actions": actions,
+        "cancelled_duplicates": cancelled,
+        "backfilled": backfilled,
+        "merged_groups": merged,
+        "unique_index_applied": index_applied,
+        "parity_ok_after": bool(after.get("parity_ok")) if not dry_run else None,
     }
 
 

@@ -3,7 +3,7 @@
 **As of:** V3.9.18 · V4 next · **2026-07-06**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.18 Agent Retrieval Enforcement shipped (#131–#135). Restart bus after version bumps so `/api/health` matches constants.
+**Git note:** V3.9.18 Agent Retrieval Enforcement shipped (#131–#135, integrity patch #142–#151). Restart bus after version bumps so `/api/health` matches constants.
 
 ---
 
@@ -49,7 +49,7 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.12** | **Shipped on `main`** — Portable Context Terminal: packet export, writeback parse/ingest, CLI (#76–#80); #81 codex_sync `--known-issue` parity |
 | **V3.9.16** | **Shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | **V3.9.17** | **Shipped** — Trust Control and Clarity: attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
-| **V3.9.18** | **Shipped** — Agent Retrieval Enforcement: handoff tickets, gating, domain triggers, observability (#131–#135) |
+| **V3.9.18** | **Shipped** — Agent Retrieval Enforcement: handoff tickets, gating, integrity patch (#131–#151) |
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |

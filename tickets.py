@@ -29,6 +29,7 @@ TICKET_EVENT_TYPES = frozenset({
     "cancelled",
     "comment",
     "handoff_linked",
+    "handoff_reconciled",
     "assignee_change",
     "priority_change",
 })
@@ -131,6 +132,13 @@ def create_ticket(
     priority_val = max(1, min(int(priority), 4))
     now = crowley._now_iso()
 
+    if linked_memory_id is not None:
+        existing = get_ticket_by_linked_memory_id(int(linked_memory_id))
+        if existing is not None:
+            raise ValueError(
+                f"linked_memory_id {linked_memory_id} already linked to ticket #{existing['id']}"
+            )
+
     conn = crowley.connect_db()
     try:
         cur = conn.execute(
@@ -195,6 +203,26 @@ def get_ticket_by_id(ticket_id: int) -> sqlite3.Row | None:
         return conn.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
     finally:
         conn.close()
+
+
+def get_ticket_by_linked_memory_id(memory_id: int) -> dict[str, object] | None:
+    """Return ticket linked to a handoff memory id, if any."""
+    conn = crowley.connect_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT * FROM tickets
+            WHERE linked_memory_id = ?
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (int(memory_id),),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return _ticket_row_to_dict(row)
 
 
 def list_ticket_events(ticket_id: int, *, limit: int = 20) -> list[sqlite3.Row]:
@@ -519,6 +547,7 @@ def update_ticket(
     comment: str | None = None,
     linked_memory_id: int | None = None,
     clear_blocked_by: bool = False,
+    clear_linked_memory: bool = False,
 ) -> dict[str, object]:
     row = get_ticket_by_id(ticket_id)
     if row is None:
@@ -561,7 +590,9 @@ def update_ticket(
         fields.append("blocked_by_ticket_id = ?")
         params.append(blocked_by_ticket_id)
 
-    if linked_memory_id is not None:
+    if clear_linked_memory:
+        fields.append("linked_memory_id = NULL")
+    elif linked_memory_id is not None:
         fields.append("linked_memory_id = ?")
         params.append(linked_memory_id)
 

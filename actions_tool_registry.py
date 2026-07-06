@@ -640,9 +640,31 @@ def _register_inspect_tools() -> None:
         if context not in {"sync", "write", "qa", "dispatch"}:
             raise ValueError("context must be sync, write, qa, or dispatch")
         session_key = _optional_str(args, "session_key") or workflow.normalize_session_key(None)
-        parity = system_integrity.check_state_parity(session_key=session_key)
+        limit = min(_optional_int(args, "limit", 50), 200)
+        parity = system_integrity.check_state_parity(session_key=session_key, limit=limit)
         invariants = system_integrity.run_invariant_checks(context, session_key=session_key)
-        return {"parity": parity, "invariants": invariants}, None
+        handoff_parity = parity.get("handoff_ticket_parity", {})
+        payload: dict[str, object] = {
+            "parity": parity,
+            "invariants": invariants,
+            "handoff_ticket_parity": {
+                "counts": {
+                    "handoffs_checked": handoff_parity.get("handoffs_checked", 0),
+                    "missing_count": handoff_parity.get("missing_count", 0),
+                    "duplicate_group_count": handoff_parity.get("duplicate_group_count", 0),
+                },
+                "parity_ok": handoff_parity.get("parity_ok"),
+                "report": handoff_parity,
+            },
+        }
+        if _optional_bool(args, "reconcile_preview", default=False):
+            import handoff_ticket_bridge
+
+            payload["reconcile_preview"] = handoff_ticket_bridge.reconcile_handoff_ticket_parity(
+                limit=limit,
+                dry_run=True,
+            )
+        return payload, None
 
     inspect_tools = [
         (
@@ -707,6 +729,8 @@ def _register_inspect_tools() -> None:
                 "properties": {
                     "context": {"type": "string", "enum": ["sync", "write", "qa", "dispatch"]},
                     "session_key": {"type": "string"},
+                    "limit": {"type": "integer"},
+                    "reconcile_preview": {"type": "boolean"},
                 }
             },
             _handle_inspect_invariant_checks,

@@ -40,7 +40,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.15 | shipped  | 2026-07-05 | GPT Toolbelt — hybrid gateway, tool registry, Codex-parity writes, GitHub read proxy (#94–#100) |
 | V3.9.16 | shipped  | 2026-07-06 | Workflow Enforcement — boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | V3.9.17 | shipped  | 2026-07-06 | Trust Control and Clarity — attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
-| V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, domain triggers, proactive chaining (#131–#135) |
+| V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
 
@@ -526,17 +526,19 @@ Plan: [docs/V3.9.17_TRUST_CONTROL_CLARITY.md](./docs/V3.9.17_TRUST_CONTROL_CLARI
 
 **Version:** `CROWLEY_VERSION = "3.9.18"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.18 Agent Retrieval Enforcement"`
 
-Plan: [docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md](./docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md) · Tickets `#131–#135`
+Plan: [docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md](./docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md) · Tickets `#131–#135` · patch `#142–#151`
 
 | Area | Detail |
 |------|--------|
-| Handoff bridge | `handoff_ticket_bridge.py` — idempotent handoff → done ticket |
+| Handoff bridge | `handoff_ticket_bridge.py` — idempotent handoff → done ticket; parity reconcile |
 | Pre-response gate | `428 context_not_ready` with `retry_path` |
 | Domain triggers | `428 domain_retrieval_required` with `required_tools` |
 | Proactive chaining | Complex-query heuristics require multi-step retrieval |
 | Observability | Structured log: `tool_called`, `reason_for_call`, `triggering_rule` |
+| Integrity patch | `system_integrity.py` — invariants, gates, planner, guardrails (#142–#150) |
+| Parity reconcile | `scripts/reconcile_handoff_ticket_parity.py` — unique `linked_memory_id` (#151) |
 | Backfill | `scripts/backfill_handoff_tickets.py` |
-| Tests | **430 tests** with `CROWLEY_TEST_MODE=1` |
+| Tests | **453 tests** with `CROWLEY_TEST_MODE=1` |
 
 ---
 
