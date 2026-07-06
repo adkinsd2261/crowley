@@ -47,6 +47,11 @@ INVARIANT_REGISTRY: list[dict[str, object]] = [
         "description": "Retrieval log matches tools_called state",
         "contexts": ["sync", "qa", "dispatch"],
     },
+    {
+        "id": "observability_chain_intact",
+        "description": "Per-session observability hash chain is unbroken (tamper-evident)",
+        "contexts": ["qa"],
+    },
 ]
 
 
@@ -381,6 +386,11 @@ def run_invariant_checks(
             if v:
                 violations.append(v)
 
+        if "observability_chain_intact" in applicable and session_key:
+            v = _check_observability_chain(session_key)
+            if v:
+                violations.append(v)
+
         if "context_before_response" in applicable and session_key:
             v = _check_context_before_response(session_key)
             if v:
@@ -408,6 +418,30 @@ def run_invariant_checks(
         }
 
 
+def _check_observability_chain(session_key: str) -> dict[str, object] | None:
+    """#201 — flag a broken observability hash chain (tamper-evidence).
+
+    Warning severity: this is detection, not a dispatch blocker. Historical
+    tamper does not affect current-execution correctness, so it must not gate
+    live dispatch (which would reintroduce the cold-state false-positive class).
+    """
+    try:
+        import observability_store
+
+        report = observability_store.verify_observability_chain(session_key)
+    except Exception:
+        return None
+    if report.get("ok"):
+        return None
+    return {
+        "invariant": "observability_chain_intact",
+        "severity": "warning",
+        "break_at_id": report.get("break_at_id"),
+        "reason": report.get("reason"),
+        "checked": report.get("checked"),
+    }
+
+
 def check_state_parity(*, session_key: str | None = None, limit: int = 20) -> dict[str, object]:
     """#147 — cross-layer parity: handoffs, observability, conflicts."""
     import handoff_ticket_bridge
@@ -415,14 +449,25 @@ def check_state_parity(*, session_key: str | None = None, limit: int = 20) -> di
     handoff_report = handoff_ticket_bridge.verify_handoff_ticket_parity(limit=limit)
     invariants = run_invariant_checks("qa", session_key=session_key)
     obs_ok = True
+    chain_report: dict[str, object] | None = None
     if session_key:
         obs_ok = _check_observability_truth(session_key, check_db=True) is None
+        import observability_store
 
+        chain_report = observability_store.verify_observability_chain(session_key)
+
+    chain_ok = chain_report.get("ok", True) if chain_report else True
     return {
         "handoff_ticket_parity": handoff_report,
         "invariants": invariants,
         "observability_matches_dispatch": obs_ok,
-        "parity_ok": bool(handoff_report.get("parity_ok")) and invariants.get("ok") and obs_ok,
+        "observability_chain": chain_report,
+        "parity_ok": (
+            bool(handoff_report.get("parity_ok"))
+            and invariants.get("ok")
+            and obs_ok
+            and bool(chain_ok)
+        ),
     }
 
 

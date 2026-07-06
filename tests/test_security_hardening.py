@@ -124,6 +124,108 @@ class DbObservabilityIntegrityTests(IsolatedDbTestCase):
         self.assertEqual(len(second), 2)
 
 
+class ObservabilityChainTests(IsolatedDbTestCase):
+    """#201 — per-session hash chain makes log tampering detectable."""
+
+    def test_intact_chain_verifies(self) -> None:
+        session = "sec-chain-ok"
+        agent_behavior.reset_request_cycle(session)
+        _record(session, "agent.sync", "ticket.list", "context.get")
+        report = observability_store.verify_observability_chain(session)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["checked"], 3)
+
+    def test_deleted_row_breaks_chain(self) -> None:
+        session = "sec-chain-delete"
+        agent_behavior.reset_request_cycle(session)
+        _record(session, "agent.sync", "ticket.list", "context.get")
+        _delete_db_tool(session, "ticket.list")
+        report = observability_store.verify_observability_chain(session)
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["reason"], "prev_hash_mismatch")
+
+    def test_altered_tool_column_breaks_chain(self) -> None:
+        session = "sec-chain-alter"
+        agent_behavior.reset_request_cycle(session)
+        _record(session, "agent.sync", "ticket.list")
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                "SELECT id FROM observability_logs WHERE session_key=? AND tool_called='ticket.list'",
+                (session,),
+            ).fetchone()
+            conn.execute(
+                "UPDATE observability_logs SET tool_called='memory.wipe' WHERE id=?",
+                (int(row["id"]),),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        report = observability_store.verify_observability_chain(session)
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["reason"], "hash_mismatch")
+
+    def test_entry_json_only_edit_is_detected(self) -> None:
+        # Editing the tool inside entry_json but not the hashed column must still
+        # be caught (the reader trusts entry_json for tool identity).
+        session = "sec-chain-json"
+        agent_behavior.reset_request_cycle(session)
+        _record(session, "agent.sync", "ticket.list")
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                "SELECT id, entry_json FROM observability_logs "
+                "WHERE session_key=? AND tool_called='ticket.list'",
+                (session,),
+            ).fetchone()
+            import json as _json
+
+            payload = _json.loads(row["entry_json"])
+            payload["tool_called"] = "memory.wipe"
+            payload["tool"] = "memory.wipe"
+            conn.execute(
+                "UPDATE observability_logs SET entry_json=? WHERE id=?",
+                (_json.dumps(payload), int(row["id"])),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        report = observability_store.verify_observability_chain(session)
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["reason"], "entry_json_tool_mismatch")
+
+    def test_legitimate_dispatch_patch_keeps_chain_intact(self) -> None:
+        # update_observability_log_dispatch patches mutable fields only; the
+        # chain (built on immutable identity) must remain valid.
+        session = "sec-chain-patch"
+        agent_behavior.reset_request_cycle(session)
+        agent_behavior.begin_dispatch(session, 7777)
+        agent_behavior.record_tool_call(session, "agent.sync", triggering_rule="sync", dispatch_id=7777)
+        entry = {"tool_called": "agent.sync", "dispatch_id": 7777, "http_status": 200, "bound_to_dispatch": True}
+        observability_store.update_observability_log_dispatch(session, 7777, entry)
+        report = observability_store.verify_observability_chain(session)
+        self.assertTrue(report["ok"])
+
+    def test_chain_check_is_warning_not_dispatch_blocker(self) -> None:
+        # A broken chain surfaces as a warning in qa context and must NOT block
+        # dispatch (dispatch blocks only on error severity).
+        session = "sec-chain-warn"
+        agent_behavior.reset_request_cycle(session)
+        _record(session, "agent.sync", "ticket.list", "context.get")
+        _delete_db_tool(session, "ticket.list")  # middle row -> chain break
+        qa = system_integrity.run_invariant_checks("qa", session_key=session)
+        chain_violations = [
+            v for v in qa["violations"] if v.get("invariant") == "observability_chain_intact"
+        ]
+        self.assertTrue(chain_violations)
+        self.assertEqual(chain_violations[0].get("severity"), "warning")
+        # dispatch context does not run the chain check at all
+        dispatch = system_integrity.run_invariant_checks("dispatch", session_key=session)
+        self.assertFalse(
+            any(v.get("invariant") == "observability_chain_intact" for v in dispatch["violations"])
+        )
+
+
 class OrderingGuaranteeTests(IsolatedDbTestCase):
     """#198 — logging is finalized before any invariant check can run."""
 
