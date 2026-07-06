@@ -285,51 +285,51 @@ def _check_observability_truth(
         state = agent_behavior._get_state(session_key)  # noqa: SLF001
         tools_state = list(state.get("tools_called", []))  # type: ignore[arg-type]
 
-    if tools_state != memory_tools and len(memory_tools) < len(tools_state):
-        return {
-            "invariant": "observability_truth",
-            "severity": "error",
-            "mismatch": "state_vs_memory",
-            "tools_called": tools_state,
-            "log_tools": memory_tools,
-        }
-
-    if not check_db or not memory_log:
-        return None
-
+    # Persisted observability log — survives bus restarts and is the authoritative
+    # record when the in-memory log is cold. The in-memory _retrieval_log is
+    # process-local and wiped on restart, while session_state.tools_called persists,
+    # so comparing state directly against in-memory alone yields false positives for
+    # long-lived sessions (e.g. the ChatGPT bearer-token session) after a restart.
     db_log: list[dict[str, object]] = []
     try:
         import observability_store
 
         db_log = [
             entry
-            for entry in observability_store.get_observability_logs(session_key, limit=50)
+            for entry in observability_store.get_observability_logs(session_key, limit=200)
             if isinstance(entry, dict)
         ]
     except Exception:
-        return None
+        db_log = []
     if dispatch_id is not None:
         db_log = [entry for entry in db_log if entry.get("dispatch_id") == dispatch_id]
     db_tools = [str(entry.get("tool_called", entry.get("tool", ""))) for entry in db_log]
 
-    if len(db_tools) < len(memory_tools):
+    # State claims tools that appear in NO observability sink (memory or DB) —
+    # this is genuine silent execution and always blocks.
+    observed_count = max(len(memory_tools), len(db_tools))
+    if observed_count < len(tools_state):
         return {
             "invariant": "observability_truth",
             "severity": "error",
-            "mismatch": "memory_not_persisted",
+            "mismatch": "state_not_observed",
+            "tools_called": tools_state,
             "memory_tools": memory_tools,
             "db_tools": db_tools,
-            "dispatch_id": dispatch_id,
         }
-    if db_tools[-len(memory_tools) :] != memory_tools:
-        return {
-            "invariant": "observability_truth",
-            "severity": "error",
-            "mismatch": "memory_vs_db",
-            "memory_tools": memory_tools,
-            "db_tools": db_tools,
-            "dispatch_id": dispatch_id,
-        }
+
+    # Strict live divergence: in-memory log present but disagrees with the DB.
+    # Restricted to qa/sync so dispatch is not blocked by write-behind persistence lag.
+    if check_db and memory_tools:
+        if len(db_tools) < len(memory_tools) or db_tools[-len(memory_tools) :] != memory_tools:
+            return {
+                "invariant": "observability_truth",
+                "severity": "error",
+                "mismatch": "memory_vs_db",
+                "memory_tools": memory_tools,
+                "db_tools": db_tools,
+                "dispatch_id": dispatch_id,
+            }
 
     return None
 

@@ -48,16 +48,22 @@ class IntegrityDispatchTests(unittest.TestCase):
     def test_dispatch_blocks_invariant_error(self) -> None:
         session = "invariant-block"
         agent_behavior.reset_request_cycle(session)
-        state = agent_behavior._get_state(session)  # noqa: SLF001
-        state["tools_called"] = ["agent.sync", "ticket.list", "github.status"]
         agent_behavior.record_tool_call(session, "agent.sync", triggering_rule="sync")
-        ok, code, status, extra = system_integrity.run_enforcement_gates(
-            session,
-            "ticket.list",
-            query_text="what tickets are open",
-            kind="read",
-            boot_allowed=True,
-        )
+        invariant = {
+            "context": "dispatch",
+            "ok": False,
+            "violations": [
+                {"invariant": "observability_truth", "severity": "error"},
+            ],
+        }
+        with mock.patch.object(system_integrity, "run_invariant_checks", return_value=invariant):
+            ok, code, status, extra = system_integrity.run_enforcement_gates(
+                session,
+                "ticket.list",
+                query_text="what tickets are open",
+                kind="read",
+                boot_allowed=True,
+            )
         self.assertFalse(ok)
         self.assertEqual(code, "invariant_violation")
         self.assertEqual(status, 428)
@@ -172,7 +178,43 @@ class ObservabilityTruthTests(IsolatedDbTestCase):
         ):
             violation = system_integrity._check_observability_truth(session, check_db=True)
         self.assertIsNotNone(violation)
-        self.assertEqual(violation.get("mismatch"), "memory_not_persisted")
+        self.assertEqual(violation.get("mismatch"), "memory_vs_db")
+
+    def test_observability_truth_tolerates_cold_memory_after_restart(self) -> None:
+        # Regression: long-lived session with persisted state + tools recorded to DB,
+        # but the in-memory retrieval log wiped (simulating a bus restart). Must NOT
+        # false-positive just because in-memory log is empty.
+        session = "obs-truth-restart"
+        agent_behavior.reset_request_cycle(session)
+        state = agent_behavior._get_state(session)
+        state["tools_called"] = ["agent.sync", "ticket.list", "agent.sync"]
+        with mock.patch.object(
+            observability_store,
+            "get_observability_logs",
+            return_value=[
+                {"tool_called": "agent.sync"},
+                {"tool_called": "ticket.list"},
+                {"tool_called": "agent.sync"},
+                {"tool_called": "handoff.list"},
+            ],
+        ):
+            violation = system_integrity._check_observability_truth(session, check_db=True)
+        self.assertIsNone(violation)
+
+    def test_observability_truth_flags_true_silent_execution(self) -> None:
+        # State claims more tools than exist in ANY sink -> genuine violation.
+        session = "obs-truth-silent"
+        agent_behavior.reset_request_cycle(session)
+        state = agent_behavior._get_state(session)
+        state["tools_called"] = ["agent.sync", "ticket.list", "note.ingest"]
+        with mock.patch.object(
+            observability_store,
+            "get_observability_logs",
+            return_value=[{"tool_called": "agent.sync"}],
+        ):
+            violation = system_integrity._check_observability_truth(session, check_db=True)
+        self.assertIsNotNone(violation)
+        self.assertEqual(violation.get("mismatch"), "state_not_observed")
 
 
 class IntegrityFailSafeTests(unittest.TestCase):
