@@ -314,6 +314,9 @@ def attach_agent_sync_runtime(
     )
     if tool_names is not None:
         bundle["workflow"] = workflow.workflow_enforcement_payload(tool_names=tool_names)
+    import actions_tool_registry
+
+    bundle["tool_catalog"] = actions_tool_registry.sync_tool_catalog_payload()
     bundle["dispatch_id"] = dispatch_id
     bundle["session_key"] = session_key
     return bundle

@@ -53,6 +53,16 @@ class PlanningToolTests(IsolatedDbTestCase):
         behavior = body["agent_behavior"]
         self.assertIn("retrieval_policy", behavior)
         self.assertIn("pre_response_validation", body)
+        catalog = body.get("tool_catalog")
+        self.assertIsInstance(catalog, dict)
+        self.assertEqual(catalog.get("version"), crowley.CROWLEY_VERSION)
+        tools = catalog.get("tools")
+        self.assertIsInstance(tools, list)
+        self.assertGreater(len(tools), 40)
+        first = tools[0]
+        self.assertIn("name", first)
+        self.assertIn("args_schema", first)
+        self.assertIn("agent.sync", {tool["name"] for tool in tools})
 
     def test_retrieval_policy_tools_exist_in_catalog(self) -> None:
         import actions_tool_registry as registry

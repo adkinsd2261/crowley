@@ -15,7 +15,11 @@ import actions_tool_registry as registry  # noqa: E402
 
 class ActionsToolRegistryTests(unittest.TestCase):
     def test_catalog_lists_v313_tools(self) -> None:
+        import crowley
+
         payload = registry.catalog_payload()
+        self.assertEqual(payload["version"], crowley.CROWLEY_VERSION)
+        self.assertEqual(payload["catalog_schema"], "actions_tool_catalog_v1")
         names = {tool["name"] for tool in payload["tools"]}
         self.assertIn("context.get", names)
         self.assertIn("writeback.ingest", names)
@@ -23,6 +27,29 @@ class ActionsToolRegistryTests(unittest.TestCase):
         self.assertIn("examples", payload)
         self.assertIn("writeback.ingest", payload["examples"])
         self.assertIn("retrieve.search", payload["examples"])
+
+    def test_sync_tool_catalog_matches_registry(self) -> None:
+        catalog = registry.sync_tool_catalog_payload()
+        full = registry.catalog_payload()
+        self.assertEqual(catalog["tool_count"], len(full["tools"]))
+        self.assertEqual(catalog["tools"], full["tools"])
+        self.assertEqual(catalog["examples"], full["examples"])
+
+    def test_agent_sync_includes_tool_catalog(self) -> None:
+        body, status = registry.dispatch(
+            "read",
+            "agent.sync",
+            {"agent": "chatgpt", "limit": 5},
+        )
+        self.assertEqual(status, 200)
+        catalog = body.get("tool_catalog")
+        self.assertIsInstance(catalog, dict)
+        self.assertGreater(int(catalog.get("tool_count") or 0), 40)
+        ticket_get = next(
+            tool for tool in catalog["tools"] if tool["name"] == "ticket.get"
+        )
+        props = ticket_get["args_schema"].get("properties", {})
+        self.assertIn("ticket_id", props)
 
     def test_unknown_tool_returns_error(self) -> None:
         body, status = registry.dispatch("read", "does.not.exist", {})

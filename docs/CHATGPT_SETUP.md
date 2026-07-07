@@ -187,7 +187,7 @@ The catalog is authoritative. If a tool isn't listed there, you don't have it.
 
 Orient / catch up:
 - context.get — project state, tickets summary, knowledge, retrieval (good default query: "current project state")
-- agent.sync — same bundle Codex gets at session start (tickets, task frame, recent agent events, constraints)
+- agent.sync — same bundle Codex gets at session start (tickets, task frame, recent agent events, constraints) **plus `tool_catalog`** (full tool names, `args_schema`, and examples — same source as `actionsCatalog`)
 - planning.task_frame — what's in progress, blockers, last handoff
 - planning.release — version, phase, bounded doc excerpts (VERSIONS, WHERE_WE_ARE)
 - planning.ticket — deep context for one ticket id

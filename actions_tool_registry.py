@@ -60,6 +60,9 @@ def catalog_payload() -> dict[str, object]:
 
     tool_names = sorted(_TOOLS.keys())
     return {
+        "version": crowley.CROWLEY_VERSION,
+        "release_label": crowley.CROWLEY_RELEASE_LABEL,
+        "catalog_schema": "actions_tool_catalog_v1",
         "tools": [
             {
                 "name": tool.name,
@@ -120,6 +123,22 @@ def catalog_payload() -> dict[str, object]:
             tool.name: tool_timeout_seconds(tool.name) for tool in list_tools()
         },
         "workflow": workflow.workflow_enforcement_payload(tool_names=tool_names),
+    }
+
+
+def sync_tool_catalog_payload() -> dict[str, object]:
+    """Authoritative tool schemas embedded in agent.sync (same registry as GET /catalog)."""
+    payload = catalog_payload()
+    return {
+        "version": payload.get("version"),
+        "release_label": payload.get("release_label"),
+        "catalog_schema": payload.get("catalog_schema"),
+        "source": "GET /api/actions/catalog",
+        "tool_count": len(payload.get("tools") or []),
+        "tools": payload.get("tools") or [],
+        "examples": payload.get("examples") or {},
+        "gateway": payload.get("gateway") or {},
+        "timeouts_seconds": payload.get("timeouts_seconds") or {},
     }
 
 
