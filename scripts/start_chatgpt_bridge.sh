@@ -144,17 +144,20 @@ start_named_tunnel() {
 
   if named_service_running; then
     echo "Durable LaunchAgent connector already running — reusing ${CLOUDFLARE_TUNNEL_HOSTNAME}" >&2
+    "$PY" -c "import sys; sys.path.insert(0, '$ROOT/scripts'); import chatgpt_bridge_lib as l; l.cleanup_duplicate_connectors()" >/dev/null 2>&1 || true
     printf 'https://%s' "${CLOUDFLARE_TUNNEL_HOSTNAME}"
     return 0
   fi
 
   if "$PY" -c "import sys; sys.path.insert(0, '$ROOT/scripts'); import chatgpt_bridge_lib as l; raise SystemExit(0 if l.connector_process_running() else 1)"; then
     echo "Named cloudflared connector already running — reusing ${CLOUDFLARE_TUNNEL_HOSTNAME}" >&2
+    "$PY" -c "import sys; sys.path.insert(0, '$ROOT/scripts'); import chatgpt_bridge_lib as l; l.cleanup_duplicate_connectors()" >/dev/null 2>&1 || true
     printf 'https://%s' "${CLOUDFLARE_TUNNEL_HOSTNAME}"
     return 0
   fi
 
   echo "Tip: for durable named bridge use ./scripts/crowley_bridge_service.py install" >&2
+  "$PY" -c "import sys; sys.path.insert(0, '$ROOT/scripts'); import chatgpt_bridge_lib as l; l.cleanup_duplicate_connectors()" >/dev/null 2>&1 || true
   stop_existing_tunnel
   mkdir -p "$BRIDGE_DIR"
   : >"$TUNNEL_LOG"

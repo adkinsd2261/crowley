@@ -19,6 +19,39 @@ FIXTURE = ROOT / "tests" / "fixtures" / "portable_writeback_valid.json"
 
 
 class PortableWritebackAcceptanceTests(IsolatedDbTestCase):
+    def test_missing_surface_defaults_to_chatgpt_for_acceptance(self) -> None:
+        payload = {
+            "format": "crowley_terminal_writeback_v1",
+            "session": {
+                "summary": "Validated acceptance flow for missing session surface.",
+                "model": "gpt-4.1",
+            },
+            "sparks": [
+                {
+                    "content": "Spark acceptance should not fail when session.surface is omitted in ChatGPT actions payloads.",
+                    "lane": "work",
+                    "why_keep": "Prevents false chatgpt_surface rejection and keeps promotion deterministic.",
+                    "confidence": 0.9,
+                    "sensitivity": "normal",
+                }
+            ],
+        }
+        result = crowley.ingest_terminal_writeback(payload)
+        self.assertEqual(result["status"], "ok")
+
+        report = crowley.build_portable_writeback_acceptance_report(apply=False)
+        session = next(
+            s for s in report["sessions"] if int(s["session_receipt_id"]) == int(result["session_receipt_id"])
+        )
+        self.assertEqual(session["surface"], "chatgpt")
+        accepted = [
+            item
+            for item in report["accepted"]
+            if int(item["session_receipt_id"]) == int(result["session_receipt_id"])
+        ]
+        self.assertTrue(accepted)
+        self.assertTrue(accepted[0]["accepted"])
+
     def test_acceptance_report_promotes_user_session_sparks(self) -> None:
         raw = FIXTURE.read_text(encoding="utf-8")
         payload = json.loads(raw)

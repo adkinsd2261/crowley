@@ -290,6 +290,22 @@ def _handle_writeback_ingest(args: dict[str, Any]) -> tuple[dict[str, Any], int 
         return {"status": "error", "errors": [str(exc)]}, 404
     if result.get("status") != "ok":
         return result, 400
+    session_receipt_id = result.get("session_receipt_id")
+    if session_receipt_id is not None:
+        try:
+            acceptance = crowley.build_portable_writeback_acceptance_report(
+                apply=True,
+                reviewer="chatgpt_actions_api",
+                session_receipt_id=int(session_receipt_id),
+            )
+            result["auto_promotion"] = {
+                "applied": True,
+                "accepted": int(acceptance.get("counts", {}).get("accepted", 0)),
+                "rejected": int(acceptance.get("counts", {}).get("rejected", 0)),
+                "deduped": int(acceptance.get("counts", {}).get("deduped", 0)),
+            }
+        except Exception as exc:
+            result["auto_promotion"] = {"applied": False, "error": str(exc)}
     return crowley.enrich_writeback_ingest_result(result), 201
 
 

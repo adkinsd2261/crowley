@@ -51,6 +51,16 @@ class ChatGptBridgeLibTests(unittest.TestCase):
         self.assertIn("local_bus", names)
         self.assertIn("local_actions", names)
 
+    def test_list_connector_pids_shape(self) -> None:
+        groups = bridge.list_connector_pids()
+        self.assertIn("named", groups)
+        self.assertIn("quick", groups)
+        self.assertIsInstance(groups["named"], list)
+        self.assertIsInstance(groups["quick"], list)
+
+    def test_bus_responsive_is_bool(self) -> None:
+        self.assertIsInstance(bridge.bus_responsive(timeout=1.0), bool)
+
 
 if __name__ == "__main__":
     unittest.main()

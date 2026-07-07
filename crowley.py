@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
 import struct
 import sys
 import threading
@@ -17,6 +16,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import ollama
+
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 
 # --- local env (optional .env file, never committed) --------------------------
 
@@ -648,15 +652,28 @@ def build_runtime_diagnostics() -> dict[str, object]:
         conn.close()
     model_probe = probe_model_availability()
     vec_detail = get_sqlite_vec_failure_reason()
+    if vec_ready:
+        vector_store = "available"
+        vector_detail: str | None = None
+    elif embed == "off":
+        vector_store = "unavailable"
+        vector_detail = vec_detail
+    else:
+        # sqlite-vec is optional; retrieval still has cosine fallback over embedding blobs.
+        vector_store = "fallback"
+        vector_detail = "sqlite-vec unavailable; using Python cosine fallback"
+        if vec_detail:
+            vector_detail = f"{vector_detail} ({vec_detail})"
+
     runtime: dict[str, object] = {
         "embeddings": embed,
-        "vector_store": "available" if vec_ready else "unavailable",
+        "vector_store": vector_store,
         "retrieval": _runtime_retrieval_label(get_last_retrieval_mode()),
         "model": str(model_probe.get("status", "unknown")),
         "test_mode": is_test_mode(),
     }
-    if vec_detail and not vec_ready:
-        runtime["vector_store_detail"] = vec_detail
+    if vector_detail:
+        runtime["vector_store_detail"] = vector_detail
     if model_probe.get("detail"):
         runtime["model_detail"] = model_probe["detail"]
     return runtime
@@ -7797,8 +7814,14 @@ def ingest_terminal_writeback(
     project_id = int(project_row["id"])
 
     session_summary = str(session_raw.get("summary") or "").strip()
-    surface = str(session_raw.get("surface") or "manual").strip().lower() or "manual"
-    session_metadata = _portable_session_receipt_metadata(writeback)
+    # Treat omitted surface as chatgpt for portable Actions sessions so
+    # downstream acceptance criteria sees the same normalized value.
+    surface = str(session_raw.get("surface") or "chatgpt").strip().lower() or "chatgpt"
+    normalized_session = dict(session_raw)
+    normalized_session["surface"] = surface
+    normalized_writeback = dict(writeback)
+    normalized_writeback["session"] = normalized_session
+    session_metadata = _portable_session_receipt_metadata(normalized_writeback)
 
     session_receipt_id = save_memory_item(
         "summary",
@@ -7834,7 +7857,7 @@ def ingest_terminal_writeback(
         is_sensitive = sensitivity in {"sensitive", "high"}
         spark_metadata = _portable_spark_metadata(
             spark,
-            session=session_raw,
+            session=normalized_session,
             session_receipt_id=int(session_receipt_id),
         )
         item_id = save_memory_item(
@@ -7881,7 +7904,7 @@ WRITEBACK_ACCEPTANCE_CRITERIA: list[dict[str, str]] = [
     },
     {
         "id": "spark_staged",
-        "description": "Spark candidate status is staged",
+        "description": "Spark candidate status is staged or active",
     },
     {
         "id": "content_present",
@@ -7904,6 +7927,15 @@ WRITEBACK_ACCEPTANCE_CRITERIA: list[dict[str, str]] = [
         "description": "Portable sparks remain unpinned on promotion",
     },
 ]
+WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA = (
+    "not_test_fixture",
+    "spark_staged",
+    "content_present",
+    "why_keep_present",
+    "dedup_canonical",
+    "no_active_duplicate",
+    "never_auto_pinned",
+)
 
 WRITEBACK_ACCEPTANCE_REPORT_PATH = PROJECT_ROOT / ".crowley" / "writeback_acceptance_report.json"
 
@@ -7949,7 +7981,11 @@ def _is_test_fixture_portable_session(
 
 
 def _find_active_memory_by_content(
-    conn: sqlite3.Connection, *, content: str, project_id: int | None
+    conn: sqlite3.Connection,
+    *,
+    content: str,
+    project_id: int | None,
+    exclude_memory_id: int | None = None,
 ) -> int | None:
     normalized = _normalize_writeback_content(content)
     if not normalized:
@@ -7962,8 +7998,11 @@ def _find_active_memory_by_content(
         (project_id, project_id),
     ).fetchall()
     for row in rows:
+        row_id = int(row["id"])
+        if exclude_memory_id is not None and row_id == int(exclude_memory_id):
+            continue
         if _normalize_writeback_content(str(row["content"] or "")) == normalized:
-            return int(row["id"])
+            return row_id
     return None
 
 
@@ -7983,7 +8022,10 @@ def _evaluate_portable_spark_acceptance(
     criteria: dict[str, bool] = {
         "chatgpt_surface": surface.startswith("chatgpt"),
         "not_test_fixture": not is_test_fixture,
-        "spark_staged": str(spark_row["status"] or "") == PORTABLE_SPARK_STATUS,
+        "spark_staged": str(spark_row["status"] or "") in {
+            PORTABLE_SPARK_STATUS,
+            "active",
+        },
         "content_present": bool(content),
         "why_keep_present": len(why_keep) >= MEMORY_GATE_WHY_MIN_LEN,
         "dedup_canonical": int(spark_row["id"]) in canonical_ids,
@@ -7993,13 +8035,14 @@ def _evaluate_portable_spark_acceptance(
             project_id=int(spark_row["project_id"])
             if spark_row["project_id"] is not None
             else None,
+            exclude_memory_id=int(spark_row["id"]),
         )
         is None,
         "never_auto_pinned": int(spark_row["pinned"] or 0) == 0,
     }
-    accepted = all(criteria.values())
+    accepted = all(bool(criteria.get(key)) for key in WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA)
     reason = "accepted" if accepted else next(
-        key for key, ok in criteria.items() if not ok
+        key for key in WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA if not criteria.get(key)
     )
     return {
         "memory_item_id": int(spark_row["id"]),
@@ -8052,8 +8095,6 @@ def list_portable_writeback_sessions(
         for row in rows:
             meta = _memory_item_metadata(row)
             surface = str(meta.get("surface") or "").strip().lower()
-            if not surface.startswith("chatgpt"):
-                continue
             sparks = _portable_session_sparks(conn, int(row["id"]))
             is_fixture = _is_test_fixture_portable_session(row, sparks)
             sessions.append(
@@ -8094,11 +8135,18 @@ def build_portable_writeback_acceptance_report(
     *,
     apply: bool = False,
     reviewer: str = "operator",
+    session_receipt_id: int | None = None,
 ) -> dict[str, object]:
     """Analyze staged portable writeback sparks; optionally promote accepted rows."""
     conn = connect_db()
     try:
         sessions = list_portable_writeback_sessions(conn=conn)
+        if session_receipt_id is not None:
+            sessions = [
+                session
+                for session in sessions
+                if int(session.get("session_receipt_id") or -1) == int(session_receipt_id)
+            ]
         accepted: list[dict[str, object]] = []
         rejected: list[dict[str, object]] = []
         deduped: list[dict[str, object]] = []
@@ -8713,12 +8761,18 @@ def ingest_handoff(
                 f"{promoted_type}: {_truncate(bullet_content, 48)}"
             )
 
+    attempted_memory_type: str | None = None
+    attempted_content: str | None = None
+    attempted_summary: str | None = None
     if typed_memories:
         summary_line = _memory_gate_section_text(trimmed_content, "Summary")
         anchor_content = summary_line or typed_memories[0][1]
         anchor_summary = summary_line or typed_memories[0][2]
+        attempted_memory_type = _handoff_anchor_memory_type(handoff_type)
+        attempted_content = anchor_content
+        attempted_summary = anchor_summary
         memory_item_id = save_memory_item(
-            _handoff_anchor_memory_type(handoff_type),
+            attempted_memory_type,
             anchor_content,
             summary=anchor_summary,
             source=source,
@@ -8731,6 +8785,9 @@ def ingest_handoff(
         if memory_item_id is None and promoted_ids:
             memory_item_id = promoted_ids[0]
     else:
+        attempted_memory_type = memory_type
+        attempted_content = trimmed_content
+        attempted_summary = None
         memory_item_id = save_memory_item(
             memory_type,
             trimmed_content,
@@ -8744,9 +8801,22 @@ def ingest_handoff(
 
     if memory_item_id is None:
         record_system_metric("ingest_error", label=source)
+        gate_reason = "unknown"
+        if attempted_memory_type and attempted_content is not None:
+            gate = evaluate_memory_quality_gate(
+                attempted_memory_type,
+                attempted_content,
+                summary=attempted_summary,
+                source=source,
+                importance=importance,
+                confidence=0.9,
+                project_id=project_id,
+            )
+            gate_reason = gate.reason
         return {
             "status": "error",
             "error": "failed to save memory_item",
+            "gate_reason": gate_reason,
             "memory_item_id": None,
             "applied": {
                 "memory_items_promoted": memory_items_promoted,

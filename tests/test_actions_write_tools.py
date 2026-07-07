@@ -78,6 +78,51 @@ class WriteToolTests(IsolatedDbTestCase):
             )
         self.assertEqual(res.status_code, 400)
 
+    def test_writeback_ingest_auto_promotes_accepted_sparks(self) -> None:
+        payload = {
+            "writeback": {
+                "session": {
+                    "summary": "Actions auto-promotion retrieval visibility test.",
+                },
+                "sparks": [
+                    {
+                        "content": "Accepted staged portable sparks should be promoted to active when ingested via actions.writeback.ingest.",
+                        "lane": "work",
+                        "why_keep": "Ensures retrieve.search can surface newly accepted portable sparks without manual acceptance runs.",
+                        "confidence": 0.95,
+                        "sensitivity": "normal",
+                    }
+                ],
+            }
+        }
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={"tool": "writeback.ingest", "args": payload},
+            )
+        self.assertEqual(res.status_code, 201, res.text)
+        body = res.json()
+        self.assertEqual(body.get("status"), "ok")
+        spark_ids = body.get("spark_ids") or []
+        self.assertTrue(spark_ids)
+        spark_id = int(spark_ids[0])
+
+        import crowley
+
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                "SELECT status FROM memory_items WHERE id = ?",
+                (spark_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(str(row["status"]), "active")
+
 
 if __name__ == "__main__":
     unittest.main()

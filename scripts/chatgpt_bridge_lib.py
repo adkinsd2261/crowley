@@ -120,22 +120,96 @@ def cleanup_stale_pid_file(pid_file: Path) -> bool:
     return False
 
 
-def connector_process_running(config_path: Path | None = None) -> bool:
+def _pgrep_pids(pattern: str) -> list[int]:
+    proc = subprocess.run(
+        ["pgrep", "-f", pattern],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    pids: list[int] = []
+    for line in (proc.stdout or "").splitlines():
+        line = line.strip()
+        if line.isdigit():
+            pids.append(int(line))
+    return sorted(set(pids))
+
+
+def list_connector_pids(config_path: Path | None = None) -> dict[str, list[int]]:
+    """Return named and quick cloudflared tunnel PIDs."""
     config = str((config_path or ROOT / "cloudflared" / "config.yml").resolve())
-    patterns = (
+    named: list[int] = []
+    for pattern in (
         f"cloudflared tunnel --config {config} run",
         "cloudflared tunnel --config cloudflared/config.yml run",
-    )
-    for pattern in patterns:
-        proc = subprocess.run(
-            ["pgrep", "-f", pattern],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if proc.returncode == 0:
-            return True
-    return False
+    ):
+        named.extend(_pgrep_pids(pattern))
+    quick = _pgrep_pids(r"cloudflared tunnel --url http://127\.0\.0\.1:8765")
+    return {
+        "named": sorted(set(named)),
+        "quick": sorted(set(quick)),
+    }
+
+
+def connector_process_running(config_path: Path | None = None) -> bool:
+    return bool(list_connector_pids(config_path=config_path)["named"])
+
+
+def _kill_pids(pids: list[int]) -> list[int]:
+    killed: list[int] = []
+    for pid in pids:
+        try:
+            os.kill(pid, 15)
+            killed.append(pid)
+        except OSError:
+            continue
+    if not killed:
+        return killed
+    import time
+
+    time.sleep(1.0)
+    for pid in list(killed):
+        if pid_alive(pid):
+            try:
+                os.kill(pid, 9)
+            except OSError:
+                continue
+    return killed
+
+
+def cleanup_duplicate_connectors(
+    *,
+    config_path: Path | None = None,
+    keep_pid: int | None = None,
+) -> dict[str, list[int]]:
+    """Stop duplicate cloudflared connectors; always remove quick tunnels."""
+    groups = list_connector_pids(config_path=config_path)
+    killed_quick = _kill_pids(groups["quick"])
+
+    named = groups["named"]
+    keep = keep_pid
+    if keep is None and len(named) == 1:
+        keep = named[0]
+    if keep is not None and keep in named:
+        to_kill = [pid for pid in named if pid != keep]
+    else:
+        # Multiple named connectors and no keeper — stop all; caller restarts one.
+        to_kill = named
+        keep = None
+
+    killed_named = _kill_pids(to_kill)
+    return {
+        "killed_quick": killed_quick,
+        "killed_named": killed_named,
+        "kept_named": [keep] if keep is not None else [],
+    }
+
+
+def bus_responsive(timeout: float = 2.0) -> bool:
+    code, _ = http_status("http://127.0.0.1:8765/api/health", timeout=timeout)
+    return code == 200
 
 
 def launchagent_service_status() -> tuple[int, str]:
