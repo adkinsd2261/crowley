@@ -1,0 +1,334 @@
+{
+  "objective": "V4.0 Cognitive Memory — spark-based cognitive system with structured memory, graph intelligence, automated context orchestration, stability safeguards, and security by design.",
+  "context": "Crowley 3.9.19 shipped. V3.9.12 portable writeback foreshadows lanes. V4 adds separate sparks/spark_links/patterns tables layered on memory_items. New /api/cognitive/* namespace. 24 focused tickets. Plan: tickets/v4.0_cognitive_memory.json supersedes v4.0_spark_lanes.json.",
+  "decisions": [
+    "Separate tables: memory_items (raw) → sparks → patterns; do not remove memory_items",
+    "New API namespace: POST /api/cognitive/ingest, GET /api/cognitive/context; existing endpoints untouched",
+    "Reuse embed_text() and EMBED_DIM; add spark_vec parallel to memory_vec",
+    "OpenAI LLM only for spark extraction; all retrieval/ranking/lane selection is deterministic code",
+    "trust_state on sparks coexists with memory_tiers on memory_items",
+    "No hard delete — archive to rejected only",
+    "Canonical score: 0.40 semantic + 0.25 confidence + 0.15 recency + 0.20 graph_reinforcement",
+    "Spark content max 300 chars; LLM returns JSON array only; 1 retry then discard batch",
+    "Field encryption deferred V4.1; content_encrypted schema hook only"
+  ],
+  "non_goals": [
+    "Remove or replace memory_items, memory_vec, or retrieve_memories()",
+    "Use OpenAI for retrieval, ranking, or lane selection",
+    "Auto-promote patterns or sparks to canon",
+    "Hard-delete sparks",
+    "Pattern data feeding back into LLM extraction",
+    "Cloud sync, external collectors, multi-user isolation",
+    "Field-level encryption in V4 core",
+    "Localhost auth on /api/cognitive/*",
+    "Change existing /api/ingest or /api/context behavior"
+  ],
+  "risks": [
+    "Triple spark concept (legacy memories, staged memory_items, new sparks table)",
+    "memory_tiers vs trust_state overlap",
+    "Pattern → ingest feedback loop",
+    "Uncontrolled graph expansion",
+    "Prompt injection via stored sparks",
+    "Sensitive data over-exposure in context",
+    "Breaking embedding pipeline if not reusing embed_text pattern"
+  ],
+  "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off python -m unittest discover -s tests -v; each ticket adds focused tests; full suite green before T24.",
+  "next_action": "Cursor claims T1 and begins Batch A foundation. Build waves: T1→T2+T3, T4→T5→T6+T7, T8→T9→T10+T11+T17+T18+T19+T20, T12→T13→T14+T15→T16+T21+T22+T23, T24.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-06",
+    "note": "V4 Cognitive Memory plan approved for mint. Supersedes v4.0_spark_lanes.json."
+  },
+  "tickets": [
+    {
+      "title": "V4 T1: sparks table schema",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Create sparks.py with setup_spark_tables() wired into crowley.py setup_db(). sparks table: content (max 300), lane, sensitivity (normal/sensitive/high), tags_json, why_keep, worth_reason, confidence, base_confidence, trust_state (candidate/active/stale/pinned/rejected), access_count, last_accessed_at, source_refs_json, owner_id, content_encrypted hook, lineage_json, source_memory_item_id, project_id, embedding_blob, embed_model, embed_dim, created_at, updated_at. Export SPARK_LANES and SPARK_TRUST_STATES enums. Sensitive lanes default trust_state=candidate. No scope beyond schema.",
+      "acceptance": [
+        "sparks table created on setup_db()",
+        "All planned columns present including sensitivity, owner_id, lineage_json, content_encrypted",
+        "SPARK_LANES matches PORTABLE_WRITEBACK_LANES (6 lanes)",
+        "tests/test_spark_schema.py passes"
+      ]
+    },
+    {
+      "title": "V4 T2: spark_links and patterns tables",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add spark_links (from_spark_id, to_spark_id, link_type, confidence, created_at) and patterns (content, lane, source_spark_ids_json, reasoning, confidence, trust_state, created_at, updated_at) in sparks.py setup. FK integrity to sparks. Depends on T1.",
+      "acceptance": [
+        "spark_links and patterns tables created",
+        "FK constraints enforce valid spark references",
+        "patterns.reasoning and spark_links.confidence columns present",
+        "tests/test_spark_schema.py covers links and patterns tables"
+      ]
+    },
+    {
+      "title": "V4 T3: spark validation module",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Implement validate_spark() in sparks.py: required fields (content ≤300 chars, lane, why_keep, worth_reason, confidence 0-1), lane enum strict (no auto-correct), sensitivity enum. Hard reject: instruction phrasing, vague filler, whole-input summary, over-length, invalid lane. Depends on T1.",
+      "acceptance": [
+        "Valid spark passes validation",
+        "Each rejection case has dedicated test (instructions, vague, over-length, invalid lane)",
+        "Invalid lane rejected without correction",
+        "tests/test_spark_validation.py passes"
+      ]
+    },
+    {
+      "title": "V4 T4: LLM spark extraction",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Create spark_extraction.py: OpenAI prompt enforcing JSON array ONLY (no prose). Required per item: content, lane, why_keep, worth_reason, confidence. 1 retry with stricter prompt; second failure discards entire batch (no partial acceptance). CROWLEY_TEST_MODE returns fixture. Patterns table NOT read. Depends on T3.",
+      "acceptance": [
+        "Valid JSON array parsed into candidate sparks",
+        "Prose wrapper rejected",
+        "Retry-then-discard on second failure",
+        "Test mode uses fixture without API call",
+        "tests/test_spark_extraction.py passes"
+      ]
+    },
+    {
+      "title": "V4 T5: cognitive ingest endpoint and async queue",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "POST /api/cognitive/ingest in app.py: sync save_memory_item() receipt then async worker for extraction. ?sync=1 for tests/debug only. enforce_dispatch_invariants('cognitive.ingest'). Code assigns trust_state/confidence defaults — LLM never writes memory state. Depends on T4.",
+      "acceptance": [
+        "memory_item receipt always created synchronously",
+        "Async worker completes spark pipeline by default",
+        "?sync=1 blocks until complete for tests",
+        "Dispatch invariant gate registered",
+        "tests/test_cognitive_ingest.py passes"
+      ]
+    },
+    {
+      "title": "V4 T6: spark dedup and merge at creation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Dedup before INSERT in sparks.py: embedding similarity > 0.85 → merge (append source_refs_json) or reinforces link. Never create redundant spark. Depends on T3, T5.",
+      "acceptance": [
+        "Dedup runs before any INSERT",
+        "Duplicate merged into keeper spark",
+        "Near-duplicate creates reinforces link",
+        "Distinct sparks both saved",
+        "tests/test_spark_dedup.py passes"
+      ]
+    },
+    {
+      "title": "V4 T7: spark embeddings and spark_vec",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "index_spark_embedding() reusing crowley.py embed_text() and pack/unpack helpers. spark_vec virtual table parallel to memory_vec. Depends on T1.",
+      "acceptance": [
+        "Spark embed on save writes embedding_blob and spark_vec row",
+        "Reuses existing EMBED_DIM and provider gate",
+        "tests/test_spark_embeddings.py passes"
+      ]
+    },
+    {
+      "title": "V4 T8: spark retrieval and canonical scoring",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "spark_retrieval.py: hybrid candidate pool, score = 0.40*semantic + 0.25*confidence + 0.15*recency + 0.20*graph_reinforcement. No AI in selection. Deterministic tie-break id ASC. Bump access_count and last_accessed_at on retrieval. Depends on T7.",
+      "acceptance": [
+        "Rank ordering matches formula",
+        "Same inputs produce identical output (determinism test)",
+        "access_count incremented on retrieve",
+        "tests/test_spark_retrieval.py passes"
+      ]
+    },
+    {
+      "title": "V4 T9: graph links CRUD limits and confidence",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "spark_graph.py: create link only if semantic sim ≥ 0.75 (SPARK_LINK_MIN_SIM) OR explicit reinforcement. SPARK_MAX_LINKS=15. Rate limit 10 new links/spark/day. Depends on T2, T7.",
+      "acceptance": [
+        "Sub-threshold similarity link rejected",
+        "16th link on spark rejected",
+        "Daily rate limit enforced",
+        "Link confidence stored",
+        "tests/test_spark_graph.py passes"
+      ]
+    },
+    {
+      "title": "V4 T10: graph expansion and pruning",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Bounded graph traversal: max 50 nodes/query, hops per depth mode. Graph reinforcement in ranking. No orphan expansion — only from scored hits. Prune links confidence < 0.3 and age > 30d. Depends on T9, T8.",
+      "acceptance": [
+        "Expansion bounded to 50 nodes",
+        "Orphan sparks excluded from expansion",
+        "Pruning dry-run reports removable links",
+        "tests/test_spark_graph_expansion.py passes"
+      ]
+    },
+    {
+      "title": "V4 T11: pattern detection and creation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "patterns.py: cluster detection ≥3 sparks, avg confidence ≥ 0.6, same lane, semantic sim ≥ 0.85. Store source_spark_ids_json and reasoning. Depends on T2, T8.",
+      "acceptance": [
+        "Pattern created from valid cluster",
+        "Below-threshold cluster rejected",
+        "source_spark_ids_json and reasoning populated",
+        "tests/test_patterns.py passes"
+      ]
+    },
+    {
+      "title": "V4 T12: pattern safety gates",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Auto-promote pattern to active only; never auto-canon. Patterns must NOT influence spark creation, override spark confidence, or feed LLM extraction. Pattern boost +0.05 lifecycle-only. Rate limit 5 patterns/hour. Depends on T11.",
+      "acceptance": [
+        "Pattern auto-active when threshold met",
+        "Canon promotion blocked",
+        "Extraction does not read patterns table (test enforced)",
+        "Pattern rate limit enforced",
+        "tests/test_pattern_safety.py passes"
+      ]
+    },
+    {
+      "title": "V4 T13: context orchestration pipeline",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "context_orchestration.py + GET /api/cognitive/context: lane parse → retrieve → rank → expand → patterns → split core/supporting. Register cognitive.context Actions tool with bearer auth. Depends on T8, T10, T12.",
+      "acceptance": [
+        "GET /api/cognitive/context returns core_sparks, supporting_sparks, patterns, confidence, trace",
+        "cognitive.context registered in actions_tool_registry.py",
+        "tests/test_cognitive_context.py passes"
+      ]
+    },
+    {
+      "title": "V4 T14: context depth modes cold start and trace",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "?depth=light|medium|deep with limits (core≤12, supporting≤20, patterns≤5). No overfill — return fewer if insufficient. Cold-start memory_items fallback when active sparks < 10. Required trace: lanes_used, selection_reason, score_basis, lineage, fallback_used. ?debug=1 score breakdown. Depends on T13.",
+      "acceptance": [
+        "Depth limits enforced per mode",
+        "Underfill returns short list not padded noise",
+        "trace fields always present",
+        "Fallback tagged when used",
+        "tests/test_cognitive_context_depth.py passes"
+      ]
+    },
+    {
+      "title": "V4 T15: spark confidence decay and re-evaluation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "spark_lifecycle.py: time_decay_factor = 0.5 ** (days_since_last_access/30); live_confidence = max(MIN_CONFIDENCE, base_confidence * decay). Pattern participation +0.05 capped at base_confidence. Depends on T8.",
+      "acceptance": [
+        "Decay math matches formula",
+        "Pattern boost applied correctly",
+        "Access updates last_accessed_at and slows decay",
+        "tests/test_spark_lifecycle_decay.py passes"
+      ]
+    },
+    {
+      "title": "V4 T16: lifecycle transitions and maintenance",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "No hard DELETE — stale/rejected only. Only code changes trust_state/confidence. POST /api/cognitive/maintenance dry_run default. POST /api/cognitive/sparks manual seeding. Depends on T15.",
+      "acceptance": [
+        "Low usage transitions to stale",
+        "Stale + low confidence transitions to rejected",
+        "Rejected rows retained in DB",
+        "Maintenance dry-run works",
+        "Manual seed endpoint works",
+        "tests/test_spark_lifecycle_maintenance.py passes"
+      ]
+    },
+    {
+      "title": "V4 T17: portable writeback bridge",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "ingest_terminal_writeback() dual-writes validated sparks to sparks table. Map worth_reason from why_keep when absent. Map sensitivity portable values. Legacy endpoints unchanged. Depends on T1, T6.",
+      "acceptance": [
+        "Portable writeback creates sparks row and memory_item receipt",
+        "worth_reason and sensitivity mapped",
+        "/api/sparks and /api/ingest unchanged",
+        "tests/test_portable_writeback_sparks_bridge.py passes"
+      ]
+    },
+    {
+      "title": "V4 T18: sensitivity classification and retrieval filtering",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "spark_security.py: exposure gates per sensitivity + lane. high/sensitive excluded unless lane matches; high also requires score > 0.7; high never in light depth. Depends on T3, T8.",
+      "acceptance": [
+        "Sensitive spark hidden from wrong-lane query",
+        "Visible when lane matches and threshold met",
+        "tests/test_spark_security_sensitivity.py passes"
+      ]
+    },
+    {
+      "title": "V4 T19: prompt injection sanitization",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "spark_sanitize.py: instruction pattern detection, MEMORY_DATA delimiter wrapping, output redaction (sk-, Bearer). Apply before LLM injection and on context output. Depends on T3.",
+      "acceptance": [
+        "Instruction-like content neutralized",
+        "API key patterns redacted in output",
+        "Data delimiter wrapping applied",
+        "tests/test_spark_sanitize.py passes"
+      ]
+    },
+    {
+      "title": "V4 T20: spark content security validation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Extend validate_spark(): reject embedded instructions ('ignore previous'), unsafe patterns, hallucinated structure. Depends on T3, T4.",
+      "acceptance": [
+        "'ignore previous instructions' content rejected",
+        "Normal content passes",
+        "tests/test_spark_security_validation.py passes"
+      ]
+    },
+    {
+      "title": "V4 T21: cognitive API input validation and rate limits",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Pydantic models: max 32KB ingest, 300 char spark content. Extend check_automation_guardrails(): cognitive ingest 10/min. Depends on T5.",
+      "acceptance": [
+        "Oversized ingest rejected",
+        "Rate limit triggers after threshold",
+        "tests/test_cognitive_api_limits.py passes"
+      ]
+    },
+    {
+      "title": "V4 T22: cognitive observability and integrity chain",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Log cognitive.ingest, cognitive.context, cognitive.maintenance to observability_store hash chain. Register dispatch invariants. Depends on T5, T13, T16.",
+      "acceptance": [
+        "Cognitive ingest logged to observability",
+        "Dispatch blocked on invariant violation",
+        "tests/test_cognitive_observability.py passes"
+      ]
+    },
+    {
+      "title": "V4 T23: audit trail and lineage",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Populate lineage_json on spark create (memory_item_id, extraction_id, dedup_action). Context trace.lineage shows full chain per spark. Depends on T5, T11, T14.",
+      "acceptance": [
+        "lineage_json populated on create",
+        "trace.lineage traceable end-to-end",
+        "tests/test_spark_lineage.py passes"
+      ]
+    },
+    {
+      "title": "V4 T24: V4 docs and release lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Update MEMORY_HIERARCHY.md, ARCHITECTURE.md, ROADMAP.md, WHERE_WE_ARE.md. Document raw→sparks→patterns→canon, /api/cognitive/* API, safeguards, security, sensitivity mapping, no-delete policy. Bump version. Depends on all prior tickets.",
+      "acceptance": [
+        "Docs define V4 cognitive memory architecture",
+        "Security and safeguard rules documented",
+        "Full unittest suite green",
+        "Preflight passes"
+      ]
+    }
+  ]
+}

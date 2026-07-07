@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.19 · V4 next · **2026-07-06**
+**As of:** V3.9.19 · V4.0 Cognitive Memory **mid-lock** (T1–T13) · **2026-07-07**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 **Git note:** V3.9.19 Memory Quality shipped (#152–#157, follow-up #162–#166). Post-3.9.19 integrity hardening shipped on `main`: #167 ingest parity, #171–#176 observability/session persistence + claim validation, #177–#184 handoff↔ticket parity hardening, #185–#193 triage (dupes closed; observability_truth DB check, dispatch-blocked metric, invariant fail-safe). Version constant still `3.9.19` — V3.9.20 label used in handoffs but not minted; Codex to decide bump. Restart bus after version bumps so `/api/health` matches constants.
@@ -54,13 +54,13 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
-| **V4.0** | **Planned** — Spark Lanes; memory lanes, trust states, lane-aware retrieval |
+| **V4.0** | **In progress (mid-lock)** — Cognitive Memory T1–T13 shipped (#203–#215); **not complete** — version still `3.9.19` until T24 |
 
 **Current constants (local code):** `CROWLEY_VERSION = "3.9.19"` (`Crowley V3.9.19 Memory Quality`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
-**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proves the portable context terminal loop; V3.9.13 adds bearer Actions for Custom GPT; V4.0 gives sparks memory lanes.
+**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proves the portable context terminal loop; V3.9.13 adds bearer Actions for Custom GPT; **V4.0 Cognitive Memory is half-built** — sparks/patterns/graph/context orchestration landed; depth modes, lifecycle, security, and release lock remain.
 
 ---
 
@@ -168,9 +168,9 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.17 Trust Control and Clarity** | Cursor | **Shipped** · #112–#130 · attribution, audit, tiers, agent behavior |
 | **V3.9.19 Memory Quality** | Cursor | **Shipped** · #152–#166 · ingest dedup, validation runtime wiring |
 | **V3.9.18 Agent Retrieval Enforcement** | Cursor | **Shipped** · #131–#135 · gating, domain triggers, handoff tickets |
-| **V4 Spark Lanes** | Codex plans | **Next** · sparks + lanes + trust |
+| **V4.0 Cognitive Memory** | Cursor | **Mid-lock** · T1–T13 (#203–#215) shipped · T14–T24 open · see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md) |
 
-**Resume workflow:** Plan or mint **V4.0 Spark Lanes** when D directs.
+**Resume workflow:** Cursor claims **#216 (T14)** — context depth modes, cold start, extended trace. **Do not** bump version or declare V4.0 shipped until **#226 (T24)**.
 
 ---
 
@@ -195,7 +195,15 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `observability_store.py` | DB-backed observability logs + session state (#171/#173) |
 | `claim_validation.py` | Claim status metadata + contested-peer marking (#176) |
 | `scripts/reconcile_handoff_ticket_parity.py` | Parity audit/fix + unique index (#151/#167) |
-| `docs/V3.9.19_MEMORY_QUALITY.md` | V3.9.19 release spec |
+| `sparks.py` | V4 cognitive sparks schema + validation (T1–T3) |
+| `spark_extraction.py` | LLM spark extraction (T4) |
+| `cognitive_ingest.py` | Cognitive ingest receipt + pipeline (T5) |
+| `spark_retrieval.py` | Deterministic spark retrieval/scoring (T8) |
+| `spark_graph.py` | Spark links, expansion, pruning (T9–T10) |
+| `patterns.py` | Pattern detection + safety gates (T11–T12) |
+| `context_orchestration.py` | Context bundle orchestration (T13) |
+| `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | V4 partial ship doc lock (T1–T13) |
+| `tickets/v4.0_cognitive_memory.json` | V4 ticket packet (#203–#226) |
 | `handoff_ticket_bridge.py` | Handoff → ticket persistence bridge (V3.9.18) |
 | `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | V3.9.18 release spec |
 | `docs/V3.9.16_WORKFLOW_ENFORCEMENT.md` | V3.9.16 release spec |

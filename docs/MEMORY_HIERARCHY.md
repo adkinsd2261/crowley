@@ -89,3 +89,23 @@ The Memory tab lists stored rows. Hybrid retrieval matches (used in chat) are la
 - [V3.9.2_CANON_SYNTHESIS_WORKFLOW.md](./V3.9.2_CANON_SYNTHESIS_WORKFLOW.md) — manual canon write path
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md) — memory trail API and canon model
 - [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — onboarding summary
+
+---
+
+## 7. V4 cognitive memory (partial · mid-lock)
+
+**Status:** T1–T13 shipped (#203–#215). **Not V4.0 complete.** See [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md).
+
+V4 adds a parallel stack **on top of** `memory_items` — it does not replace them.
+
+| Layer | Table / API | Role |
+|-------|-------------|------|
+| Raw receipt | `memory_items` | Ingest receipt from `POST /api/cognitive/ingest` |
+| Sparks | `sparks` | Durable lane-scoped units (max 300 chars); `trust_state` on spark |
+| Graph | `spark_links` | Reinforcement edges between sparks |
+| Patterns | `patterns` | Cluster summaries from sparks; T12 promotes to `active` only |
+| Context bundle | `GET /api/cognitive/context` | Read-only orchestration — core/supporting sparks + attached patterns |
+
+**Authority:** For version and ship status, filesystem docs still win. V4 tables are **not** yet wired into main chat prompt injection — that remains T14+ work.
+
+**Legacy note:** CLI trim sparks still use `memories` / implicit spark path. V4 `sparks` table is the new cognitive unit.

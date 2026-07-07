@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.19 · V4 planned
-**Last doc sync:** 2026-07-06 (V3.9.19 Memory Quality doc lock #166)
+**As of:** V3.9.19 · V4.0 Cognitive Memory mid-lock (T1–T13)
+**Last doc sync:** 2026-07-07 (V4.0 mid-lock #215 — partial, not release)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -42,7 +42,8 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
 - **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
-- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 Spark Lanes is next on the minted ladder.
+- **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T13 (#203–#215): sparks schema, ingest, retrieval, graph, patterns, context API — **13/24 tickets; not V4.0 complete**; see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
+- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T14 (#216).
 
 It is **not** a multi-user service and **not** a full agent framework with tool use. The browser UI is one cockpit, not the identity boundary.
 
@@ -68,6 +69,15 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `scripts/backfill_handoff_tickets.py` | **Active** | Backfill handoffs as tickets (V3.9.18) |
 | `scripts/reconcile_handoff_ticket_parity.py` | **Active** | Parity audit/fix + unique index (V3.9.18 #151) |
 | `memory_quality.py` | **Active** | Ingest dedup, retrieval strength, lifecycle cleanup (V3.9.19) |
+| `sparks.py` | **Active (V4 partial)** | Sparks/patterns schema + validation (T1–T3) |
+| `spark_extraction.py` | **Active (V4 partial)** | LLM spark extraction (T4) |
+| `cognitive_ingest.py` | **Active (V4 partial)** | Cognitive ingest receipt + pipeline (T5) |
+| `spark_retrieval.py` | **Active (V4 partial)** | Deterministic spark retrieval (T8) |
+| `spark_graph.py` | **Active (V4 partial)** | Spark links, graph expansion (T9–T10) |
+| `patterns.py` | **Active (V4 partial)** | Pattern detection + safety (T11–T12) |
+| `context_orchestration.py` | **Active (V4 partial)** | Context bundle orchestration (T13) |
+| `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | **Active** | V4 mid-lock — T1–T13 only; not release |
+| `tickets/v4.0_cognitive_memory.json` | **Active** | V4 ticket packet (#203–#226) |
 | `scripts/backfill_constraint_deduplication.py` | **Active** | Constraint dedup backfill (V3.9.19 #163) |
 | `docs/V3.9.19_MEMORY_QUALITY.md` | **Active** | V3.9.19 release spec |
 | `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | **Active** | V3.9.18 release spec |
@@ -136,7 +146,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
 | V3.9.14 | Durable ChatGPT Bridge | LaunchAgent, API-only tunnel, verify tooling |
 | V3.9.12 | Portable Context Terminal | Packet export, writeback parse/ingest, CLI (#76–#80) |
-| V4.0 | Spark Lanes | Planned memory lanes, trust states, lane-aware retrieval |
+| V4.0 | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open; version bump at T24 only |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 

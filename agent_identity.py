@@ -46,6 +46,7 @@ TOOL_MIN_ROLE: dict[str, AgentPermissionRole] = {
     "handoff.ingest": "writer",
     "note.ingest": "writer",
     "writeback.ingest": "writer",
+    "cognitive.ingest": "writer",
     "writeback.parse": "read_only",
     "memory.pin": "architect",
     "memory.promote_canonical": "architect",

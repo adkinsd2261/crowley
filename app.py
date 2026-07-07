@@ -127,6 +127,13 @@ class PortableWritebackParseRequest(BaseModel):
     writeback: dict[str, object] | None = None
 
 
+class CognitiveIngestRequest(BaseModel):
+    content: str = Field(min_length=1)
+    project: str = "crowley"
+    source: Literal["cursor", "chatgpt", "codex", "manual", "crowley"] = "manual"
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
 @app.get("/api/brain")
 def api_brain_get() -> JSONResponse:
     return JSONResponse(crowley.get_brain_snapshot())
@@ -346,6 +353,57 @@ def api_ingest(body: IngestRequest) -> JSONResponse:
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=404)
     if result.get("status") != "ok":
         return JSONResponse(result, status_code=500)
+    return JSONResponse(result)
+
+
+@app.post("/api/cognitive/ingest")
+def api_cognitive_ingest(
+    body: CognitiveIngestRequest,
+    sync: int = Query(0, ge=0, le=1),
+) -> JSONResponse:
+    import cognitive_ingest
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("cognitive.ingest")
+    if not ok:
+        return JSONResponse(block, status_code=428)
+    try:
+        result = cognitive_ingest.ingest_cognitive_content(
+            body.content,
+            project=body.project,
+            source=body.source,
+            metadata=body.metadata,
+            sync=bool(sync),
+        )
+    except ValueError as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=404)
+    if result.get("status") == "error":
+        return JSONResponse(result, status_code=500)
+    return JSONResponse(result, status_code=201)
+
+
+@app.get("/api/cognitive/context")
+def api_cognitive_context(
+    q: str = Query(""),
+    lane: str | None = Query(None),
+    limit: int = Query(12, ge=1, le=50),
+    project: str | None = Query(None),
+) -> JSONResponse:
+    import context_orchestration
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("cognitive.context")
+    if not ok:
+        return JSONResponse(block, status_code=428)
+    try:
+        result = context_orchestration.build_cognitive_context(
+            q,
+            lanes=lane,
+            limit=limit,
+            project=project,
+        )
+    except ValueError as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
     return JSONResponse(result)
 
 

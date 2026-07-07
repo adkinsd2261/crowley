@@ -551,6 +551,27 @@ def _handle_handoff_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | No
     return {"items": items, "total": len(items), "limit": limit, "offset": 0}, None
 
 
+def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+    import context_orchestration
+
+    q = _optional_str(args, "q") or ""
+    lane = _optional_str(args, "lane")
+    limit = min(_optional_int(args, "limit", 12), 50)
+    project = _optional_str(args, "project")
+    try:
+        return (
+            context_orchestration.build_cognitive_context(
+                q,
+                lanes=lane,
+                limit=limit,
+                project=project,
+            ),
+            None,
+        )
+    except ValueError as exc:
+        return {"status": "error", "error": str(exc)}, 400
+
+
 def _register_domain_read_tools() -> None:
     _domain_tools = [
         ("memory.get", "Get one memory item by id (any status).", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_memory_get),
@@ -565,6 +586,19 @@ def _register_domain_read_tools() -> None:
         ("decision.list", "List recent decisions for active project.", {"properties": {"limit": {"type": "integer"}}}, _handle_decision_list),
         ("handoff.get", "Get agent handoff memory by id.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_handoff_get),
         ("handoff.list", "List recent agent events / handoffs.", {"properties": {"limit": {"type": "integer"}, "handoffs_only": {"type": "boolean"}}}, _handle_handoff_list),
+        (
+            "cognitive.context",
+            "Read V4 cognitive context from ranked sparks and active patterns.",
+            {
+                "properties": {
+                    "q": {"type": "string"},
+                    "lane": {"type": "string"},
+                    "limit": {"type": "integer"},
+                    "project": {"type": "string"},
+                }
+            },
+            _handle_cognitive_context,
+        ),
     ]
     for name, description, args_schema, handler in _domain_tools:
         register_tool(

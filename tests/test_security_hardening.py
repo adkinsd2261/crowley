@@ -17,6 +17,7 @@ which exposes only ^/api/actions/.* per cloudflared/config.yml):
                                         →guardrails→dispatch invariant check)
     GET  /api/agent/sync      ──► attach_agent_sync_runtime → run_invariant_checks
     POST /api/ingest          ─┐
+    POST /api/cognitive/ingest ─┤
     POST /api/portable/       ─┤─► system_integrity.enforce_dispatch_invariants (#196)
          writeback/ingest      ┘
 """

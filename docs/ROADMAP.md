@@ -87,12 +87,15 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.13 ChatGPT Actions API ✅
                               │
                               ▼
-                    V4.0 Spark Lanes ◄── YOU ARE HERE
+                    V4.0 Cognitive Memory ◄── YOU ARE HERE (mid-lock · T1–T13 shipped)
+                              │
+                              ▼
+                    T14–T24 open (#216–#226) · version bump at T24 only
 ```
 
-**Shipped through V3.9.13:** … portable context terminal (#76–#80); ChatGPT Actions API — bearer `/api/actions/*`, OpenAPI, bridge scripts (#V3.9.13).
+**Shipped through V3.9.19:** … memory quality (#152–#166); post-3.9.19 integrity hardening on `main`.
 
-**Active initiative:** V4.0 Spark Lanes (planned). See [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md).
+**Active initiative:** V4.0 Cognitive Memory — **partial (13/24 tickets)**. Mid-lock: [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md). **Not a release** — `CROWLEY_VERSION` stays `3.9.19` until T24.
 
 ---
 

@@ -36,7 +36,7 @@ The target state before V4:
 | V3.9.12 | Portable Context Terminal | **Shipped** (#76–#80) |
 | V3.9.14 | Durable ChatGPT Bridge | **Shipped** — LaunchAgent, API-only tunnel, verify |
 | V3.9.13 | Secure ChatGPT Actions API | **Shipped** — bearer `/api/actions/*` |
-| V4.0 | Spark Lanes | **Next** — mint when D directs |
+| V4.0 | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
 V4 memory-lane architecture starts when D mints V4.0 (V3.9.12 terminal loop and V3.9.13 Actions API proven).
@@ -91,11 +91,15 @@ Shipped — see [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEX
 
 **Boundary:** V3.9.12 proves the workflow only. It does not build OAuth, a browser extension, live terminal automation, cloud sync, or durable lane architecture.
 
-### V4.0 — Spark Lanes / Memory Architecture (planned)
+### V4.0 — Cognitive Memory (in progress · mid-lock)
 
-**Goal:** Redesign memory around sparks as the memory unit and lanes as the retrieval/trust boundary.
+**Goal:** Spark-based cognitive system — structured memory, graph intelligence, context orchestration, safeguards.
 
-**Packet:** `tickets/v4.0_spark_lanes.json` — planned, not minted. Start after V3.9.12 packet-in/writeback-out and V3.9.13 Actions API are proven.
+**Packet:** `tickets/v4.0_cognitive_memory.json` — minted **#203–#226**. Supersedes `v4.0_spark_lanes.json`.
+
+**Mid-lock (2026-07-07):** T1–T13 (#203–#215) shipped in code + tests. **13/24 tickets complete.** Version constant unchanged (`3.9.19`). See [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md).
+
+**Remaining:** T14–T24 (#216–#226) — depth modes, decay, maintenance, security, observability, final release lock.
 
 **Primary lanes:** learning, work, relationships, money, health, operating_style.
 

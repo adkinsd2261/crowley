@@ -1354,6 +1354,9 @@ def setup_db() -> None:
             import observability_store
 
             observability_store.ensure_tables(conn)
+            import sparks
+
+            sparks.setup_spark_tables(conn)
         except Exception:
             pass
         conn.commit()
