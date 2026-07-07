@@ -219,7 +219,7 @@ Planning writes (Codex-parity — you plan, Cursor builds):
 - note.ingest — short planning note
 
 Session writeback (end of substantive sessions):
-- writeback.parse then writeback.ingest — structured JSON per the portable packet contract; sparks stay staged until promoted, not auto-canon
+- writeback.parse then writeback.ingest — structured JSON per the portable packet contract; normal-sensitivity sparks auto-promote to active on Actions ingest (sensitive/high stay staged), not auto-canon
 
 ## Boot ritual (required — V3.9.16+)
 
@@ -345,8 +345,9 @@ curl -si -X POST -H "Authorization: Bearer $YOUR_KEY" -H "Content-Type: applicat
 - Quick tunnel URLs change when you restart the bridge — re-import OpenAPI or update the Action URL in the GPT editor
 - Quick tunnels have no uptime SLA (Cloudflare terms)
 - `CROWLEY_ACTION_KEY` is a shared secret — rotate if leaked
-- Writeback ingest stages sparks as **candidates**; it does not promote to canon automatically
-- Crowley remains bound to **localhost**; only the tunnel exposes HTTPS outward
+- Writeback ingest on Actions auto-promotes accepted **normal** sparks to `active`; sensitive/high stay staged — internal portable ingest still stages only
+- Public tunnel exposes only `/api/actions/*` — `/api/retrieve` returns 404 on the public hostname
+- Restart bus after code changes; run `./scripts/cleanup_chatgpt_bridge.sh` if tunnel wedges
 
 ---
 

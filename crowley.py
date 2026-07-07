@@ -250,6 +250,7 @@ _extract_spawn_lock = threading.Lock()
 _extract_running = False
 
 _sqlite_vec_ready: bool | None = None
+_sqlite_vec_loaded_conns: set[int] = set()
 _sqlite_vec_failure_reason: str | None = None
 _sqlite_vec_failure_logged = False
 _embed_model = None
@@ -1192,9 +1193,10 @@ def has_enough_signal_for_summary(messages: list[sqlite3.Row]) -> bool:
 
 def connect_db() -> sqlite3.Connection:
     """Open crowley.db with WAL mode and row factory."""
-    conn = sqlite3.connect(get_db_path())
+    conn = sqlite3.connect(get_db_path(), timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
@@ -3991,8 +3993,11 @@ def _memory_embed_provider() -> str:
 
 def _try_load_sqlite_vec(conn: sqlite3.Connection) -> bool:
     global _sqlite_vec_ready, _sqlite_vec_failure_reason, _sqlite_vec_failure_logged
-    if _sqlite_vec_ready is not None:
-        return _sqlite_vec_ready
+    conn_id = id(conn)
+    if conn_id in _sqlite_vec_loaded_conns:
+        return True
+    if _sqlite_vec_ready is False:
+        return False
     if not hasattr(conn, "enable_load_extension"):
         _sqlite_vec_ready = False
         _sqlite_vec_failure_reason = "SQLite connection cannot load extensions"
@@ -4009,6 +4014,7 @@ def _try_load_sqlite_vec(conn: sqlite3.Connection) -> bool:
         conn.enable_load_extension(True)
         sqlite_vec.load(conn)
         conn.enable_load_extension(False)
+        _sqlite_vec_loaded_conns.add(conn_id)
         _sqlite_vec_ready = True
     except Exception as exc:
         _sqlite_vec_ready = False
@@ -4041,15 +4047,22 @@ def _ensure_memory_vec_table(conn: sqlite3.Connection) -> bool:
         """
     ).fetchone()
     if row:
+        try:
+            conn.execute("SELECT 1 FROM memory_vec LIMIT 0")
+        except Exception:
+            return False
         return True
-    conn.execute(
-        f"""
-        CREATE VIRTUAL TABLE memory_vec USING vec0(
-            memory_id INTEGER PRIMARY KEY,
-            embedding float[{EMBED_DIM}]
+    try:
+        conn.execute(
+            f"""
+            CREATE VIRTUAL TABLE memory_vec USING vec0(
+                memory_id INTEGER PRIMARY KEY,
+                embedding float[{EMBED_DIM}]
+            )
+            """
         )
-        """
-    )
+    except Exception:
+        return False
     return True
 
 
@@ -4188,14 +4201,18 @@ def index_memory_embedding(
     )
     if not _ensure_memory_vec_table(conn):
         return
-    conn.execute(
-        "DELETE FROM memory_vec WHERE memory_id = ?",
-        (memory_id,),
-    )
-    conn.execute(
-        "INSERT INTO memory_vec(memory_id, embedding) VALUES (?, ?)",
-        (memory_id, embedding),
-    )
+    try:
+        conn.execute(
+            "DELETE FROM memory_vec WHERE memory_id = ?",
+            (memory_id,),
+        )
+        conn.execute(
+            "INSERT INTO memory_vec(memory_id, embedding) VALUES (?, ?)",
+            (memory_id, embedding),
+        )
+    except Exception:
+        # embedding_blob is already stored; vec index is optional acceleration.
+        return
 
 
 def backfill_memory_item_embeddings(conn: sqlite3.Connection, limit: int = 200) -> int:
@@ -7001,6 +7018,7 @@ def retrieve_memories_api(q: str, limit: int = MEMORY_LIMIT) -> dict[str, object
         "limit": limit,
         "retrieval_mode": get_last_retrieval_mode(),
         "results": results,
+        "hits": results,
     }
     return memory_quality.annotate_retrieval_payload(payload)
 
@@ -7926,6 +7944,10 @@ WRITEBACK_ACCEPTANCE_CRITERIA: list[dict[str, str]] = [
         "id": "never_auto_pinned",
         "description": "Portable sparks remain unpinned on promotion",
     },
+    {
+        "id": "not_sensitive",
+        "description": "Sensitive or high-sensitivity sparks remain staged for manual review",
+    },
 ]
 WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA = (
     "not_test_fixture",
@@ -7935,6 +7957,7 @@ WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA = (
     "dedup_canonical",
     "no_active_duplicate",
     "never_auto_pinned",
+    "not_sensitive",
 )
 
 WRITEBACK_ACCEPTANCE_REPORT_PATH = PROJECT_ROOT / ".crowley" / "writeback_acceptance_report.json"
@@ -8017,6 +8040,7 @@ def _evaluate_portable_spark_acceptance(
 ) -> dict[str, object]:
     meta = _memory_item_metadata(spark_row)
     surface = str(meta.get("surface") or "").strip().lower()
+    sensitivity = str(meta.get("sensitivity") or "normal").strip().lower()
     why_keep = str(meta.get("why_keep") or spark_row["summary"] or "").strip()
     content = str(spark_row["content"] or "").strip()
     criteria: dict[str, bool] = {
@@ -8039,6 +8063,7 @@ def _evaluate_portable_spark_acceptance(
         )
         is None,
         "never_auto_pinned": int(spark_row["pinned"] or 0) == 0,
+        "not_sensitive": sensitivity not in {"sensitive", "high"},
     }
     accepted = all(bool(criteria.get(key)) for key in WRITEBACK_ACCEPTANCE_REQUIRED_CRITERIA)
     reason = "accepted" if accepted else next(
@@ -8359,6 +8384,19 @@ def build_portable_writeback_acceptance_report(
         return report
     finally:
         conn.close()
+
+
+def auto_promote_portable_writeback_session(
+    session_receipt_id: int,
+    *,
+    reviewer: str = "crowley",
+) -> dict[str, object]:
+    """Promote accepted staged sparks for one portable writeback session."""
+    return build_portable_writeback_acceptance_report(
+        apply=True,
+        reviewer=reviewer,
+        session_receipt_id=session_receipt_id,
+    )
 
 
 def write_portable_writeback_acceptance_report(

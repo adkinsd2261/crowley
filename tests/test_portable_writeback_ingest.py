@@ -87,7 +87,8 @@ class PortableWritebackIngestTests(IsolatedDbTestCase):
         finally:
             conn.close()
 
-    def test_staged_sparks_not_in_retrieval(self) -> None:
+    def test_direct_ingest_leaves_sparks_staged_not_retrievable(self) -> None:
+        """Direct ingest_terminal_writeback stores candidates; promotion is a separate step."""
         payload = json.loads((FIXTURES / "portable_writeback_valid.json").read_text())
         result = crowley.ingest_terminal_writeback(payload)
         self.assertEqual(result["status"], "ok")

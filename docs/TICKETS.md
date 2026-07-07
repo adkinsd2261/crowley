@@ -11,7 +11,7 @@
 
 **Packet:** `tickets/v4.0_cognitive_memory.json` (supersedes `v4.0_spark_lanes.json`)  
 **Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)  
-**Part 1 patch (2026-07-07):** [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md) — agent.sync ASE (#229–#231) + GitHub envelope · **Next:** #216 (T14 depth modes)
+**Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md) — ChatGPT loop verified; resume **#216 (T14)**
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -82,7 +82,8 @@ Resolved: test DB isolation (#13, shipped).
 
 ## Completed (recent)
 
-- **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE (#229–#231) + GitHub read envelope; see [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
+- **V4.0 Part 1 bridge E2E (2026-07-07)** — ChatGPT Actions loop verified; sqlite-vec, auto-promote, retrieve hardening — [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
+- **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE (#229–#231) + GitHub read envelope — [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
 - **V4.0 Cognitive Memory (partial · mid-lock #215)** — sparks through context orchestration — see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
 - **V3.9.13 Secure ChatGPT Actions API** — bearer `/api/actions/*`, `CROWLEY_ACTION_KEY`, OpenAPI, bridge (`start_chatgpt_bridge.sh`)
 - **#81 Sync parity** — codex_sync `--known-issue` parity with cursor_sync

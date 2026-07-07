@@ -1,7 +1,7 @@
 # Crowley — Project State
 
 **As of:** V3.9.19 · V4.0 Cognitive Memory mid-lock (T1–T13)
-**Last doc sync:** 2026-07-07 (V4.0 mid-lock #215 — partial, not release)
+**Last doc sync:** 2026-07-07 (V4 Part 1 bridge E2E lock — ChatGPT loop verified)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -42,6 +42,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
 - **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
+- **V4.0 Part 1 bridge E2E (2026-07-07)** — sqlite-vec per-connection, Actions auto-promote, retrieve hardening, bridge verify; see [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 - **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE + GitHub envelope on Actions bridge; see [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
 - **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T13 (#203–#215): sparks schema, ingest, retrieval, graph, patterns, context API — **13/24 tickets; not V4.0 complete**; see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
 - **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T14 (#216).
@@ -77,6 +78,10 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `spark_graph.py` | **Active (V4 partial)** | Spark links, graph expansion (T9–T10) |
 | `patterns.py` | **Active (V4 partial)** | Pattern detection + safety (T11–T12) |
 | `agent_sync_envelope.py` | **Active (V4 part 1)** | ASE + deep_sync pagination (#229–#230) |
+| `actions_tool_runtime.py` | **Active (V4 part 1)** | Actions tool concurrency + timeouts |
+| `scripts/cleanup_chatgpt_bridge.sh` | **Active (V4 part 1)** | Bridge cleanup — duplicate cloudflared, wedged bus |
+| `scripts/watch_crowley_bus.sh` | **Active (V4 part 1)** | Bus watchdog for durable LaunchAgent bridge |
+| `docs/V4.0_PART1_BRIDGE_E2E_LOCK.md` | **Active** | Part 1 bridge + ChatGPT E2E doc lock |
 | `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | **Active** | V4 part 1 patch — sync ASE + GitHub envelope |
 | `tickets/v4.0_cognitive_memory.json` | **Active** | V4 ticket packet (#203–#226) |
 | `scripts/backfill_constraint_deduplication.py` | **Active** | Constraint dedup backfill (V3.9.19 #163) |
@@ -114,7 +119,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `.cursor/hooks.json` | **Active** | sessionStart + beforeSubmitPrompt + stop hooks |
 | `.crowley/inbox/` | **Active** | Handoff drop folder |
 | `.crowley/processed/` | **Active** | Post-ingest archive |
-| `tests/` | **Active** | QA unit tests (**389** locally with `CROWLEY_TEST_MODE=1`) |
+| `tests/` | **Active** | QA unit tests (**705** collected with `CROWLEY_TEST_MODE=1`) |
 | `.github/workflows/tests.yml` | **Active** | CI — core deps only; `CROWLEY_EMBED_PROVIDER=off` |
 | `requirements-core.txt` | **Active** | Core runtime dependencies (CI install) |
 | `requirements-ml.txt` | **Active** | Optional ML stack (local embeddings) |
@@ -176,7 +181,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Planning workflow | ✅ V3.9.3 | Packet template, validation, parent_id, cancel path |
 | Memory hygiene | ✅ V3.9.2 | `GET /api/memory/hygiene`, `crowley.py --hygiene` |
 | Test DB isolation | ✅ V3.9.2 | `tests/db_helpers.py` — tests do not write `crowley.db` |
-| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **353** tests |
+| Git + CI | ✅ V3.9.13 | GitHub Actions — core deps + `CROWLEY_TEST_MODE=1`; **705** tests collected |
 | Test mode | ✅ V3.9.8 | `CROWLEY_TEST_MODE=1` — embed off + model stub |
 | Runtime health | ✅ V3.9.8 | `/api/health` `runtime` block; preflight validates |
 | Canon read path | ✅ V3.8 | `list_canon_memory_items()`, prompt + sync bundles |
@@ -250,7 +255,7 @@ Bind: `127.0.0.1:8765`.
 | Legacy sparks API | `GET /api/sparks` reads legacy `memories`; UI uses `/api/memory-items` |
 | `metadata` on ingest | `POST /api/ingest` does not persist arbitrary metadata; portable writeback ingest (V3.9.12) persists `metadata_json` on session receipt and staged spark candidates |
 | Daily summary | Opt-in only (`MEMORY_DAILY_SUMMARY=1`) |
-| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **353** tests with `CROWLEY_TEST_MODE=1` |
+| CI pipeline | ✅ V3.9.13 | GitHub Actions — `requirements-core.txt`; **705** tests collected with `CROWLEY_TEST_MODE=1` |
 | UI poll interval | 5s — not instant; handoff ingest still needed for memory content |
 | Ingest inference | Filename-based; markdown `Source:` header not parsed |
 | Tasks vs tickets clarification | See MEMORY_HIERARCHY work board surfaces + Intelligence panel notes |

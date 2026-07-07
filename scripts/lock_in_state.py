@@ -87,19 +87,21 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V3.9.19 ship."""
+    """Current world-model fields after V4 Part 1 bridge E2E lock."""
     return {
-        "phase": "V3.9.19 shipped — Memory Quality",
-        "focus": "Memory quality live — ingest dedup, lifecycle cleanup, validation runtime wiring",
+        "phase": "V3.9.19 + V4 mid-lock (T1–T13) + Part 1 bridge E2E",
+        "focus": "ChatGPT Actions E2E verified — resume V4 at T14 (#216)",
         "current_risk": (
-            "Restart bus after version bumps so /api/health matches constants."
+            "Restart bus after code bumps; run cleanup_chatgpt_bridge.sh if tunnel wedges; "
+            "version constant 3.9.19 until T24."
         ),
         "next_action": (
-            f"Mint or plan V4.0 Spark Lanes when {crowley.USER_NAME} directs."
+            "Cursor claims #216 (T14 depth modes). ChatGPT loop: agent.sync → writeback.ingest → retrieve.search."
         ),
         "what_changed": (
-            "V3.9.19 Memory Quality: ingest dedup, retrieval strength, lifecycle cleanup, "
-            "observability-backed pre_response_validation on Actions + /api/agent/sync (#152–#166)."
+            "V4 T1–T13 (#203–#215); Part 1 ASE/GitHub (#229–#231); bridge E2E lock: "
+            "pysqlite3/sqlite-vec per-connection, Actions auto-promote, retrieve.query alias, "
+            "bridge verify retrieve probe. ~705 tests."
         ),
     }
 

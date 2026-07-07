@@ -20,6 +20,9 @@ class ActionsToolRegistryTests(unittest.TestCase):
         self.assertIn("context.get", names)
         self.assertIn("writeback.ingest", names)
         self.assertIn("gateway", payload)
+        self.assertIn("examples", payload)
+        self.assertIn("writeback.ingest", payload["examples"])
+        self.assertIn("retrieve.search", payload["examples"])
 
     def test_unknown_tool_returns_error(self) -> None:
         body, status = registry.dispatch("read", "does.not.exist", {})
@@ -40,6 +43,17 @@ class ActionsToolRegistryTests(unittest.TestCase):
         body, status = registry.dispatch("read", "context.get", "bad")
         self.assertEqual(status, 400)
         self.assertEqual(body["error"], "invalid_args")
+
+    def test_retrieve_search_accepts_query_alias(self) -> None:
+        registry.dispatch("read", "agent.sync", {"agent": "chatgpt", "limit": 3})
+        body, status = registry.dispatch(
+            "read",
+            "retrieve.search",
+            {"query": "crowley project", "limit": 3},
+        )
+        self.assertEqual(status, 200)
+        self.assertIsInstance(body.get("results"), list)
+        self.assertEqual(body.get("hits"), body.get("results"))
 
 
 if __name__ == "__main__":

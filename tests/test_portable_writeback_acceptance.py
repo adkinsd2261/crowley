@@ -69,15 +69,56 @@ class PortableWritebackAcceptanceTests(IsolatedDbTestCase):
         )
         self.assertTrue(applied["applied"])
         self.assertGreaterEqual(int(applied["counts"]["accepted"]), 1)
+        self.assertGreaterEqual(int(applied["counts"]["rejected"]), 1)
 
         active_rows, total = crowley.list_memory_items(
             source=crowley.PORTABLE_TERMINAL_SOURCE,
             status="active",
             limit=20,
         )
-        self.assertGreaterEqual(total, 2)
+        self.assertGreaterEqual(total, 1)
         statuses = {str(row["status"]) for row in active_rows}
         self.assertIn("active", statuses)
+
+    def test_sensitive_sparks_rejected_for_auto_promotion(self) -> None:
+        payload = {
+            "format": "crowley_terminal_writeback_v1",
+            "session": {
+                "summary": "Validated sensitive spark promotion gate.",
+                "surface": "chatgpt",
+                "model": "gpt-4.1",
+            },
+            "sparks": [
+                {
+                    "content": "Normal spark should promote after acceptance.",
+                    "lane": "work",
+                    "why_keep": "Confirms normal sensitivity can reach retrieval after promotion.",
+                    "confidence": 0.9,
+                    "sensitivity": "normal",
+                },
+                {
+                    "content": "Sensitive spark should remain staged after acceptance review.",
+                    "lane": "health",
+                    "why_keep": "Protects sensitive content from automatic promotion.",
+                    "confidence": 0.8,
+                    "sensitivity": "sensitive",
+                },
+            ],
+        }
+        result = crowley.ingest_terminal_writeback(payload)
+        report = crowley.build_portable_writeback_acceptance_report(
+            apply=True,
+            reviewer="test",
+            session_receipt_id=int(result["session_receipt_id"]),
+        )
+        self.assertEqual(int(report["counts"]["accepted"]), 1)
+        self.assertEqual(int(report["counts"]["rejected"]), 1)
+        rejected = next(
+            item
+            for item in report["rejected"]
+            if item.get("rejection_reason") == "not_sensitive"
+        )
+        self.assertEqual(str(rejected.get("sensitivity")), "sensitive")
 
     def test_fixture_session_is_rejected(self) -> None:
         payload = {

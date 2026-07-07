@@ -36,4 +36,11 @@ fi
 
 bash "$ROOT/scripts/ensure_crowley_bus.sh"
 
+if [[ "${CROWLEY_BUS_WATCHDOG:-1}" != "0" ]]; then
+  if ! pgrep -f "scripts/watch_crowley_bus.sh" >/dev/null 2>&1; then
+    nohup bash "$ROOT/scripts/watch_crowley_bus.sh" >>"$BRIDGE_DIR/bus_watchdog.log" 2>&1 &
+    disown 2>/dev/null || true
+  fi
+fi
+
 exec "$CLOUDFLARED" tunnel --config "$CONFIG" run >>"$LOG_FILE" 2>&1

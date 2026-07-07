@@ -79,6 +79,7 @@ class WriteToolTests(IsolatedDbTestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_writeback_ingest_auto_promotes_accepted_sparks(self) -> None:
+        marker = "Actions auto-promotion retrieval visibility marker"
         payload = {
             "writeback": {
                 "session": {
@@ -86,7 +87,7 @@ class WriteToolTests(IsolatedDbTestCase):
                 },
                 "sparks": [
                     {
-                        "content": "Accepted staged portable sparks should be promoted to active when ingested via actions.writeback.ingest.",
+                        "content": f"{marker}: accepted staged portable sparks should be promoted to active when ingested via actions.writeback.ingest.",
                         "lane": "work",
                         "why_keep": "Ensures retrieve.search can surface newly accepted portable sparks without manual acceptance runs.",
                         "confidence": 0.95,
@@ -105,6 +106,7 @@ class WriteToolTests(IsolatedDbTestCase):
         self.assertEqual(res.status_code, 201, res.text)
         body = res.json()
         self.assertEqual(body.get("status"), "ok")
+        self.assertTrue(body.get("auto_promotion", {}).get("applied"))
         spark_ids = body.get("spark_ids") or []
         self.assertTrue(spark_ids)
         spark_id = int(spark_ids[0])
@@ -122,6 +124,73 @@ class WriteToolTests(IsolatedDbTestCase):
         self.assertIsNotNone(row)
         assert row is not None
         self.assertEqual(str(row["status"]), "active")
+
+        hits = crowley.retrieve_memories(marker, limit=20)
+        hit_ids = {int(item["id"]) for item in hits}
+        self.assertIn(spark_id, hit_ids)
+
+    def test_writeback_ingest_rejects_handoff_shaped_args(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "writeback.ingest",
+                    "args": {
+                        "content": "Wrong shape for writeback ingest",
+                        "type": "project_update",
+                        "metadata": {"source": "chatgpt", "sensitivity": "normal"},
+                    },
+                },
+            )
+        self.assertEqual(res.status_code, 400, res.text)
+        errors = res.json().get("errors") or []
+        self.assertTrue(any("handoff.ingest" in str(item) for item in errors))
+
+    def test_writeback_ingest_keeps_sensitive_sparks_staged(self) -> None:
+        payload = {
+            "writeback": {
+                "session": {
+                    "summary": "Sensitive spark should remain staged after actions ingest.",
+                },
+                "sparks": [
+                    {
+                        "content": "Sensitive portable spark must stay staged until manual review.",
+                        "lane": "health",
+                        "why_keep": "Protects high-sensitivity content from automatic promotion into retrieval.",
+                        "confidence": 0.9,
+                        "sensitivity": "sensitive",
+                    }
+                ],
+            }
+        }
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={"tool": "writeback.ingest", "args": payload},
+            )
+        self.assertEqual(res.status_code, 201, res.text)
+        body = res.json()
+        promotion = body.get("auto_promotion") or {}
+        self.assertTrue(promotion.get("applied"))
+        self.assertEqual(int(promotion.get("accepted", -1)), 0)
+
+        import crowley
+
+        spark_id = int(body["spark_ids"][0])
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                "SELECT status FROM memory_items WHERE id = ?",
+                (spark_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        assert row is not None
+        self.assertEqual(str(row["status"]), "rejected")
 
 
 if __name__ == "__main__":

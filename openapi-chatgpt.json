@@ -50,7 +50,7 @@
       "post": {
         "operationId": "actionsRead",
         "summary": "Invoke a read tool",
-        "description": "Examples: context.get, memory.get, ticket.list, agent.sync, inspect.writeback_result, github.file. See GET /catalog.",
+        "description": "Examples: context.get, retrieve.search, memory.get, ticket.list, agent.sync, inspect.writeback_result, github.file. See GET /catalog.",
         "requestBody": {
           "required": true,
           "content": {
@@ -67,6 +67,23 @@
                 "schema": { "$ref": "#/components/schemas/LooseObject" }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/actions/retrieve": {
+      "get": {
+        "operationId": "actionsRetrieve",
+        "summary": "Alias route for retrieve.search",
+        "description": "Convenience alias for read tool `retrieve.search`. Prefer POST /read with tool retrieve.search for ChatGPT Actions.",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 8 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
           }
         }
       }

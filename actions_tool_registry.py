@@ -8,6 +8,7 @@ from typing import Any, Callable, Literal
 import crowley
 import github_read
 import tickets
+from actions_tool_runtime import invoke_tool_handler, tool_timeout_seconds
 
 ToolKind = Literal["read", "write"]
 ToolHandler = Callable[[dict[str, Any]], tuple[dict[str, Any], int | None]]
@@ -72,6 +73,44 @@ def catalog_payload() -> dict[str, object]:
         "gateway": {
             "read": "POST /api/actions/read {\"tool\": \"...\", \"args\": {...}}",
             "write": "POST /api/actions/write {\"tool\": \"...\", \"args\": {...}}",
+            "canonical": "Use POST /read and POST /write only; legacy GET/POST alias routes delegate to the same tools.",
+        },
+        "examples": {
+            "writeback.ingest": {
+                "tool": "writeback.ingest",
+                "args": {
+                    "writeback": {
+                        "session": {"summary": "Session receipt summary"},
+                        "sparks": [
+                            {
+                                "content": "Actionable spark content",
+                                "lane": "work",
+                                "why_keep": "Why this spark should persist",
+                                "confidence": 0.9,
+                                "sensitivity": "normal",
+                            }
+                        ],
+                    }
+                },
+            },
+            "handoff.ingest": {
+                "tool": "handoff.ingest",
+                "args": {
+                    "source": "chatgpt",
+                    "type": "architect_handoff",
+                    "content": "# Crowley Handoff\\n\\n## Summary\\n- ...",
+                },
+            },
+            "retrieve.search": {
+                "tool": "retrieve.search",
+                "args": {
+                    "q": "what changed after the vec0 fix",
+                    "limit": 5,
+                },
+            },
+        },
+        "timeouts_seconds": {
+            tool.name: tool_timeout_seconds(tool.name) for tool in list_tools()
         },
         "workflow": workflow.workflow_enforcement_payload(tool_names=tool_names),
     }
@@ -149,7 +188,21 @@ def dispatch(
     agent_behavior.begin_dispatch(session, dispatch_id)
 
     try:
-        body, status = defn.handler(normalized_args)
+        body, status, runtime_error = invoke_tool_handler(name, defn.handler, normalized_args)
+        if runtime_error == "server_busy":
+            return _error(
+                "server_busy",
+                "Crowley is processing other heavy Actions requests; retry shortly.",
+                503,
+            )
+        if runtime_error == "tool_timeout":
+            return _error(
+                "tool_timeout",
+                f"{name} exceeded {tool_timeout_seconds(name)}s; retry or narrow the request.",
+                504,
+                tool=name,
+                timeout_seconds=tool_timeout_seconds(name),
+            )
     except ValueError as exc:
         return _error("invalid_args", str(exc), 400)
     except LookupError as exc:
@@ -196,6 +249,11 @@ def _optional_str(args: dict[str, Any], key: str) -> str | None:
     return text or None
 
 
+def _search_query(args: dict[str, Any]) -> str | None:
+    """Canonical retrieval arg is ``q``; ``query`` is accepted for client compatibility."""
+    return _optional_str(args, "q") or _optional_str(args, "query")
+
+
 def _optional_int(args: dict[str, Any], key: str, default: int) -> int:
     value = args.get(key, default)
     return max(1, min(int(value), 200))
@@ -239,7 +297,7 @@ def _handle_context_get(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
 
 
 def _handle_retrieve_search(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-    q = _optional_str(args, "q")
+    q = _search_query(args)
     if not q:
         raise ValueError("q is required")
     limit = min(_optional_int(args, "limit", 8), 50)
@@ -275,17 +333,29 @@ def _handle_writeback_parse(args: dict[str, Any]) -> tuple[dict[str, Any], int |
     return {"ok": True, "writeback": result.writeback}, None
 
 
+def _writeback_ingest_args_error(args: dict[str, Any]) -> str | None:
+    if args.get("writeback") is not None or _optional_str(args, "text"):
+        return None
+    if any(key in args for key in ("content", "type", "metadata", "summary")):
+        return (
+            "writeback.ingest expects args.writeback (portable terminal packet) or args.text, "
+            "not handoff-style content/type/metadata. Use handoff.ingest for markdown handoffs."
+        )
+    return "text or writeback object is required"
+
+
 def _handle_writeback_ingest(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
     writeback = args.get("writeback")
     text = _optional_str(args, "text")
     project = _optional_str(args, "project") or "crowley"
+    if writeback is None and not text:
+        message = _writeback_ingest_args_error(args) or "text or writeback object is required"
+        return {"status": "error", "errors": [message]}, 400
     try:
         if writeback is not None:
             result = crowley.ingest_terminal_writeback(writeback, project=project)
-        elif text:
-            result = crowley.ingest_terminal_writeback(text, project=project)
         else:
-            return {"status": "error", "errors": ["text or writeback object is required"]}, 400
+            result = crowley.ingest_terminal_writeback(text, project=project)
     except ValueError as exc:
         return {"status": "error", "errors": [str(exc)]}, 404
     if result.get("status") != "ok":
@@ -293,10 +363,9 @@ def _handle_writeback_ingest(args: dict[str, Any]) -> tuple[dict[str, Any], int 
     session_receipt_id = result.get("session_receipt_id")
     if session_receipt_id is not None:
         try:
-            acceptance = crowley.build_portable_writeback_acceptance_report(
-                apply=True,
+            acceptance = crowley.auto_promote_portable_writeback_session(
+                int(session_receipt_id),
                 reviewer="chatgpt_actions_api",
-                session_receipt_id=int(session_receipt_id),
             )
             result["auto_promotion"] = {
                 "applied": True,
@@ -355,7 +424,11 @@ def _register_v313_tools() -> None:
                 "type": "object",
                 "required": ["q"],
                 "properties": {
-                    "q": {"type": "string"},
+                    "q": {"type": "string", "description": "Search query (canonical)"},
+                    "query": {
+                        "type": "string",
+                        "description": "Alias for q (accepted for compatibility)",
+                    },
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
                 },
             },
@@ -395,7 +468,10 @@ def _register_v313_tools() -> None:
         ToolDefinition(
             name="writeback.ingest",
             kind="write",
-            description="Persist session receipt and staged spark candidates.",
+            description=(
+                "Persist session receipt and spark candidates via args.writeback; "
+                "accepted normal sparks auto-promote to active for retrieval."
+            ),
             args_schema={
                 "type": "object",
                 "properties": {

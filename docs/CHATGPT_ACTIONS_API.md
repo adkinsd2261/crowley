@@ -1,6 +1,6 @@
-# ChatGPT Actions API — Crowley V3.9.13
+# ChatGPT Actions API — Crowley V3.9.19+
 
-**Status:** Shipped (2026-07-03) · tunnel and Custom GPT setup are operator steps (not configured by default)
+**Status:** Shipped · Part 1 bridge E2E verified **2026-07-07** · see [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 
 Crowley V3.9.13 adds a **narrow, bearer-authenticated** `/api/actions/*` surface for ChatGPT Custom GPT Actions. It reuses the V3.9.12 portable context terminal engine but does **not** expose the full internal API.
 
@@ -51,7 +51,7 @@ Task mutation, brain switching, chat/messages, diagnostics, and ingest of arbitr
 
 Actions tool gateway (`/api/actions/catalog`, `/api/actions/read`, `/api/actions/write`) exposes additional scoped tools, including agent sync/deep sync, memory/ticket read, and gated write tools.
 
-Writeback ingest uses `ingest_terminal_writeback()` — session receipt + **staged** spark candidates only.
+Writeback ingest via `POST /api/actions/write` (`writeback.ingest`) persists a session receipt and spark candidates, then auto-promotes accepted **normal** sparks to `active` for retrieval. Sensitive/high sparks remain staged/rejected. The legacy alias `POST /api/actions/writeback/ingest` delegates to the same tool. Internal `POST /api/portable/writeback/ingest` stages only (no auto-promotion).
 
 ---
 
@@ -163,7 +163,7 @@ Do not call routes outside /api/actions/*.
 |--------|------|-------|
 | GET | `/api/actions/health` | Auth check + safe runtime |
 | GET | `/api/actions/catalog` | Registered tool list + arg schemas |
-| POST | `/api/actions/read` | Generic read tool dispatch |
+| POST | `/api/actions/read` | Generic read tool dispatch (`retrieve.search`, `agent.sync`, …) |
 | POST | `/api/actions/write` | Generic write tool dispatch |
 | GET | `/api/actions/context` | `build_context_bundle()` |
 | GET | `/api/actions/retrieve` | `retrieve_memories_api()` |
@@ -185,10 +185,17 @@ Object schemas must declare explicit `properties` for ChatGPT’s validator — 
 ## Known limitations
 
 - No OAuth — single shared bearer secret
-- No rate limiting on Actions routes (localhost-first)
+- Heavy tools may return **503** `server_busy` or **504** `tool_timeout` (see catalog `timeouts_seconds`)
 - Tunnel / Custom GPT / Cloudflare not auto-configured
-- Writeback sparks remain **candidates** until promoted through existing Crowley workflows
+- Actions `writeback.ingest` auto-promotes accepted **normal** sparks; sensitive/high stay staged
+- Public hostname exposes only `/api/actions/*` — not `/api/retrieve` or full `/api/*`
 - Actions packet surface is fixed to `chatgpt` (local `/api/portable/packet` still accepts `surface` param)
+
+### retrieve.search
+
+- Canonical arg: `args.q` (string). `args.query` accepted as alias.
+- Response includes `results` and `hits` (same list), plus `retrieval_mode`.
+- Requires `agent.sync` earlier in the same session (workflow gate).
 
 ---
 

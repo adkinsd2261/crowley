@@ -33,7 +33,7 @@
     "Breaking embedding pipeline if not reusing embed_text pattern"
   ],
   "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off python -m unittest discover -s tests -v; each ticket adds focused tests; full suite green before T24.",
-  "next_action": "Cursor claims T1 and begins Batch A foundation. Build waves: T1→T2+T3, T4→T5→T6+T7, T8→T9→T10+T11+T17+T18+T19+T20, T12→T13→T14+T15→T16+T21+T22+T23, T24.",
+  "next_action": "T1–T13 shipped (#203–#215). Part 1 ASE/GitHub + bridge E2E locked 2026-07-07. Cursor claims #216 (T14) — context depth modes, cold start, extended trace. Version bump only at T24 (#226).",
   "approval": {
     "status": "approved",
     "approved_by": "mr_go",

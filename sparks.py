@@ -348,6 +348,12 @@ def _ensure_spark_vec_table(conn: sqlite3.Connection) -> bool:
         except Exception:
             _spark_vec_ready_cache[conn_id] = False
             return False
+    else:
+        try:
+            conn.execute("SELECT 1 FROM spark_vec LIMIT 0")
+        except Exception:
+            _spark_vec_ready_cache[conn_id] = False
+            return False
     _spark_vec_ready_cache[conn_id] = True
     return True
 

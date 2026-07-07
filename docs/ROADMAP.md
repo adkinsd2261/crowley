@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.13 shipped · V4 direction pivot · **2026-07-03**
+**As of:** V3.9.19 + V4 mid-lock + Part 1 bridge E2E · **2026-07-07**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -302,7 +302,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
 | V3.9.13 | Secure ChatGPT Actions API | Shipped on `main` |
 | V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
-| **V4.0** | Spark Lanes | **Next** — memory lanes, trust states, lane-aware retrieval |
+| **V4.0** | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open; bridge E2E verified; bump at T24 (#226) |
 
 ---
 

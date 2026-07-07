@@ -78,6 +78,23 @@ class FragileStartupTests(unittest.TestCase):
         self.assertIsInstance(rows, list)
         self.assertIn("keyword", crowley.get_last_retrieval_mode().lower())
 
+    def test_sqlite_vec_loads_per_connection_not_only_first(self) -> None:
+        crowley._sqlite_vec_ready = None
+        crowley._sqlite_vec_loaded_conns.clear()
+        crowley._sqlite_vec_failure_reason = None
+        crowley._sqlite_vec_failure_logged = False
+        with isolated_db():
+            first = crowley.connect_db()
+            second = crowley.connect_db()
+            try:
+                self.assertTrue(crowley._try_load_sqlite_vec(first))
+                self.assertTrue(crowley._ensure_memory_vec_table(first))
+                self.assertTrue(crowley._try_load_sqlite_vec(second))
+                second.execute("SELECT COUNT(*) FROM memory_vec").fetchone()
+            finally:
+                first.close()
+                second.close()
+
 
 class RuntimeHealthApiTests(IsolatedDbTestCase):
     def test_api_health_includes_runtime_block(self) -> None:

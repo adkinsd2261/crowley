@@ -3,7 +3,7 @@
 Single source of truth for release history. Update this file at the end of every version.
 
 **Current:** V3.9.19 (`Crowley V3.9.19 Memory Quality`)
-**Next planned:** V4 Spark Lanes
+**Next planned:** V4.0 Cognitive Memory (mid-lock — version bump at T24 #226)
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
@@ -43,7 +43,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.19 | shipped  | 2026-07-06 | Memory Quality — ingest dedup, lifecycle cleanup, validation runtime wiring (#152–#157, #162–#166) |
 | V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
-| V4.0    | planned  | TBD        | Spark Lanes — memory lanes, trust states, lane-aware retrieval |
+| V4.0    | in progress | 2026-07-07 | Cognitive Memory mid-lock T1–T13; Part 1 ASE/GitHub + bridge E2E; bump at T24 |
 
 ---
 
@@ -624,6 +624,26 @@ Plan: [docs/V3.9.10_TASK_FRAME_CONTEXT.md](./docs/V3.9.10_TASK_FRAME_CONTEXT.md)
 **Version:** `CROWLEY_VERSION = "3.9.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.9 Context That Feeds"`
 
 Plan: [docs/V3.9.9_CONTEXT_THAT_FEEDS.md](./docs/V3.9.9_CONTEXT_THAT_FEEDS.md)
+
+---
+
+## V4.0 Cognitive Memory — mid-lock (batch 1)
+
+**Version constant:** still `3.9.19` until T24 (#226)
+
+Lock: [docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md) — T1–T13 (#203–#215). **674 tests** at mid-lock.
+
+---
+
+## V4.0 Part 1 patch — ASE + GitHub
+
+Lock: [docs/V4.0_PART1_PATCH_AGENT_GITHUB.md](./docs/V4.0_PART1_PATCH_AGENT_GITHUB.md) — agent.sync ASE (#229–#231), GitHub read envelope. **686 tests** at patch lock.
+
+---
+
+## V4.0 Part 1 — bridge & ChatGPT E2E
+
+Lock: [docs/V4.0_PART1_BRIDGE_E2E_LOCK.md](./docs/V4.0_PART1_BRIDGE_E2E_LOCK.md) — sqlite-vec per-connection, Actions auto-promote, retrieve hardening, bridge verify. **705 tests** collected at lock.
 
 ---
 

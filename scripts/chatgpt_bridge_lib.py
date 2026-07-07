@@ -259,6 +259,93 @@ def local_actions_health(action_key: str) -> tuple[int, FailureHint | None]:
     return code, classify_http_failure(code, context="local /api/actions/health")
 
 
+def actions_retrieve_probe(
+    base_url: str,
+    action_key: str,
+    *,
+    timeout: float = 20.0,
+) -> tuple[int, str, FailureHint | None]:
+    """POST retrieve.search via Actions read gateway; return status, content-type, hint."""
+    base = base_url.rstrip("/")
+    headers = {
+        "Authorization": f"Bearer {action_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Crowley-ChatGPT-Bridge-Verify/1.0",
+        "Accept": "application/json",
+    }
+
+    def _post(tool: str, args: dict[str, object]) -> tuple[int, str, str]:
+        url = f"{base}/api/actions/read"
+        payload = json.dumps({"tool": tool, "args": args}).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+        with urllib.request.urlopen(req, context=_ssl_context(), timeout=timeout) as resp:
+            content_type = str(resp.headers.get("Content-Type") or "")
+            body = resp.read().decode("utf-8", errors="replace")
+            return resp.status, content_type, body
+
+    try:
+        sync_code, _, sync_body = _post(
+            "agent.sync",
+            {"agent": "chatgpt", "limit": 3},
+        )
+        if sync_code != 200:
+            return sync_code, "", classify_http_failure(
+                sync_code, context="agent.sync before retrieve.search", body=sync_body
+            )
+        code, content_type, body = _post(
+            "retrieve.search",
+            {"q": "bridge verification probe", "limit": 3},
+        )
+        if code != 200:
+            return code, content_type, classify_http_failure(
+                code, context="retrieve.search", body=body
+            )
+        if "application/json" not in content_type.lower():
+            return (
+                code,
+                content_type,
+                FailureHint(
+                    category="invalid_content_type",
+                    message="retrieve.search returned non-JSON content-type",
+                    inspect=content_type or "missing Content-Type",
+                ),
+            )
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError:
+            return (
+                code,
+                content_type,
+                FailureHint(
+                    category="invalid_json",
+                    message="retrieve.search body is not valid JSON",
+                    inspect=body[:200],
+                ),
+            )
+        if not isinstance(parsed.get("results"), list):
+            return (
+                code,
+                content_type,
+                FailureHint(
+                    category="invalid_payload",
+                    message="retrieve.search JSON missing results list",
+                    inspect=str(parsed.keys()),
+                ),
+            )
+        return code, content_type, None
+    except urllib.error.HTTPError as exc:
+        body = exc.read(4096).decode("utf-8", errors="replace")
+        return exc.code, str(exc.headers.get("Content-Type") or ""), classify_http_failure(
+            exc.code, context="retrieve.search", body=body
+        )
+    except Exception:
+        return 0, "", FailureHint(
+            category="local_connection",
+            message="retrieve.search probe could not connect",
+            inspect=base,
+        )
+
+
 def format_hint(hint: FailureHint) -> str:
     return f"[{hint.category}] {hint.message} → inspect: {hint.inspect}"
 
@@ -286,6 +373,22 @@ def build_verify_report(
     checks.append({"name": "local_actions", "code": local_code, "ok": local_code == 200})
     if local_hint:
         failures.append(format_hint(local_hint))
+
+    retrieve_code, retrieve_ct, retrieve_hint = actions_retrieve_probe(
+        "http://127.0.0.1:8765",
+        action_key,
+        timeout=20.0,
+    )
+    checks.append(
+        {
+            "name": "local_actions_retrieve",
+            "code": retrieve_code,
+            "ok": retrieve_hint is None,
+            "content_type": retrieve_ct,
+        }
+    )
+    if retrieve_hint:
+        failures.append(format_hint(retrieve_hint))
 
     if check_service:
         svc_code, svc_out = launchagent_service_status()
@@ -328,6 +431,22 @@ def build_verify_report(
             if not ok:
                 hint = classify_http_failure(code, context=f"public {path}", body=body)
                 failures.append(format_hint(hint))
+
+        pub_retrieve_code, pub_retrieve_ct, pub_retrieve_hint = actions_retrieve_probe(
+            public_base,
+            action_key,
+            timeout=30.0,
+        )
+        checks.append(
+            {
+                "name": "public/api/actions/retrieve.search",
+                "code": pub_retrieve_code,
+                "ok": pub_retrieve_hint is None,
+                "content_type": pub_retrieve_ct,
+            }
+        )
+        if pub_retrieve_hint:
+            failures.append(format_hint(pub_retrieve_hint))
 
     status = "ok" if not failures else "fail"
     return {

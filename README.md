@@ -4,7 +4,7 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
-**v3.9.19 (Stable — July 6, 2026)** improves memory quality (ingest dedup, lifecycle cleanup) and wires pre-response validation on all sync paths including `/api/agent/sync`.
+**v3.9.19 (Stable — July 2026)** — memory quality, V4 cognitive memory mid-lock (T1–T13), ChatGPT Actions E2E verified. Version constant stays `3.9.19` until V4 T24 release lock.
 
 ---
 
