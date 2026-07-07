@@ -1,6 +1,6 @@
 # Crowley — Project State
 
-**As of:** V3.9.19 · V4.0 Cognitive Memory mid-lock (T1–T13)
+**As of:** V3.9.19 · V4.0 Cognitive Memory mid-lock (T1–T14)
 **Last doc sync:** 2026-07-07 (V4 Part 1 bridge E2E lock — ChatGPT loop verified)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
@@ -44,8 +44,8 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
 - **V4.0 Part 1 bridge E2E (2026-07-07)** — sqlite-vec per-connection, Actions auto-promote, retrieve hardening, bridge verify; see [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 - **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE + GitHub envelope on Actions bridge; see [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
-- **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T13 (#203–#215): sparks schema, ingest, retrieval, graph, patterns, context API — **13/24 tickets; not V4.0 complete**; see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
-- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T14 (#216).
+- **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T14 (#203–#216): sparks schema, ingest, retrieval, graph, patterns, context API, **cross-source resolution** — **14/24 tickets; not V4.0 complete**; see [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md)
+- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T15 (#217).
 
 It is **not** a multi-user service and **not** a full agent framework with tool use. The browser UI is one cockpit, not the identity boundary.
 
@@ -152,7 +152,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
 | V3.9.14 | Durable ChatGPT Bridge | LaunchAgent, API-only tunnel, verify tooling |
 | V3.9.12 | Portable Context Terminal | Packet export, writeback parse/ingest, CLI (#76–#80) |
-| V4.0 | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open; version bump at T24 only |
+| V4.0 | Cognitive Memory | **In progress** — T1–T14 shipped; T15–T24 open; version bump at T24 only |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 

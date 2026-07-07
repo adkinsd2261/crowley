@@ -260,9 +260,17 @@ def api_context(
     q: str = Query(crowley.CONTEXT_DEFAULT_QUERY),
     limit: int = Query(8, ge=1, le=50),
     project: str | None = Query(None),
+    depth: str | None = Query("medium"),
+    debug: bool = Query(False),
 ) -> JSONResponse:
     try:
-        bundle = crowley.build_context_bundle(q=q, limit=limit, project_slug=project)
+        bundle = crowley.build_context_bundle(
+            q=q,
+            limit=limit,
+            project_slug=project,
+            depth=depth,
+            debug=debug,
+        )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=404)
     return JSONResponse(bundle)
@@ -272,8 +280,12 @@ def api_context(
 def api_retrieve(
     q: str = Query(..., min_length=1),
     limit: int = Query(8, ge=1, le=50),
+    depth: str | None = Query("medium"),
+    debug: bool = Query(False),
 ) -> JSONResponse:
-    return JSONResponse(crowley.retrieve_memories_api(q=q, limit=limit))
+    return JSONResponse(
+        crowley.retrieve_memories_api(q=q, limit=limit, depth=depth, debug=debug)
+    )
 
 
 @app.get("/api/events/recent")
@@ -389,6 +401,8 @@ def api_cognitive_context(
     lane: str | None = Query(None),
     limit: int = Query(12, ge=1, le=50),
     project: str | None = Query(None),
+    depth: str | None = Query("medium"),
+    debug: bool = Query(False),
 ) -> JSONResponse:
     import context_orchestration
     import system_integrity
@@ -402,6 +416,8 @@ def api_cognitive_context(
             lanes=lane,
             limit=limit,
             project=project,
+            depth=depth,
+            debug=debug,
         )
     except ValueError as exc:
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)

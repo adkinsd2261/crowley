@@ -7,11 +7,12 @@
 
 ## Active initiative — V4.0 Cognitive Memory
 
-**Current:** V3.9.19 Memory Quality shipped (#152–#166). **Active:** V4.0 Cognitive Memory — **13/24 tickets shipped** (#203–#215). **Not a release** — version constant still `3.9.19` until T24 (#226).
+**Current:** V3.9.19 Memory Quality shipped (#152–#166). **Active:** V4.0 Cognitive Memory — **14/24 tickets shipped** (#203–#216). **Not a release** — version constant still `3.9.19` until T24 (#226).
 
 **Packet:** `tickets/v4.0_cognitive_memory.json` (supersedes `v4.0_spark_lanes.json`)  
 **Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)  
-**Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md) — ChatGPT loop verified; resume **#216 (T14)**
+**Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)  
+**T14 context resolution (2026-07-07):** [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md) — resume **#217 (T15)**
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -29,7 +30,7 @@
 | V3.9.18 Agent Retrieval Enforcement | #131–#135 | —                                             | **Shipped**  |
 | V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
-| V4.0 Cognitive Memory      | #203–#226 | `tickets/v4.0_cognitive_memory.json`      | **In progress** · T1–T13 shipped · T14–T24 open |
+| V4.0 Cognitive Memory      | #203–#226 | `tickets/v4.0_cognitive_memory.json`      | **In progress** · T1–T14 shipped · T15–T24 open |
 
 
 See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
@@ -55,7 +56,7 @@ See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · 
 | V3.9.17 Trust Control and Clarity (#112–#130)  | **Shipped** — attribution, audit, tiers, agent behavior |
 | V3.9.19 Memory Quality (#152–#166)             | **Shipped** — ingest dedup, lifecycle, validation runtime wiring |
 | V3.9.18 Agent Retrieval Enforcement (#131–#135) | **Shipped** — gating, domain triggers, handoff tickets |
-| V4.0 Cognitive Memory (#203–#226)              | **Mid-lock** — T1–T13 (#203–#215) shipped; T14–T24 open |
+| V4.0 Cognitive Memory (#203–#226)              | **Mid-lock** — T1–T14 (#203–#216) shipped; T15–T24 open |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
 

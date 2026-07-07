@@ -1,4 +1,4 @@
-"""V4 T13 — deterministic cognitive context orchestration."""
+"""V4 T13/T14 — deterministic cognitive context orchestration."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import sqlite3
 from typing import Any
 
+import context_resolution
 import spark_graph
 import spark_retrieval
 import sparks
@@ -127,6 +128,34 @@ def _context_confidence(core: list[spark_retrieval.SparkRetrievalResult]) -> flo
     return round(sum(item.score for item in core) / len(core), 4)
 
 
+def _memory_fallback_items(
+    query: str,
+    *,
+    project_id: int | None,
+    limit: int,
+    conn: sqlite3.Connection,
+) -> list[dict[str, Any]]:
+    import crowley
+
+    memories = crowley.retrieve_memories(
+        str(query or ""),
+        limit=limit,
+        project_id=project_id,
+    )
+    fallback: list[dict[str, Any]] = []
+    for memory in memories:
+        fallback.append(
+            {
+                "memory_id": int(memory["id"]),
+                "content": str(memory.get("content") or ""),
+                "memory_type": str(memory.get("memory_type") or "event"),
+                "score": float(memory.get("score") or 0.0),
+                "source": "memory_items_fallback",
+            }
+        )
+    return fallback
+
+
 def build_cognitive_context(
     query: str,
     *,
@@ -136,12 +165,21 @@ def build_cognitive_context(
     project: str | None = None,
     project_id: int | None = None,
     conn: sqlite3.Connection | None = None,
+    depth: str = "medium",
+    debug: bool = False,
 ) -> dict[str, Any]:
     """Build read-only cognitive context from ranked sparks and active patterns."""
     import crowley
 
-    core_limit = _clamp_limit(limit)
-    support_limit = max(0, min(int(supporting_limit), COGNITIVE_CONTEXT_SUPPORTING_LIMIT))
+    resolved_depth = context_resolution.normalize_depth(depth, default="medium")
+    assert resolved_depth is not None
+    depth_limits = context_resolution.COGNITIVE_DEPTH_LIMITS[resolved_depth]
+    core_limit = min(_clamp_limit(limit), int(depth_limits["core"]))
+    support_limit = min(
+        max(0, int(supporting_limit)),
+        int(depth_limits["supporting"]),
+    )
+    pattern_limit = int(depth_limits["patterns"])
     lane_filter = _normalize_lanes(lanes)
     owns_conn = conn is None
     db = conn or crowley.connect_db()
@@ -149,6 +187,10 @@ def build_cognitive_context(
         resolved_project_id = project_id
         if resolved_project_id is None:
             resolved_project_id = _resolve_project_id(db, project)
+        active_spark_count = context_resolution.count_active_sparks(
+            db,
+            project_id=resolved_project_id,
+        )
         ranked = spark_retrieval.retrieve_sparks(
             str(query or ""),
             limit=core_limit + support_limit,
@@ -160,24 +202,50 @@ def build_cognitive_context(
         )
         core = ranked[:core_limit]
         supporting = ranked[core_limit : core_limit + support_limit]
+        fallback_used = active_spark_count < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD
+        memory_fallback: list[dict[str, Any]] = []
+        if fallback_used and support_limit > 0:
+            memory_fallback = _memory_fallback_items(
+                query,
+                project_id=resolved_project_id,
+                limit=support_limit,
+                conn=db,
+            )
         context_ids = {int(item.spark_id) for item in [*core, *supporting]}
         attached_patterns = _active_patterns_for_context(db, context_ids)
-        return {
+        attached_patterns = attached_patterns[:pattern_limit]
+        trace: dict[str, Any] = {
+            "depth": resolved_depth,
+            "lanes_used": sorted(lane_filter) if lane_filter else [],
+            "retrieved_count": len(ranked),
+            "core_count": len(core),
+            "supporting_count": len(supporting),
+            "pattern_count": len(attached_patterns),
+            "expand_hops": spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
+            "selection_reason": "ranked retrieval split into core and supporting sparks",
+            "score_basis": COGNITIVE_CONTEXT_SCORE_BASIS,
+            "lineage": [],
+            "fallback_used": fallback_used,
+            "active_spark_count": active_spark_count,
+        }
+        if fallback_used:
+            trace["selection_reason"] = (
+                f"{trace['selection_reason']}; memory_items fallback "
+                f"(active sparks < {context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD})"
+            )
+        payload: dict[str, Any] = {
             "core_sparks": [_spark_payload(item) for item in core],
             "supporting_sparks": [_spark_payload(item) for item in supporting],
             "patterns": attached_patterns,
             "confidence": _context_confidence(core),
-            "trace": {
-                "lanes_used": sorted(lane_filter) if lane_filter else [],
-                "retrieved_count": len(ranked),
-                "core_count": len(core),
-                "supporting_count": len(supporting),
-                "pattern_count": len(attached_patterns),
-                "expand_hops": spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
-                "selection_reason": "ranked retrieval split into core and supporting sparks",
-                "score_basis": COGNITIVE_CONTEXT_SCORE_BASIS,
-            },
+            "depth": resolved_depth,
+            "trace": trace,
         }
+        if memory_fallback:
+            payload["memory_fallback"] = memory_fallback
+        if debug:
+            payload["debug"] = {"spark_ranked_count": len(ranked)}
+        return payload
     finally:
         if owns_conn:
             db.close()

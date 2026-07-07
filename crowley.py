@@ -5992,12 +5992,15 @@ def retrieve_memories(
                 breakdown = dict(breakdown)
                 breakdown["open_ticket_boost"] = round(ticket_boost, 4)
             display = _memory_display_text(row)
+            row_summary = str(row["summary"]) if row["summary"] else ""
+            source_text = f"{row['content']} {row_summary}".strip()
             row_confidence = row["confidence"] if "confidence" in row.keys() else 1.0
             results.append(
                 {
                     "id": memory_id,
                     "memory_type": str(row["memory_type"]),
                     "content": display,
+                    "source_text": source_text,
                     "importance": int(row["importance"]),
                     "confidence": round(float(row_confidence), 4),
                     "source": str(row["source"]),
@@ -6950,11 +6953,15 @@ def build_context_bundle(
     q: str = CONTEXT_DEFAULT_QUERY,
     limit: int = MEMORY_LIMIT,
     project_slug: str | None = None,
+    depth: str | None = None,
+    debug: bool = False,
 ) -> dict[str, object]:
     """
     Read-only working context for external agents (V3.7 memory bus).
     No writes.
     """
+    import context_resolution
+
     if project_slug is not None:
         project = get_project_by_slug(project_slug)
         if project is None:
@@ -6982,14 +6989,48 @@ def build_context_bundle(
         row_to_dict(row) for row in list_tasks(status="open")[:DIAGNOSTICS_TASKS_LIMIT]
     ]
     canon = _canon_api_items(project_id)
-    relevant_memories = retrieve_memories(q, limit=limit, project_id=project_id)
+    resolved_depth = context_resolution.normalize_depth(depth)
+    fetch_limit = max(limit * 3, 16) if resolved_depth else limit
+    relevant_memories = retrieve_memories(q, limit=fetch_limit, project_id=project_id)
+    matched_tickets: list[dict[str, object]] = []
+    trace: dict[str, object] = {}
+    if resolved_depth is not None:
+        tickets_summary = build_tickets_summary(project_id)
+        open_tickets = tickets_summary.get("open")
+        candidate_tickets = (
+            [dict(item) for item in open_tickets]
+            if isinstance(open_tickets, list)
+            else []
+        )
+        resolved, matched_tickets, trace = context_resolution.cross_source_resolve(
+            [dict(item) for item in relevant_memories],
+            matched_tickets=candidate_tickets,
+            query=q,
+            depth=resolved_depth,
+            debug=debug,
+        )
+        relevant_memories = resolved[:limit]
+        conn = connect_db()
+        try:
+            active_spark_count = context_resolution.count_active_sparks(
+                conn,
+                project_id=project_id,
+            )
+        finally:
+            conn.close()
+        trace = context_resolution.apply_memory_fallback_trace(
+            trace,
+            active_spark_count=active_spark_count,
+            fallback_used=active_spark_count
+            < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD,
+        )
 
     if state is not None and state["next_action"]:
         recommended = _state_display(state["next_action"])
     else:
         recommended = "(unset)"
 
-    return {
+    bundle: dict[str, object] = {
         "project": row_to_dict(project) if project is not None else None,
         "state": state_payload,
         "recent_decisions": recent_decisions,
@@ -7004,15 +7045,71 @@ def build_context_bundle(
         "knowledge_files": load_knowledge_files_context(q),
         "recommended_next_action": recommended,
     }
+    if resolved_depth is not None:
+        bundle["depth"] = resolved_depth
+        bundle["matched_tickets"] = matched_tickets
+        bundle["trace"] = trace
+    return bundle
 
 
-def retrieve_memories_api(q: str, limit: int = MEMORY_LIMIT) -> dict[str, object]:
+def retrieve_memories_api(
+    q: str,
+    limit: int = MEMORY_LIMIT,
+    *,
+    depth: str | None = None,
+    debug: bool = False,
+) -> dict[str, object]:
     """Read-only hybrid memory search for external agents (V3.7 memory bus)."""
+    import context_resolution
     import memory_quality
 
     project = get_active_project()
     project_id = int(project["id"]) if project is not None else None
-    results = retrieve_memories(q, limit=limit, project_id=project_id)
+    resolved_depth = context_resolution.normalize_depth(depth)
+    fetch_limit = max(limit * 3, 16) if resolved_depth else limit
+    results = retrieve_memories(q, limit=fetch_limit, project_id=project_id)
+    trace: dict[str, object] = {}
+    if resolved_depth is not None:
+        tickets_summary = build_tickets_summary(project_id)
+        open_tickets = tickets_summary.get("open")
+        candidate_tickets = (
+            [dict(item) for item in open_tickets]
+            if isinstance(open_tickets, list)
+            else []
+        )
+        resolved, matched_tickets, trace = context_resolution.cross_source_resolve(
+            [dict(item) for item in results],
+            matched_tickets=candidate_tickets,
+            query=q,
+            depth=resolved_depth,
+            debug=debug,
+        )
+        results = resolved[:limit]
+        conn = connect_db()
+        try:
+            active_spark_count = context_resolution.count_active_sparks(
+                conn,
+                project_id=project_id,
+            )
+        finally:
+            conn.close()
+        trace = context_resolution.apply_memory_fallback_trace(
+            trace,
+            active_spark_count=active_spark_count,
+            fallback_used=active_spark_count
+            < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD,
+        )
+        payload = {
+            "query": q,
+            "limit": limit,
+            "depth": resolved_depth,
+            "retrieval_mode": get_last_retrieval_mode(),
+            "results": results,
+            "hits": results,
+            "matched_tickets": matched_tickets,
+            "trace": trace,
+        }
+        return memory_quality.annotate_retrieval_payload(payload)
     payload = {
         "query": q,
         "limit": limit,

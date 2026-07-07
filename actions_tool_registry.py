@@ -96,8 +96,7 @@ def catalog_payload() -> dict[str, object]:
             "handoff.ingest": {
                 "tool": "handoff.ingest",
                 "args": {
-                    "source": "chatgpt",
-                    "type": "architect_handoff",
+                    "handoff_type": "architect_handoff",
                     "content": "# Crowley Handoff\\n\\n## Summary\\n- ...",
                 },
             },
@@ -107,6 +106,14 @@ def catalog_payload() -> dict[str, object]:
                     "q": "what changed after the vec0 fix",
                     "limit": 5,
                 },
+            },
+            "ticket.get": {
+                "tool": "ticket.get",
+                "args": {"ticket_id": 249},
+            },
+            "ticket.list": {
+                "tool": "ticket.list",
+                "args": {"status": "open", "limit": 5},
             },
         },
         "timeouts_seconds": {
@@ -249,6 +256,14 @@ def _optional_str(args: dict[str, Any], key: str) -> str | None:
     return text or None
 
 
+def _resolve_handoff_content(args: dict[str, Any]) -> str | None:
+    """Canonical handoff body is ``content``; ``details`` and ``summary`` are accepted aliases."""
+    content = _optional_str(args, "content") or _optional_str(args, "details")
+    if content:
+        return content
+    return _optional_str(args, "summary")
+
+
 def _search_query(args: dict[str, Any]) -> str | None:
     """Canonical retrieval arg is ``q``; ``query`` is accepted for client compatibility."""
     return _optional_str(args, "q") or _optional_str(args, "query")
@@ -277,6 +292,24 @@ def _require_id(args: dict[str, Any], key: str = "id") -> int:
         raise ValueError(f"{key} must be an integer") from exc
 
 
+def _require_entity_id(
+    args: dict[str, Any],
+    *,
+    key: str = "id",
+    aliases: tuple[str, ...] = (),
+) -> int:
+    """Resolve an entity id from canonical key or accepted aliases."""
+    for name in (key, *aliases):
+        if args.get(name) is None:
+            continue
+        try:
+            return int(args[name])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be an integer") from exc
+    alias_hint = f" or {aliases[0]}" if aliases else ""
+    raise ValueError(f"{key}{alias_hint} is required")
+
+
 def _list_result(items: list[dict[str, object]], total: int, limit: int, offset: int) -> dict[str, object]:
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
@@ -289,8 +322,16 @@ def _handle_context_get(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
     limit = _optional_int(args, "limit", 8)
     limit = min(limit, 50)
     project = _optional_str(args, "project")
+    depth = _optional_str(args, "depth") or "medium"
+    debug = bool(args.get("debug"))
     try:
-        bundle = crowley.build_context_bundle(q=q, limit=limit, project_slug=project)
+        bundle = crowley.build_context_bundle(
+            q=q,
+            limit=limit,
+            project_slug=project,
+            depth=depth,
+            debug=debug,
+        )
     except ValueError as exc:
         return {"error": str(exc)}, 404
     return bundle, None
@@ -301,7 +342,14 @@ def _handle_retrieve_search(args: dict[str, Any]) -> tuple[dict[str, Any], int |
     if not q:
         raise ValueError("q is required")
     limit = min(_optional_int(args, "limit", 8), 50)
-    return crowley.retrieve_memories_api(q=q, limit=limit), None
+    depth = _optional_str(args, "depth") or "medium"
+    debug = bool(args.get("debug"))
+    return crowley.retrieve_memories_api(
+        q=q,
+        limit=limit,
+        depth=depth,
+        debug=debug,
+    ), None
 
 
 def _handle_portable_packet(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
@@ -410,6 +458,15 @@ def _register_v313_tools() -> None:
                     "q": {"type": "string", "description": "Query for knowledge and retrieval scoring"},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
                     "project": {"type": "string", "description": "Optional project slug"},
+                    "depth": {
+                        "type": "string",
+                        "enum": ["light", "medium", "deep"],
+                        "description": "Context depth mode (default: medium)",
+                    },
+                    "debug": {
+                        "type": "boolean",
+                        "description": "Include suppressed raw duplicates when true",
+                    },
                 },
             },
             handler=_handle_context_get,
@@ -430,6 +487,15 @@ def _register_v313_tools() -> None:
                         "description": "Alias for q (accepted for compatibility)",
                     },
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                    "depth": {
+                        "type": "string",
+                        "enum": ["light", "medium", "deep"],
+                        "description": "Context depth mode (default: medium)",
+                    },
+                    "debug": {
+                        "type": "boolean",
+                        "description": "Include suppressed raw duplicates when true",
+                    },
                 },
             },
             handler=_handle_retrieve_search,
@@ -523,9 +589,10 @@ def _handle_memory_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
 
 
 def _handle_ticket_get(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-    detail = tickets.get_ticket_detail(_require_id(args))
+    ticket_id = _require_entity_id(args, aliases=("ticket_id",))
+    detail = tickets.get_ticket_detail(ticket_id)
     if detail is None:
-        raise LookupError(f"ticket not found: {args['id']}")
+        raise LookupError(f"ticket not found: {ticket_id}")
     return detail, None
 
 
@@ -537,6 +604,7 @@ def _handle_ticket_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
     offset = max(0, int(args.get("offset", 0)))
     open_only = status.strip().lower() == "open"
     status_filter = None if open_only else status
+    sort = _optional_str(args, "sort") or "newest"
     rows = tickets.list_tickets(
         project_id=project_id,
         status=status_filter,
@@ -546,6 +614,7 @@ def _handle_ticket_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
         parent_id=int(args["parent_id"]) if args.get("parent_id") is not None else None,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
     total = tickets.count_tickets(
         project_id=project_id,
@@ -651,6 +720,8 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
     lane = _optional_str(args, "lane")
     limit = min(_optional_int(args, "limit", 12), 50)
     project = _optional_str(args, "project")
+    depth = _optional_str(args, "depth") or "medium"
+    debug = bool(args.get("debug"))
     try:
         return (
             context_orchestration.build_cognitive_context(
@@ -658,6 +729,8 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
                 lanes=lane,
                 limit=limit,
                 project=project,
+                depth=depth,
+                debug=debug,
             ),
             None,
         )
@@ -669,8 +742,8 @@ def _register_domain_read_tools() -> None:
     _domain_tools = [
         ("memory.get", "Get one memory item by id (any status).", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_memory_get),
         ("memory.list", "List memory items with filters.", {"properties": {"q": {"type": "string"}, "source": {"type": "string"}, "memory_type": {"type": "string"}, "status": {"type": "string"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}}}, _handle_memory_list),
-        ("ticket.get", "Get ticket detail with events and linked handoff.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_ticket_get),
-        ("ticket.list", "List tickets for active project.", {"properties": {"status": {"type": "string"}, "assignee": {"type": "string"}, "priority": {"type": "integer"}, "parent_id": {"type": "integer"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}}}, _handle_ticket_list),
+        ("ticket.get", "Get ticket detail with events and linked handoff.", {"properties": {"id": {"type": "integer", "description": "Ticket id (canonical)"}, "ticket_id": {"type": "integer", "description": "Alias for id"}}}, _handle_ticket_get),
+        ("ticket.list", "List tickets for active project (default sort: newest first).", {"properties": {"status": {"type": "string"}, "assignee": {"type": "string"}, "priority": {"type": "integer"}, "parent_id": {"type": "integer"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}, "sort": {"type": "string", "description": "newest (default), priority, or updated"}}}, _handle_ticket_list),
         ("session.get", "Get portable session receipt and linked sparks.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_session_get),
         ("session.list", "List portable terminal session receipts.", {"properties": {"status": {"type": "string"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}}}, _handle_session_list),
         ("spark.get", "Get spark (memory event) by id.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_spark_get),
@@ -688,6 +761,11 @@ def _register_domain_read_tools() -> None:
                     "lane": {"type": "string"},
                     "limit": {"type": "integer"},
                     "project": {"type": "string"},
+                    "depth": {
+                        "type": "string",
+                        "enum": ["light", "medium", "deep"],
+                    },
+                    "debug": {"type": "boolean"},
                 }
             },
             _handle_cognitive_context,
@@ -1023,7 +1101,7 @@ def _register_write_tools() -> None:
         return result, 201
 
     def _handle_ticket_update(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-        ticket_id = _require_id(args)
+        ticket_id = _require_entity_id(args, aliases=("ticket_id",))
         result = tickets.update_ticket(
             ticket_id,
             actor="chatgpt",
@@ -1037,7 +1115,7 @@ def _register_write_tools() -> None:
         return result, None
 
     def _handle_ticket_cancel(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-        ticket_id = _require_id(args)
+        ticket_id = _require_entity_id(args, aliases=("ticket_id",))
         comment = _optional_str(args, "comment")
         if not comment:
             raise ValueError("comment is required")
@@ -1047,10 +1125,14 @@ def _register_write_tools() -> None:
     def _handle_handoff_ingest(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
         import workflow
 
-        content = _optional_str(args, "content")
+        content = _resolve_handoff_content(args)
         if not content:
             raise ValueError("content is required")
-        handoff_type = _optional_str(args, "handoff_type") or "architect_handoff"
+        handoff_type = (
+            _optional_str(args, "handoff_type")
+            or _optional_str(args, "type")
+            or "architect_handoff"
+        )
         if handoff_type not in {"architect_handoff", "note"}:
             raise ValueError("handoff_type must be architect_handoff or note")
         if handoff_type == "note" and workflow.is_low_signal_note(content):
@@ -1104,9 +1186,9 @@ def _register_write_tools() -> None:
             "ticket.update",
             "Update ticket status, assignee, comment, or linked handoff.",
             {
-                "required": ["id"],
                 "properties": {
                     "id": {"type": "integer"},
+                    "ticket_id": {"type": "integer", "description": "Alias for id"},
                     "status": {"type": "string"},
                     "assignee": {"type": "string"},
                     "comment": {"type": "string"},
@@ -1119,8 +1201,11 @@ def _register_write_tools() -> None:
             "ticket.cancel",
             "Cancel a ticket (requires comment).",
             {
-                "required": ["id", "comment"],
-                "properties": {"id": {"type": "integer"}, "comment": {"type": "string"}},
+                "properties": {
+                    "id": {"type": "integer"},
+                    "ticket_id": {"type": "integer", "description": "Alias for id"},
+                    "comment": {"type": "string"},
+                },
             },
             _handle_ticket_cancel,
         ),
@@ -1128,10 +1213,22 @@ def _register_write_tools() -> None:
             "handoff.ingest",
             "Post architect handoff or note to Crowley memory.",
             {
-                "required": ["content"],
                 "properties": {
-                    "content": {"type": "string"},
-                    "handoff_type": {"type": "string", "enum": ["architect_handoff", "note"]},
+                    "content": {"type": "string", "description": "Handoff body (canonical)"},
+                    "details": {"type": "string", "description": "Alias for content"},
+                    "summary": {
+                        "type": "string",
+                        "description": "Short summary; used as body only when content/details omitted",
+                    },
+                    "handoff_type": {
+                        "type": "string",
+                        "enum": ["architect_handoff", "note"],
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Alias for handoff_type",
+                        "enum": ["architect_handoff", "note"],
+                    },
                     "project": {"type": "string"},
                 },
             },

@@ -31,7 +31,7 @@ Crowley is a **local-first persistent context layer** for a single user (“D”
 19. **V3.9.11 Live Wire (2026-07)** — activity pulses, compose wire UI, brain switcher API (#70–#75).
 20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
 22. **V3.9.14 Durable ChatGPT Bridge (2026-07)** — LaunchAgent service, API-only tunnel ingress, bridge verify tooling, hardened start script.
-22. **V4.0 Cognitive Memory (in progress · mid-lock 2026-07-07)** — separate `sparks` / `spark_links` / `patterns` tables; `/api/cognitive/*` namespace; T1–T13 shipped. **Part 1 patch:** agent.sync ASE + GitHub envelope ([V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)). **Not complete** — T14–T24 remain.
+22. **V4.0 Cognitive Memory (in progress · mid-lock 2026-07-07)** — separate `sparks` / `spark_links` / `patterns` tables; `/api/cognitive/*` namespace; T1–T14 shipped including `context_resolution.py` cross-source arbitration ([V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md)). **Part 1 patch:** agent.sync ASE + GitHub envelope ([V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)). **Not complete** — T15–T24 remain.
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/actions/*` uses bearer auth when `CROWLEY_ACTION_KEY` is set; full internal API remains localhost-first.
 

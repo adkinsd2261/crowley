@@ -36,7 +36,7 @@ The target state before V4:
 | V3.9.12 | Portable Context Terminal | **Shipped** (#76–#80) |
 | V3.9.14 | Durable ChatGPT Bridge | **Shipped** — LaunchAgent, API-only tunnel, verify |
 | V3.9.13 | Secure ChatGPT Actions API | **Shipped** — bearer `/api/actions/*` |
-| V4.0 | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open |
+| V4.0 | Cognitive Memory | **In progress** — T1–T14 shipped; T15–T24 open |
 | Pre-V4 QA Hygiene | State lock-in + stale loop cleanup | Shipped (#37) |
 
 V4 memory-lane architecture starts when D mints V4.0 (V3.9.12 terminal loop and V3.9.13 Actions API proven).
@@ -97,9 +97,9 @@ Shipped — see [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEX
 
 **Packet:** `tickets/v4.0_cognitive_memory.json` — minted **#203–#226**. Supersedes `v4.0_spark_lanes.json`.
 
-**Mid-lock (2026-07-07):** T1–T13 (#203–#215) shipped in code + tests. **13/24 tickets complete.** Version constant unchanged (`3.9.19`). See [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md).
+**Mid-lock (2026-07-07):** T1–T14 (#203–#216) shipped in code + tests. **14/24 tickets complete.** Version constant unchanged (`3.9.19`). See [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md).
 
-**Remaining:** T14–T24 (#216–#226) — depth modes, decay, maintenance, security, observability, final release lock.
+**Remaining:** T15–T24 (#217–#226) — decay, maintenance, security, observability, final release lock.
 
 **Primary lanes:** learning, work, relationships, money, health, operating_style.
 

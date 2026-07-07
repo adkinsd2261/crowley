@@ -87,21 +87,21 @@ SHIPPED_LOOP_SNIPPETS = (
 
 
 def project_state_updates() -> dict[str, str]:
-    """Current world-model fields after V4 Part 1 bridge E2E lock."""
+    """Current world-model fields after V4 T14 context resolution lock."""
     return {
-        "phase": "V3.9.19 + V4 mid-lock (T1–T13) + Part 1 bridge E2E",
-        "focus": "ChatGPT Actions E2E verified — resume V4 at T14 (#216)",
+        "phase": "V3.9.19 + V4 mid-lock (T1–T14) + Part 1 bridge E2E",
+        "focus": "V4 T14 shipped — cross-source context resolution; resume T15 (#217)",
         "current_risk": (
             "Restart bus after code bumps; run cleanup_chatgpt_bridge.sh if tunnel wedges; "
             "version constant 3.9.19 until T24."
         ),
         "next_action": (
-            "Cursor claims #216 (T14 depth modes). ChatGPT loop: agent.sync → writeback.ingest → retrieve.search."
+            "Cursor claims #217 (T15 spark lifecycle decay). Midway tool QA: agent.sync, qa.bundle, context.get depth."
         ),
         "what_changed": (
-            "V4 T1–T13 (#203–#215); Part 1 ASE/GitHub (#229–#231); bridge E2E lock: "
-            "pysqlite3/sqlite-vec per-connection, Actions auto-promote, retrieve.query alias, "
-            "bridge verify retrieve probe. ~705 tests."
+            "V4 T14 (#216): context_resolution.cross_source_resolve, depth modes on context.get/retrieve.search, "
+            "cognitive.context cold-start fallback; ticket/handoff Actions aliases; XSYS-TEST-ALPHA verified. "
+            "~716 tests (12 known spark_schema FK errors)."
         ),
     }
 

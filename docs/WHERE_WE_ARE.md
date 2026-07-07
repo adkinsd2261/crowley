@@ -1,6 +1,6 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.19 · V4.0 Cognitive Memory **mid-lock** (T1–T13) · Part 1 **bridge E2E verified** · **2026-07-07**
+**As of:** V3.9.19 · V4.0 Cognitive Memory **mid-lock** (T1–T14) · Part 1 **bridge E2E verified** · **2026-07-07**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
 **Git note:** V3.9.19 Memory Quality shipped (#152–#157, follow-up #162–#166). Post-3.9.19 integrity hardening shipped on `main`: #167 ingest parity, #171–#176 observability/session persistence + claim validation, #177–#184 handoff↔ticket parity hardening, #185–#193 triage (dupes closed; observability_truth DB check, dispatch-blocked metric, invariant fail-safe). Version constant still `3.9.19` — V3.9.20 label used in handoffs but not minted; Codex to decide bump. Restart bus after version bumps so `/api/health` matches constants.
@@ -54,7 +54,7 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
-| **V4.0** | **In progress (mid-lock)** — Cognitive Memory T1–T13 (#203–#215); Part 1 bridge E2E lock — **not complete** until T24 |
+| **V4.0** | **In progress (mid-lock)** — Cognitive Memory T1–T14 (#203–#216); Part 1 bridge E2E lock — **not complete** until T24 |
 
 **Current constants (local code):** `CROWLEY_VERSION = "3.9.19"` (`Crowley V3.9.19 Memory Quality`)
 
@@ -168,9 +168,9 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.17 Trust Control and Clarity** | Cursor | **Shipped** · #112–#130 · attribution, audit, tiers, agent behavior |
 | **V3.9.19 Memory Quality** | Cursor | **Shipped** · #152–#166 · ingest dedup, validation runtime wiring |
 | **V3.9.18 Agent Retrieval Enforcement** | Cursor | **Shipped** · #131–#135 · gating, domain triggers, handoff tickets |
-| **V4.0 Cognitive Memory** | Cursor | **Mid-lock** · T1–T13 (#203–#215) · Part 1 bridge E2E · [mid-lock](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md) · [bridge E2E](./V4.0_PART1_BRIDGE_E2E_LOCK.md) |
+| **V4.0 Cognitive Memory** | Cursor | **Mid-lock** · T1–T14 (#203–#216) · [T14 lock](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md) · [bridge E2E](./V4.0_PART1_BRIDGE_E2E_LOCK.md) |
 
-**Resume workflow:** Cursor claims **#216 (T14)** — context depth modes, cold start, extended trace. **Do not** bump version or declare V4.0 shipped until **#226 (T24)**.
+**Resume workflow:** Cursor claims **#217 (T15)** — spark confidence decay. **Do not** bump version or declare V4.0 shipped until **#226 (T24)**.
 
 ---
 
@@ -201,10 +201,12 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `spark_retrieval.py` | Deterministic spark retrieval/scoring (T8) |
 | `spark_graph.py` | Spark links, expansion, pruning (T9–T10) |
 | `patterns.py` | Pattern detection + safety gates (T11–T12) |
-| `context_orchestration.py` | Context bundle orchestration (T13) |
+| `context_orchestration.py` | Context bundle orchestration (T13–T14 depth modes) |
+| `context_resolution.py` | Cross-source resolver — handoff > memory > ticket (T14) |
 | `actions_tool_runtime.py` | Actions heavy-tool concurrency + timeouts (Part 1 bridge) |
 | `scripts/cleanup_chatgpt_bridge.sh` | Kill duplicate cloudflared + wedged bus recovery |
 | `scripts/watch_crowley_bus.sh` | LaunchAgent bus health watchdog |
+| `docs/V4.0_T14_CONTEXT_RESOLUTION_LOCK.md` | T14 depth modes + cross-source resolution lock |
 | `docs/V4.0_PART1_BRIDGE_E2E_LOCK.md` | Part 1 bridge + ChatGPT E2E doc lock |
 | `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | V4 part 1 patch — agent.sync ASE + GitHub envelope |
 | `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | V4 partial ship doc lock (T1–T13) |

@@ -77,6 +77,30 @@ class DomainReadToolTests(IsolatedDbTestCase):
         self.assertIn("items", listed)
         self.assertIn("total", listed)
 
+    def test_ticket_create_list_newest_and_get_alias(self) -> None:
+        import tickets
+
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            create = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "ticket.create",
+                    "args": {
+                        "title": "Actions newest-sort probe",
+                        "assignee": "cursor",
+                        "priority": 4,
+                    },
+                },
+            )
+        self.assertEqual(create.status_code, 201, create.text)
+        ticket_id = int(create.json()["ticket"]["id"])
+        got = self._read("ticket.get", {"ticket_id": ticket_id})
+        self.assertEqual(got["ticket"]["id"], ticket_id)
+        listed = self._read("ticket.list", {"status": "open", "limit": 5})
+        self.assertEqual(listed["items"][0]["id"], ticket_id)
+
 
 if __name__ == "__main__":
     unittest.main()

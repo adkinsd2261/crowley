@@ -87,15 +87,15 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.13 ChatGPT Actions API ✅
                               │
                               ▼
-                    V4.0 Cognitive Memory ◄── YOU ARE HERE (mid-lock · T1–T13 shipped)
+                    V4.0 Cognitive Memory ◄── YOU ARE HERE (mid-lock · T1–T14 shipped)
                               │
                               ▼
-                    T14–T24 open (#216–#226) · version bump at T24 only
+                    T15–T24 open (#217–#226) · version bump at T24 only
 ```
 
 **Shipped through V3.9.19:** … memory quality (#152–#166); post-3.9.19 integrity hardening on `main`.
 
-**Active initiative:** V4.0 Cognitive Memory — **partial (13/24 tickets)**. Mid-lock: [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md). **Not a release** — `CROWLEY_VERSION` stays `3.9.19` until T24.
+**Active initiative:** V4.0 Cognitive Memory — **partial (14/24 tickets)**. T14 lock: [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md). **Not a release** — `CROWLEY_VERSION` stays `3.9.19` until T24.
 
 ---
 
@@ -302,7 +302,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
 | V3.9.13 | Secure ChatGPT Actions API | Shipped on `main` |
 | V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
-| **V4.0** | Cognitive Memory | **In progress** — T1–T13 shipped; T14–T24 open; bridge E2E verified; bump at T24 (#226) |
+| **V4.0** | Cognitive Memory | **In progress** — T1–T14 shipped; T15–T24 open; bridge E2E + T14 resolution locked; bump at T24 (#226) |
 
 ---
 

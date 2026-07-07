@@ -446,6 +446,7 @@ def list_tickets(
     parent_id: int | None = None,
     limit: int = 50,
     offset: int = 0,
+    sort: str = "priority",
 ) -> list[sqlite3.Row]:
     limit = max(1, min(int(limit), 200))
     offset = max(0, int(offset))
@@ -484,6 +485,14 @@ def list_tickets(
         clauses.append("parent_id = ?")
         params.append(parent_id)
 
+    sort_norm = (sort or "priority").strip().lower()
+    if sort_norm in {"newest", "created_desc", "recent"}:
+        order_clause = "ORDER BY datetime(created_at) DESC, id DESC"
+    elif sort_norm in {"updated", "updated_desc"}:
+        order_clause = "ORDER BY datetime(updated_at) DESC, id DESC"
+    else:
+        order_clause = "ORDER BY priority ASC, datetime(updated_at) DESC, id DESC"
+
     params.extend([limit, offset])
     conn = crowley.connect_db()
     try:
@@ -491,7 +500,7 @@ def list_tickets(
             f"""
             SELECT * FROM tickets
             WHERE {' AND '.join(clauses)}
-            ORDER BY priority ASC, datetime(updated_at) DESC, id DESC
+            {order_clause}
             LIMIT ? OFFSET ?
             """,
             params,

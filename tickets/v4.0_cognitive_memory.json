@@ -33,7 +33,7 @@
     "Breaking embedding pipeline if not reusing embed_text pattern"
   ],
   "qa_expectations": "CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off python -m unittest discover -s tests -v; each ticket adds focused tests; full suite green before T24.",
-  "next_action": "T1–T13 shipped (#203–#215). Part 1 ASE/GitHub + bridge E2E locked 2026-07-07. Cursor claims #216 (T14) — context depth modes, cold start, extended trace. Version bump only at T24 (#226).",
+  "next_action": "T1–T14 shipped (#203–#216). T14 doc lock 2026-07-07. Cursor claims #217 (T15) — spark confidence decay. Version bump only at T24 (#226).",
   "approval": {
     "status": "approved",
     "approved_by": "mr_go",

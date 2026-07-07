@@ -55,6 +55,24 @@ class ActionsToolRegistryTests(unittest.TestCase):
         self.assertIsInstance(body.get("results"), list)
         self.assertEqual(body.get("hits"), body.get("results"))
 
+    def test_ticket_get_accepts_ticket_id_alias(self) -> None:
+        import tickets
+
+        created = tickets.create_ticket(
+            "Alias id probe ticket",
+            source="chatgpt",
+            actor="codex",
+        )
+        ticket_id = int(created["ticket"]["id"])
+        registry.dispatch("read", "agent.sync", {"agent": "chatgpt", "limit": 3})
+        body, status = registry.dispatch(
+            "read",
+            "ticket.get",
+            {"ticket_id": ticket_id},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body["ticket"]["id"], ticket_id)
+
 
 if __name__ == "__main__":
     unittest.main()

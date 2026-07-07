@@ -78,6 +78,37 @@ class WriteToolTests(IsolatedDbTestCase):
             )
         self.assertEqual(res.status_code, 400)
 
+    def test_handoff_ingest_accepts_details_alias(self) -> None:
+        body_text = (
+            "# Crowley Handoff\n\n## Summary\n- QA handoff details alias probe\n\n"
+            "## Details\nValidated that handoff.ingest accepts details when content is omitted."
+        )
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.post(
+                "/api/actions/write",
+                headers=AUTH_HEADER,
+                json={
+                    "tool": "handoff.ingest",
+                    "args": {
+                        "summary": "QA handoff details alias probe",
+                        "details": body_text,
+                        "type": "architect_handoff",
+                    },
+                },
+            )
+        self.assertEqual(res.status_code, 201, res.text)
+        memory_id = int(res.json()["memory_item_id"])
+        with TestClient(crowley_app.app) as client:
+            listed = client.post(
+                "/api/actions/read",
+                headers=AUTH_HEADER,
+                json={"tool": "handoff.list", "args": {"limit": 5}},
+            )
+        self.assertEqual(listed.status_code, 200)
+        ids = {int(item["id"]) for item in listed.json().get("items", [])}
+        self.assertIn(memory_id, ids)
+
     def test_writeback_ingest_auto_promotes_accepted_sparks(self) -> None:
         marker = "Actions auto-promotion retrieval visibility marker"
         payload = {
