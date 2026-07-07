@@ -58,7 +58,23 @@ class ChatGptActionsAuthTests(unittest.TestCase):
                 headers={"Authorization": f"Basic {ACTIONS_KEY}"},
             )
         self.assertEqual(res.status_code, 401)
-        self.assertEqual(res.json()["detail"]["error"], "invalid_authorization_scheme")
+        self.assertEqual(res.json()["detail"]["error"], "invalid_token")
+
+    def test_x_api_key_header_succeeds(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.get(
+                "/api/actions/health",
+                headers={"X-API-Key": ACTIONS_KEY},
+            )
+        self.assertEqual(res.status_code, 200)
+
+    def test_raw_authorization_token_succeeds(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.get(
+                "/api/actions/health",
+                headers={"Authorization": ACTIONS_KEY},
+            )
+        self.assertEqual(res.status_code, 200)
 
     def test_actions_disabled_when_key_missing(self) -> None:
         os.environ.pop("CROWLEY_ACTION_KEY", None)
@@ -237,6 +253,57 @@ class ChatGptActionsAuthorizedTests(IsolatedDbTestCase):
             )
         self.assertEqual(res.status_code, 404)
         self.assertEqual(res.json()["error"], "unknown_tool")
+
+    def test_alias_agent_sync_route_available(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            res = client.get(
+                "/api/actions/agent/sync",
+                headers=AUTH_HEADER,
+                params={"agent": "chatgpt", "limit": 5},
+            )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body.get("agent"), "chatgpt")
+        self.assertIn("sync_meta", body)
+
+    def test_alias_agent_deep_sync_route_available(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.get(
+                "/api/actions/agent/deep_sync",
+                headers=AUTH_HEADER,
+                params={"agent": "chatgpt", "section": "tickets", "limit": 5},
+            )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body.get("section"), "tickets")
+        self.assertIn("items", body)
+
+    def test_alias_github_status_route_available(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.get("/api/actions/github/status", headers=AUTH_HEADER)
+        self.assertIn(res.status_code, {200, 503})
+
+    def test_alias_github_file_route_available(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.get(
+                "/api/actions/github/file",
+                headers=AUTH_HEADER,
+                params={"path": "README.md"},
+            )
+        self.assertIn(res.status_code, {200, 503})
+
+    def test_alias_github_search_code_route_available(self) -> None:
+        with TestClient(crowley_app.app) as client:
+            boot_actions_session(client, AUTH_HEADER)
+            res = client.get(
+                "/api/actions/github/search_code",
+                headers=AUTH_HEADER,
+                params={"q": "agent.sync"},
+            )
+        self.assertIn(res.status_code, {200, 503})
 
 
 if __name__ == "__main__":

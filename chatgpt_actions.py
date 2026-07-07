@@ -34,6 +34,7 @@ def configured_action_key() -> str | None:
 
 def require_actions_bearer(
     authorization: Annotated[str | None, Header()] = None,
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> None:
     expected = configured_action_key()
     if not expected:
@@ -47,29 +48,44 @@ def require_actions_bearer(
                 ),
             },
         )
-    if not authorization or not authorization.strip():
+    token_candidate = ""
+    if authorization and authorization.strip():
+        raw_auth = authorization.strip()
+        scheme, _, token = raw_auth.partition(" ")
+        if scheme.lower() == "bearer" and token.strip():
+            token_candidate = token.strip()
+        elif not token:
+            # Allow raw token in Authorization for compatibility with some clients.
+            token_candidate = raw_auth
+        else:
+            # If a scheme is present but isn't Bearer, treat whole value as token so
+            # callers get invalid_token instead of missing auth.
+            token_candidate = raw_auth
+    elif x_api_key and x_api_key.strip():
+        raw_key = x_api_key.strip()
+        scheme, _, token = raw_key.partition(" ")
+        if scheme.lower() == "bearer" and token.strip():
+            token_candidate = token.strip()
+        else:
+            token_candidate = raw_key
+
+    if not token_candidate:
         raise HTTPException(
             status_code=401,
             detail={
                 "error": "authorization_required",
-                "message": "Authorization: Bearer <CROWLEY_ACTION_KEY> is required.",
+                "message": (
+                    "Provide CROWLEY_ACTION_KEY via Authorization: Bearer <key> "
+                    "or X-API-Key: <key>."
+                ),
             },
         )
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "error": "invalid_authorization_scheme",
-                "message": "Authorization must use the Bearer scheme.",
-            },
-        )
-    if not hmac.compare_digest(token.strip(), expected):
+    if not hmac.compare_digest(token_candidate, expected):
         raise HTTPException(
             status_code=401,
             detail={
                 "error": "invalid_token",
-                "message": "Bearer token is invalid.",
+                "message": "Actions API token is invalid.",
             },
         )
 
@@ -266,6 +282,91 @@ def actions_writeback_acceptance(
         "read",
         "writeback.acceptance",
         {"refresh": refresh, "apply": apply},
+        session_key=session_key,
+        agent_id="chatgpt",
+    )
+
+
+@router.get("/agent/sync")
+def actions_agent_sync(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
+    _auth: None = Depends(require_actions_bearer),
+    agent: str = Query("chatgpt", min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+) -> JSONResponse:
+    return _invoke_response(
+        "read",
+        "agent.sync",
+        {"agent": agent, "limit": limit},
+        session_key=session_key,
+        agent_id="chatgpt",
+    )
+
+
+@router.get("/agent/deep_sync")
+def actions_agent_deep_sync(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
+    _auth: None = Depends(require_actions_bearer),
+    section: str = Query(..., min_length=1),
+    agent: str = Query("chatgpt", min_length=1),
+    cursor: str | None = Query(None),
+    limit: int = Query(20, ge=1, le=50),
+) -> JSONResponse:
+    return _invoke_response(
+        "read",
+        "agent.deep_sync",
+        {
+            "agent": agent,
+            "section": section,
+            "cursor": cursor,
+            "limit": limit,
+        },
+        session_key=session_key,
+        agent_id="chatgpt",
+    )
+
+
+@router.get("/github/status")
+def actions_github_status(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
+    _auth: None = Depends(require_actions_bearer),
+) -> JSONResponse:
+    return _invoke_response(
+        "read",
+        "github.status",
+        {},
+        session_key=session_key,
+        agent_id="chatgpt",
+    )
+
+
+@router.get("/github/file")
+def actions_github_file(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
+    _auth: None = Depends(require_actions_bearer),
+    path: str = Query(..., min_length=1),
+    ref: str | None = Query(None),
+) -> JSONResponse:
+    return _invoke_response(
+        "read",
+        "github.file",
+        {"path": path, "ref": ref},
+        session_key=session_key,
+        agent_id="chatgpt",
+    )
+
+
+@router.get("/github/search_code")
+def actions_github_search_code(
+    session_key: Annotated[str, Depends(_resolve_session_key)],
+    _auth: None = Depends(require_actions_bearer),
+    q: str = Query(..., min_length=1),
+    ref: str | None = Query(None),
+) -> JSONResponse:
+    return _invoke_response(
+        "read",
+        "github.search_code",
+        {"q": q, "ref": ref},
         session_key=session_key,
         agent_id="chatgpt",
     )

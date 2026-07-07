@@ -12,10 +12,10 @@ LIB="$ROOT/scripts/chatgpt_bridge_lib.py"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/start_chatgpt_bridge.sh [--quick|--named|--ngrok]
+Usage: ./scripts/start_chatgpt_bridge.sh [--named|--quick|--ngrok]
 
-  --quick   Cloudflare quick tunnel (default; random *.trycloudflare.com URL)
-  --named   Stable hostname via cloudflared/config.yml; prefers durable LaunchAgent
+  --named   Stable hostname via cloudflared/config.yml; prefers durable LaunchAgent (default)
+  --quick   Cloudflare quick tunnel (random *.trycloudflare.com URL; explicit opt-in)
   --ngrok   Fallback when cloudflared is unavailable (requires ngrok)
 
 Loads .env, ensures Crowley bus, checks local Actions auth, starts or reuses tunnel,
@@ -243,8 +243,8 @@ verify_public_actions() {
 
 main() {
   case "$MODE" in
-    "" | --quick) MODE="quick" ;;
-    --named) MODE="named" ;;
+    "" | --named) MODE="named" ;;
+    --quick) MODE="quick" ;;
     --ngrok) MODE="ngrok" ;;
     -h | --help)
       usage

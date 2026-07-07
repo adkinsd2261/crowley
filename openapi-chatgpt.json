@@ -95,6 +95,86 @@
           }
         }
       }
+    },
+    "/api/actions/agent/sync": {
+      "get": {
+        "operationId": "actionsAgentSync",
+        "summary": "Alias route for agent.sync",
+        "description": "Convenience alias for read tool `agent.sync`.",
+        "parameters": [
+          { "name": "agent", "in": "query", "required": false, "schema": { "type": "string", "default": "chatgpt" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
+          }
+        }
+      }
+    },
+    "/api/actions/agent/deep_sync": {
+      "get": {
+        "operationId": "actionsAgentDeepSync",
+        "summary": "Alias route for agent.deep_sync",
+        "description": "Convenience alias for read tool `agent.deep_sync`.",
+        "parameters": [
+          { "name": "section", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "agent", "in": "query", "required": false, "schema": { "type": "string", "default": "chatgpt" } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
+          }
+        }
+      }
+    },
+    "/api/actions/github/status": {
+      "get": {
+        "operationId": "actionsGithubStatus",
+        "summary": "Alias route for github.status",
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
+          }
+        }
+      }
+    },
+    "/api/actions/github/file": {
+      "get": {
+        "operationId": "actionsGithubFile",
+        "summary": "Alias route for github.file",
+        "parameters": [
+          { "name": "path", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "ref", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
+          }
+        }
+      }
+    },
+    "/api/actions/github/search_code": {
+      "get": {
+        "operationId": "actionsGithubSearchCode",
+        "summary": "Alias route for github.search_code",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "ref", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LooseObject" } } }
+          }
+        }
+      }
     }
   },
   "components": {

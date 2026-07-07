@@ -202,6 +202,7 @@ def verify(*, base_url: str, action_key: str, wait_seconds: int = 90) -> int:
     auth = {"Authorization": f"Bearer {action_key}"}
     checks: list[tuple[str, str, dict[str, Any] | None]] = [
         ("GET", f"{base}/api/actions/health", None),
+        ("GET", f"{base}/api/actions/agent/sync?agent=chatgpt&limit=5", None),
         ("GET", f"{base}/api/actions/context?limit=3", None),
         ("GET", f"{base}/api/actions/retrieve?q=current%20project&limit=3", None),
         ("POST", f"{base}/api/actions/writeback/parse", WRITEBACK_PARSE_BODY),

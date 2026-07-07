@@ -47,7 +47,9 @@ Never bind Crowley to `0.0.0.0` or expose the dashboard/full internal API.
 
 ### Excluded from Actions API
 
-Ticket mutation, task mutation, brain switching, chat/messages, memory-item listing, diagnostics, ingest of arbitrary handoffs, and agent sync are **not** exposed.
+Task mutation, brain switching, chat/messages, diagnostics, and ingest of arbitrary handoffs are **not** exposed.
+
+Actions tool gateway (`/api/actions/catalog`, `/api/actions/read`, `/api/actions/write`) exposes additional scoped tools, including agent sync/deep sync, memory/ticket read, and gated write tools.
 
 Writeback ingest uses `ingest_terminal_writeback()` — session receipt + **staged** spark candidates only.
 
@@ -160,11 +162,19 @@ Do not call routes outside /api/actions/*.
 | Method | Path | Wraps |
 |--------|------|-------|
 | GET | `/api/actions/health` | Auth check + safe runtime |
+| GET | `/api/actions/catalog` | Registered tool list + arg schemas |
+| POST | `/api/actions/read` | Generic read tool dispatch |
+| POST | `/api/actions/write` | Generic write tool dispatch |
 | GET | `/api/actions/context` | `build_context_bundle()` |
 | GET | `/api/actions/retrieve` | `retrieve_memories_api()` |
 | GET | `/api/actions/portable/packet` | `build_portable_context_packet(surface="chatgpt")` + markdown |
 | POST | `/api/actions/writeback/parse` | `parse_terminal_writeback()` |
 | POST | `/api/actions/writeback/ingest` | `ingest_terminal_writeback()` |
+| GET | `/api/actions/agent/sync` | Alias to `agent.sync` tool |
+| GET | `/api/actions/agent/deep_sync` | Alias to `agent.deep_sync` tool |
+| GET | `/api/actions/github/status` | Alias to `github.status` tool |
+| GET | `/api/actions/github/file` | Alias to `github.file` tool |
+| GET | `/api/actions/github/search_code` | Alias to `github.search_code` tool |
 
 OpenAPI: [`openapi-chatgpt.json`](../openapi-chatgpt.json) (template) · import **`openapi-chatgpt.deployed.json`** into Custom GPT (patched URL at bridge start).
 
