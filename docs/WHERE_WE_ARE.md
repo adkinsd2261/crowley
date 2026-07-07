@@ -202,6 +202,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `spark_graph.py` | Spark links, expansion, pruning (T9–T10) |
 | `patterns.py` | Pattern detection + safety gates (T11–T12) |
 | `context_orchestration.py` | Context bundle orchestration (T13) |
+| `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | V4 part 1 patch — agent.sync ASE + GitHub envelope |
 | `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | V4 partial ship doc lock (T1–T13) |
 | `tickets/v4.0_cognitive_memory.json` | V4 ticket packet (#203–#226) |
 | `handoff_ticket_bridge.py` | Handoff → ticket persistence bridge (V3.9.18) |

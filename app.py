@@ -310,6 +310,7 @@ def api_agent_sync(
             bundle,
             tool_names=tool_names,
         )
+        bundle = crowley.finalize_agent_sync_bundle(bundle)
         return JSONResponse(bundle)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -405,6 +406,27 @@ def api_cognitive_context(
     except ValueError as exc:
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
     return JSONResponse(result)
+
+
+@app.get("/api/agent/deep_sync")
+def api_agent_deep_sync(
+    agent: Literal["cursor", "codex", "chatgpt"] = Query(...),
+    section: str = Query(...),
+    cursor: str | None = Query(None),
+    limit: int = Query(20, ge=1, le=50),
+) -> JSONResponse:
+    import agent_sync_envelope
+
+    try:
+        payload = agent_sync_envelope.build_deep_sync_page(
+            agent,
+            section,
+            cursor=cursor,
+            limit=limit,
+        )
+    except ValueError as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
+    return JSONResponse(payload)
 
 
 @app.get("/api/bus/health")

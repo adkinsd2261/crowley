@@ -680,7 +680,7 @@ def handoff_since_session(agent: str) -> bool:
 def is_slim_sync_bundle(sync: dict[str, Any]) -> bool:
     """True when /api/agent/sync returned a slim or task-frame bundle."""
     shape = sync.get("bundle_shape")
-    if shape in {"slim_v399", "task_frame_v3910"}:
+    if shape in {"slim_v399", "task_frame_v3910", "ase_v1"}:
         return True
     if isinstance(sync.get("bundle_caps"), dict):
         return True

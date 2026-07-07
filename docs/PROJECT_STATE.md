@@ -42,6 +42,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
 - **V3.9.13 shipped on `main`** — ChatGPT Actions API: bearer-auth `/api/actions/*`, OpenAPI, bridge scripts (`start_chatgpt_bridge.sh`), setup guide
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
+- **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE + GitHub envelope on Actions bridge; see [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
 - **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T13 (#203–#215): sparks schema, ingest, retrieval, graph, patterns, context API — **13/24 tickets; not V4.0 complete**; see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
 - **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T14 (#216).
 
@@ -75,8 +76,8 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `spark_retrieval.py` | **Active (V4 partial)** | Deterministic spark retrieval (T8) |
 | `spark_graph.py` | **Active (V4 partial)** | Spark links, graph expansion (T9–T10) |
 | `patterns.py` | **Active (V4 partial)** | Pattern detection + safety (T11–T12) |
-| `context_orchestration.py` | **Active (V4 partial)** | Context bundle orchestration (T13) |
-| `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | **Active** | V4 mid-lock — T1–T13 only; not release |
+| `agent_sync_envelope.py` | **Active (V4 part 1)** | ASE + deep_sync pagination (#229–#230) |
+| `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | **Active** | V4 part 1 patch — sync ASE + GitHub envelope |
 | `tickets/v4.0_cognitive_memory.json` | **Active** | V4 ticket packet (#203–#226) |
 | `scripts/backfill_constraint_deduplication.py` | **Active** | Constraint dedup backfill (V3.9.19 #163) |
 | `docs/V3.9.19_MEMORY_QUALITY.md` | **Active** | V3.9.19 release spec |

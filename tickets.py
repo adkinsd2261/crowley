@@ -830,6 +830,9 @@ def _enrich_tickets_with_handoff_links(
 def build_tickets_summary(
     project_id: int | None,
     agent: str | None = None,
+    *,
+    open_limit: int = 50,
+    closed_limit: int = 5,
 ) -> dict[str, object]:
     if project_id is None:
         return {
@@ -846,7 +849,11 @@ def build_tickets_summary(
             },
         }
 
-    open_rows = list_tickets(project_id=project_id, open_only=True, limit=50)
+    open_rows = list_tickets(
+        project_id=project_id,
+        open_only=True,
+        limit=max(1, min(int(open_limit), 50)),
+    )
     open_payload = _enrich_tickets_with_handoff_links(
         [_ticket_row_to_dict(row) for row in open_rows]
     )
@@ -863,7 +870,7 @@ def build_tickets_summary(
     closed_rows = list_tickets(
         project_id=project_id,
         status="done,cancelled",
-        limit=5,
+        limit=max(1, min(int(closed_limit), 20)),
     )
     return {
         "open": open_payload,

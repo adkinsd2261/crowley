@@ -3742,17 +3742,31 @@ def _task_frame_ticket_payload(ticket: dict[str, object]) -> dict[str, object]:
 def build_task_frame_context(
     project_id: int | None,
     agent: str | None = None,
+    *,
+    sync_limit: int | None = None,
 ) -> dict[str, object]:
     """Structured task brief: working tickets, handoff, guardrails (V3.9.10 #64)."""
+    import agent_sync_envelope
+
     normalized_agent = (
         agent.strip().lower() if isinstance(agent, str) and agent.strip() else None
     )
     role = get_agent_role(normalized_agent) if normalized_agent else None
+    section_caps = (
+        agent_sync_envelope.section_caps(sync_limit)
+        if sync_limit is not None
+        else {
+            "task_frame_working": TASK_FRAME_WORKING_ON_CAP,
+            "decisions": AGENT_SYNC_DECISIONS_CAP,
+            "constraints": AGENT_SYNC_CONSTRAINTS_CAP,
+            "tickets_open": 50,
+        }
+    )
     empty_guardrails = {"recent_decisions": [], "constraint_memories": []}
     caps = {
-        "working_on": TASK_FRAME_WORKING_ON_CAP,
-        "recent_decisions": AGENT_SYNC_DECISIONS_CAP,
-        "constraint_memories": AGENT_SYNC_CONSTRAINTS_CAP,
+        "working_on": section_caps["task_frame_working"],
+        "recent_decisions": section_caps["decisions"],
+        "constraint_memories": section_caps["constraints"],
     }
     if project_id is None:
         return {
@@ -3765,7 +3779,12 @@ def build_task_frame_context(
             "caps": caps,
         }
 
-    summary = build_tickets_summary(project_id, normalized_agent)
+    summary = build_tickets_summary(
+        project_id,
+        normalized_agent,
+        open_limit=section_caps["tickets_open"],
+        closed_limit=min(5, section_caps["tickets_open"]),
+    )
     working_on: list[dict[str, object]] = []
     seen_work_ids: set[int] = set()
 
@@ -3822,17 +3841,17 @@ def build_task_frame_context(
 
     recent_decisions = [
         row_to_dict(row)
-        for row in list_decisions(project_id, limit=AGENT_SYNC_DECISIONS_CAP)
+        for row in list_decisions(project_id, limit=section_caps["decisions"])
     ]
     constraint_memories = _list_constraint_memories(
-        project_id, limit=AGENT_SYNC_CONSTRAINTS_CAP
+        project_id, limit=section_caps["constraints"]
     )
 
     return {
         "agent": normalized_agent,
         "role": role,
-        "working_on": working_on[:TASK_FRAME_WORKING_ON_CAP],
-        "blockers": blockers[:TASK_FRAME_WORKING_ON_CAP],
+        "working_on": working_on[: section_caps["task_frame_working"]],
+        "blockers": blockers[: section_caps["task_frame_working"]],
         "last_handoff": last_handoff,
         "guardrails": {
             "recent_decisions": recent_decisions,
@@ -6150,7 +6169,10 @@ def _canon_api_items(project_id: int | None = None) -> list[dict[str, object]]:
 
 
 def _agent_sync_memory_limit(limit: int) -> int:
-    return max(AGENT_SYNC_MEMORIES_MIN, min(AGENT_SYNC_MEMORIES_MAX, int(limit)))
+    import agent_sync_envelope
+
+    caps = agent_sync_envelope.section_caps(limit)
+    return caps["memories"]
 
 
 def _list_constraint_memories(
@@ -8351,11 +8373,15 @@ def get_agent_role(agent: str) -> str:
 
 def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
     """Read-only slim sync snapshot for agents communicating through Crowley (V3.9.9)."""
+    import agent_sync_envelope
+
     normalized_agent = agent.strip().lower()
     if normalized_agent not in {"cursor", "codex", "chatgpt"}:
         raise ValueError(f"unsupported agent: {agent}")
 
-    memory_limit = _agent_sync_memory_limit(limit)
+    sync_limit = agent_sync_envelope.normalize_agent_sync_limit(limit)
+    caps = agent_sync_envelope.section_caps(sync_limit)
+    memory_limit = caps["memories"]
     project = get_active_project()
     project_id = int(project["id"]) if project is not None else None
     state = get_project_state(project_id) if project_id is not None else None
@@ -8363,28 +8389,31 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
 
     raw_events = [
         _memory_item_api_dict(row)
-        for row in list_recent_agent_events(limit=50, project_id=project_id)
+        for row in list_recent_agent_events(
+            limit=max(sync_limit, caps["events_other"]),
+            project_id=project_id,
+        )
     ]
     events_from_this_agent = [
         _agent_sync_event_dict(event)
         for event in raw_events
         if str(event.get("source", "")).lower() == normalized_agent
-    ][:AGENT_SYNC_OWN_EVENTS_CAP]
+    ][: caps["events_own"]]
     events_from_other_agents = [
         _agent_sync_event_dict(event)
         for event in raw_events
         if str(event.get("source", "")).lower() != normalized_agent
-    ][:AGENT_SYNC_OTHER_EVENTS_CAP]
+    ][: caps["events_other"]]
 
     recent_decisions: list[dict[str, object]] = []
     if project_id is not None:
         recent_decisions = [
             row_to_dict(row)
-            for row in list_decisions(project_id, limit=AGENT_SYNC_DECISIONS_CAP)
+            for row in list_decisions(project_id, limit=caps["decisions"])
         ]
 
     constraint_memories = _list_constraint_memories(
-        project_id, limit=AGENT_SYNC_CONSTRAINTS_CAP
+        project_id, limit=caps["constraints"]
     )
     retrieval_context = retrieve_work_context_memories(
         project_id,
@@ -8394,19 +8423,28 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
     relevant_memories = retrieval_context["memories"]
     supporting_memories = relevant_memories
     recommended = _state_display(state["next_action"]) if state is not None else "(unset)"
-    tickets = build_tickets_summary(project_id, normalized_agent)
-    task_frame = build_task_frame_context(project_id, normalized_agent)
+    tickets = build_tickets_summary(
+        project_id,
+        normalized_agent,
+        open_limit=caps["tickets_open"],
+        closed_limit=caps["tickets_closed"],
+    )
+    task_frame = build_task_frame_context(
+        project_id,
+        normalized_agent,
+        sync_limit=sync_limit,
+    )
     activity_wire = _slim_activity_wire_for_agent(
         build_activity_wire(project_id, limit=ACTIVITY_WIRE_WORLD_CAP),
         normalized_agent,
-        limit=ACTIVITY_WIRE_SYNC_CAP,
+        limit=caps["activity_wire"],
     )
 
     import agent_behavior
 
-    recent_handoffs = agent_behavior.build_auto_handoff_feed(limit=8)
+    recent_handoffs = agent_behavior.build_auto_handoff_feed(limit=caps["handoffs"])
 
-    return {
+    bundle = {
         "agent": normalized_agent,
         "role": get_agent_role(normalized_agent),
         "permissions": _agent_permissions_payload(normalized_agent),
@@ -8440,17 +8478,29 @@ def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
         "supporting_memories": supporting_memories,
         "relevant_memories_tickets": retrieval_context["tickets"],
         "bundle_shape": AGENT_SYNC_BUNDLE_SHAPE,
+        "sync_limit": sync_limit,
         "bundle_caps": {
-            "recent_decisions": AGENT_SYNC_DECISIONS_CAP,
-            "constraint_memories": AGENT_SYNC_CONSTRAINTS_CAP,
-            "events_from_other_agents": AGENT_SYNC_OTHER_EVENTS_CAP,
-            "events_from_this_agent": AGENT_SYNC_OWN_EVENTS_CAP,
-            "supporting_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
-            "relevant_memories": min(memory_limit, SUPPORTING_MEMORIES_CAP),
-            "task_frame_working_on": TASK_FRAME_WORKING_ON_CAP,
-            "activity_wire": ACTIVITY_WIRE_SYNC_CAP,
+            "sync_limit": sync_limit,
+            "recent_decisions": caps["decisions"],
+            "constraint_memories": caps["constraints"],
+            "events_from_other_agents": caps["events_other"],
+            "events_from_this_agent": caps["events_own"],
+            "supporting_memories": memory_limit,
+            "relevant_memories": memory_limit,
+            "task_frame_working_on": caps["task_frame_working"],
+            "activity_wire": caps["activity_wire"],
+            "handoffs": caps["handoffs"],
+            "tickets_open": caps["tickets_open"],
         },
     }
+    return bundle
+
+
+def finalize_agent_sync_bundle(bundle: dict[str, object]) -> dict[str, object]:
+    """Apply ASE byte bounding to a sync bundle (#229)."""
+    import agent_sync_envelope
+
+    return agent_sync_envelope.apply_adaptive_sync_envelope(bundle)
 
 
 INGEST_SOURCES = frozenset({"cursor", "chatgpt", "codex", "manual", "crowley"})

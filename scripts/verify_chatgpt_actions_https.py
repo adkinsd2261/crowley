@@ -14,9 +14,27 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 import certifi
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def load_action_key_from_env() -> str | None:
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        return None
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        if key.strip() == "CROWLEY_ACTION_KEY":
+            token = value.strip().strip("'\"")
+            return token or None
+    return None
 
 WRITEBACK_PARSE_BODY: dict[str, Any] = {
     "writeback": {
@@ -226,19 +244,25 @@ def verify(*, base_url: str, action_key: str, wait_seconds: int = 90) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify ChatGPT Actions API over HTTPS.")
     parser.add_argument("--url", help="Public HTTPS base URL")
-    parser.add_argument("--key", required=True, help="CROWLEY_ACTION_KEY bearer token")
+    parser.add_argument("--key", help="CROWLEY_ACTION_KEY bearer token (default: .env)")
     parser.add_argument("--wait", type=int, default=90, help="Seconds to wait for tunnel readiness")
     parser.add_argument("--local-only", action="store_true", help="Verify localhost Actions only")
     parser.add_argument("--port", type=int, default=8765, help="Local Crowley port")
     args = parser.parse_args()
 
+    action_key = (args.key or "").strip() or load_action_key_from_env()
+    if not action_key:
+        parser.error(
+            "CROWLEY_ACTION_KEY required: pass --key or set it in .env"
+        )
+
     if args.local_only:
-        return verify_local(action_key=args.key, port=args.port)
+        return verify_local(action_key=action_key, port=args.port)
 
     if not args.url:
         parser.error("--url is required unless --local-only is set")
 
-    return verify(base_url=args.url, action_key=args.key, wait_seconds=args.wait)
+    return verify(base_url=args.url, action_key=action_key, wait_seconds=args.wait)
 
 
 if __name__ == "__main__":

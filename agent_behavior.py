@@ -763,7 +763,7 @@ def build_auto_handoff_feed(*, limit: int = 8) -> dict[str, object]:
     """#124 — auto-load handoff.list after sync."""
     import crowley
 
-    limit = max(5, min(int(limit), 10))
+    limit = max(1, min(int(limit), 50))
     rows = crowley.list_recent_agent_events(limit=limit)
     items = [crowley._memory_item_api_dict(row) for row in rows]
     handoffs = [

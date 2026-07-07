@@ -177,6 +177,7 @@ def dispatch(
             body,
             tool_names=sorted(_TOOLS.keys()),
         )
+        body = crowley.finalize_agent_sync_bundle(body)
     return body, resolved_status
 
 
@@ -813,6 +814,28 @@ def _register_planning_tools() -> None:
         limit = min(_optional_int(args, "limit", 20), 50)
         return crowley.build_agent_sync_bundle(agent=agent, limit=limit), None
 
+    def _handle_agent_deep_sync(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+        import agent_sync_envelope
+
+        agent = _optional_str(args, "agent") or "chatgpt"
+        section = _optional_str(args, "section")
+        if not section:
+            raise ValueError("section is required")
+        cursor = _optional_str(args, "cursor")
+        limit = min(_optional_int(args, "limit", 20), 50)
+        try:
+            return (
+                agent_sync_envelope.build_deep_sync_page(
+                    agent,
+                    section,
+                    cursor=cursor,
+                    limit=limit,
+                ),
+                None,
+            )
+        except ValueError as exc:
+            return {"status": "error", "error": str(exc)}, 400
+
     def _handle_planning_task_frame(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
         project = crowley.get_active_project()
         project_id = int(project["id"]) if project is not None else None
@@ -839,6 +862,20 @@ def _register_planning_tools() -> None:
             "Agent sync bundle (Codex --before equivalent).",
             {"properties": {"agent": {"type": "string", "default": "chatgpt"}, "limit": {"type": "integer"}}},
             _handle_agent_sync,
+        ),
+        (
+            "agent.deep_sync",
+            "Paginated deep sync for one agent.sync section (handoffs, tickets, memory, ...).",
+            {
+                "required": ["section"],
+                "properties": {
+                    "agent": {"type": "string", "default": "chatgpt"},
+                    "section": {"type": "string"},
+                    "cursor": {"type": "string"},
+                    "limit": {"type": "integer"},
+                },
+            },
+            _handle_agent_deep_sync,
         ),
         (
             "planning.task_frame",
@@ -1047,8 +1084,24 @@ def _github_dispatch(call: Callable[[], Any], _args: dict[str, Any]) -> tuple[di
         result = call()
     except github_read.GitHubNotConfiguredError as exc:
         return {"ok": False, "error": "github_not_configured", "message": str(exc)}, 503
+    except github_read.GitHubReadError as exc:
+        return {
+            "ok": False,
+            "error": "github_read_failed",
+            "message": str(exc)[:500],
+        }, 200
     except RuntimeError as exc:
-        return {"ok": False, "error": "github_error", "message": str(exc)}, 502
+        return {
+            "ok": False,
+            "error": "github_read_failed",
+            "message": str(exc)[:500],
+        }, 200
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "github_read_failed",
+            "message": str(exc)[:500],
+        }, 200
     if isinstance(result, dict):
         return result, None
     return {"result": result}, None
