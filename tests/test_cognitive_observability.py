@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -15,24 +16,34 @@ sys.path.insert(0, str(ROOT / "tests"))
 import agent_behavior  # noqa: E402
 import app as crowley_app  # noqa: E402
 import cognitive_ingest  # noqa: E402
+import context_orchestration  # noqa: E402
 import observability_store  # noqa: E402
 import system_integrity  # noqa: E402
+from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-
+ACTIONS_KEY = "test-actions-key"
 SESSION_KEY = crowley_app.COGNITIVE_API_OBSERVABILITY_SESSION
 
 
 class CognitiveObservabilityTests(IsolatedDbTestCase):
     def setUp(self) -> None:
         super().setUp()
+        self._prior_key = os.environ.get("CROWLEY_ACTION_KEY")
+        os.environ["CROWLEY_ACTION_KEY"] = ACTIONS_KEY
         agent_behavior.reset_request_cycle(SESSION_KEY)
         system_integrity._cognitive_ingest_timestamps.clear()  # noqa: SLF001
 
     def tearDown(self) -> None:
-        system_integrity._cognitive_ingest_timestamps.clear()  # noqa: SLF001
-        super().tearDown()
+        try:
+            if self._prior_key is None:
+                os.environ.pop("CROWLEY_ACTION_KEY", None)
+            else:
+                os.environ["CROWLEY_ACTION_KEY"] = self._prior_key
+        finally:
+            system_integrity._cognitive_ingest_timestamps.clear()  # noqa: SLF001
+            super().tearDown()
 
     def _tools(self) -> list[str]:
         return [
@@ -82,6 +93,49 @@ class CognitiveObservabilityTests(IsolatedDbTestCase):
             res = client.get("/api/cognitive/context", params={"q": "blocked"})
         self.assertEqual(res.status_code, 428)
         self.assertEqual(res.json().get("error"), "invariant_violation")
+
+    def test_actions_cognitive_context_logged_to_observability_chain(self) -> None:
+        actions_session = "cognitive-obs-actions-test"
+        agent_behavior.reset_request_cycle(actions_session)
+        headers = actions_headers(ACTIONS_KEY, session=actions_session)
+        client = TestClient(crowley_app.app)
+        boot_actions_session(client, headers)
+        with mock.patch.object(
+            context_orchestration,
+            "build_cognitive_context",
+            return_value={
+                "core_sparks": [],
+                "supporting_sparks": [],
+                "patterns": [],
+                "confidence": 0.0,
+                "trace": {
+                    "lanes_used": [],
+                    "retrieved_count": 0,
+                    "core_count": 0,
+                    "supporting_count": 0,
+                    "pattern_count": 0,
+                    "expand_hops": 1,
+                    "selection_reason": "test",
+                    "score_basis": "test",
+                },
+            },
+        ):
+            res = client.post(
+                "/api/actions/read",
+                headers=headers,
+                json={"tool": "cognitive.context", "args": {"q": "observability"}},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        tools = [
+            str(entry.get("tool_called"))
+            for entry in observability_store.get_observability_logs(
+                actions_session, limit=20
+            )
+        ]
+        self.assertIn("cognitive.context", tools)
+        self.assertTrue(
+            observability_store.verify_observability_chain(actions_session)["ok"]
+        )
 
 
 if __name__ == "__main__":
