@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.19 · V4.0 Cognitive Memory mid-lock (T1–T14)
-**Last doc sync:** 2026-07-07 (V4 Part 1 bridge E2E lock — ChatGPT loop verified)
+**As of:** V3.9.20 · V4.0 Cognitive Memory mid-lock (T1–T14)
+**Last doc sync:** 2026-07-08 (V3.9.20 ticket lineage + memory linkage lock)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -36,6 +36,7 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.9 shipped locally** — memory quality gate, inclusion reasons, slim agent sync, handoff-to-memory upgrade, feedback loop, handoff-ticket wiring, UI/hygiene (#56–#63)
 - **V3.9.16 shipped** — Workflow Enforcement: boot gate, truth hierarchy, core tool tiers, QA pipeline handoffs (#101–#111)
 - **V3.9.17 shipped** — Trust Control and Clarity: write attribution, permissions, audit/rollback, memory tiers, conflict engine, agent behavior layer (#112–#130)
+- **V3.9.20 shipped** — Ticket lineage + memory linkage: `sort=oldest`, `tickets.lineage`, `linked_ticket_ids_json`, `ticket.get include_memories` (#264, #225)
 - **V3.9.19 shipped** — Memory Quality: ingest dedup, retrieval strength, lifecycle cleanup, observability-backed validation runtime wiring (#152–#166)
 - **V3.9.18 shipped** — Agent Retrieval Enforcement + integrity patch: handoff→ticket bridge, gating, system integrity, parity reconcile (#131–#151)
 - **V3.9.15 shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100)

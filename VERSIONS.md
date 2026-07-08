@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.19 (`Crowley V3.9.19 Memory Quality`)
-**Next planned:** V4.0 Cognitive Memory (mid-lock — version bump at T24 #226)
+**Current:** V3.9.20 (`Crowley V3.9.20 Ticket Memory Linkage`)
+**Next planned:** V4.0 Cognitive Memory (mid-lock — final bump at T24 #226)
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
@@ -41,6 +41,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.16 | shipped  | 2026-07-06 | Workflow Enforcement — boot gate, truth hierarchy, core tools, QA pipeline (#101–#111) |
 | V3.9.17 | shipped  | 2026-07-06 | Trust Control and Clarity — attribution, audit, tiers, conflicts, agent behavior (#112–#130) |
 | V3.9.19 | shipped  | 2026-07-06 | Memory Quality — ingest dedup, lifecycle cleanup, validation runtime wiring (#152–#157, #162–#166) |
+| V3.9.20 | shipped  | 2026-07-08 | Ticket lineage + memory linkage — full arc query, bidirectional index, audit/backfill (#264, #225) |
 | V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0    | in progress | 2026-07-07 | Cognitive Memory mid-lock T1–T13; Part 1 ASE/GitHub + bridge E2E; bump at T24 |
@@ -538,7 +539,24 @@ Plan: [docs/V3.9.19_MEMORY_QUALITY.md](./docs/V3.9.19_MEMORY_QUALITY.md) · Tick
 | Validation | Observability-backed checklist (#162); runtime wiring on Actions + `/api/agent/sync` (#166) |
 | Tests | **471 tests** with `CROWLEY_TEST_MODE=1` |
 
-### Post-3.9.19 integrity hardening (no version bump yet — Codex to review)
+---
+
+## V3.9.20 — Ticket Lineage & Memory Linkage
+
+**Version:** `CROWLEY_VERSION = "3.9.20"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.20 Ticket Memory Linkage"`
+
+Plan: [docs/V3.9.20_TICKET_MEMORY_LINKAGE.md](./docs/V3.9.20_TICKET_MEMORY_LINKAGE.md) · Tickets `#264`, `#225`
+
+| Area | Detail |
+|------|--------|
+| Ticket lineage | `sort=oldest`, `tickets.lineage` in `agent.sync`, `agent.deep_sync scope=history`, audit script |
+| Memory linkage | `memory_ticket_linkage.py`, `linked_ticket_ids_json`, backfill + audit scripts |
+| Ticket detail | `ticket.get` / REST `include_memories` — grouped linked memories |
+| Retrieval | Query-ticket boost; persisted memory→ticket links |
+| Handoff bridge | Next Action `#N` excluded from false ticket close |
+| Tests | `test_ticket_lineage`, `test_memory_ticket_linkage` |
+
+### Post-3.9.19 integrity hardening (folded into 3.9.20 release)
 
 Tickets `#167`, `#171–#193` (ChatGPT-minted; #185–#188/#191–#192 closed as duplicates of #171–#184).
 

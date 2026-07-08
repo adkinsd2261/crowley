@@ -4,7 +4,7 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
-**v3.9.19 (Stable — July 2026)** — memory quality, V4 cognitive memory mid-lock (T1–T13), ChatGPT Actions E2E verified. Version constant stays `3.9.19` until V4 T24 release lock.
+**v3.9.20 (Stable — July 2026)** — ticket lineage + memory linkage, V4 cognitive memory mid-lock (T1–T14), ChatGPT Actions E2E verified. V4 final bump at T24 (#226).
 
 ---
 
@@ -369,7 +369,7 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-**Current:** v3.9.19 (Stable)
+**Current:** v3.9.20 (Stable)
 
 - [x] Persistent semantic memory + retrieval
 - [x] Model hotswapping (OpenAI, Anthropic, Ollama)

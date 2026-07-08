@@ -61,6 +61,10 @@ class DomainReadToolTests(IsolatedDbTestCase):
         ids = {row["id"] for row in listed["items"]}
         self.assertIn(self.memory_id, ids)
 
+    def test_memory_get_memory_id_alias(self) -> None:
+        item = self._read("memory.get", {"memory_id": self.memory_id})
+        self.assertEqual(item["id"], self.memory_id)
+
     def test_memory_get_not_found(self) -> None:
         with TestClient(crowley_app.app) as client:
             boot_actions_session(client, AUTH_HEADER)

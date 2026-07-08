@@ -44,8 +44,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.19"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.19 Memory Quality"
+CROWLEY_VERSION = "3.9.20"
+CROWLEY_RELEASE_LABEL = "Crowley V3.9.20 Ticket Memory Linkage"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -1998,7 +1998,7 @@ def build_planning_ticket_bundle(ticket_id: int) -> dict[str, object] | None:
     """Ticket detail plus task-frame context for implementation planning."""
     import tickets as tickets_mod
 
-    detail = tickets_mod.get_ticket_detail(ticket_id)
+    detail = tickets_mod.get_ticket_detail(ticket_id, include_memories=True)
     if detail is None:
         return None
     project = get_active_project()
@@ -2225,27 +2225,9 @@ def _ticket_linked_handoff(memory_id: int | None) -> dict[str, object] | None:
 
 
 def _tickets_by_linked_memory_ids(memory_ids: list[int]) -> dict[int, list[int]]:
-    if not memory_ids:
-        return {}
-    marks = ",".join("?" for _ in memory_ids)
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            f"""
-            SELECT id, linked_memory_id
-            FROM tickets
-            WHERE linked_memory_id IN ({marks})
-            ORDER BY id ASC
-            """,
-            memory_ids,
-        ).fetchall()
-    finally:
-        conn.close()
-    linked: dict[int, list[int]] = {}
-    for row in rows:
-        mem_id = int(row["linked_memory_id"])
-        linked.setdefault(mem_id, []).append(int(row["id"]))
-    return linked
+    import memory_ticket_linkage
+
+    return memory_ticket_linkage.batch_linked_ticket_ids(memory_ids)
 
 
 def _handoff_next_action_line(content: str) -> str | None:
@@ -4293,6 +4275,12 @@ def _ensure_memory_items_columns(conn: sqlite3.Connection) -> None:
         )
     if "metadata_json" not in cols:
         conn.execute("ALTER TABLE memory_items ADD COLUMN metadata_json TEXT")
+    try:
+        import memory_ticket_linkage
+
+        memory_ticket_linkage.ensure_linkage_column(conn)
+    except Exception:
+        pass
 
 
 def _normalize_memory_dedupe_key(content: str) -> str:
@@ -5956,11 +5944,24 @@ def retrieve_memories(
             ):
                 open_tickets_by_id[int(ticket_row["id"])] = ticket_row
         open_ticket_ids = set(open_tickets_by_id.keys())
-        linked_by_mem = (
-            _tickets_by_linked_memory_ids(list(candidate_ids))
-            if open_ticket_ids
-            else {}
-        )
+        linked_by_mem = _tickets_by_linked_memory_ids(list(candidate_ids))
+        import memory_ticket_linkage
+
+        max_ticket_id = memory_ticket_linkage.max_ticket_id(conn)
+        query_ticket_ids: set[int] = set()
+        import handoff_ticket_bridge
+
+        for ticket_id in handoff_ticket_bridge.extract_referenced_ticket_ids(query):
+            if 1 <= ticket_id <= max_ticket_id:
+                query_ticket_ids.add(ticket_id)
+        query_ticket_rows: dict[int, sqlite3.Row] = {}
+        for ticket_id in query_ticket_ids:
+            ticket_row = conn.execute(
+                "SELECT * FROM tickets WHERE id = ?",
+                (ticket_id,),
+            ).fetchone()
+            if ticket_row is not None:
+                query_ticket_rows[ticket_id] = ticket_row
         results: list[dict[str, object]] = []
         semantic_used = bool(query_embedding and semantic_scores)
 
@@ -5977,10 +5978,19 @@ def retrieve_memories(
             )
             linked_ticket_ids = linked_by_mem.get(memory_id, [])
             ticket_boost = 0.0
-            if open_ticket_ids and any(
+            if query_ticket_ids and any(
+                ticket_id in query_ticket_ids for ticket_id in linked_ticket_ids
+            ):
+                ticket_boost = W_SCORE_OPEN_TICKET_BOOST
+            elif open_ticket_ids and any(
                 ticket_id in open_ticket_ids for ticket_id in linked_ticket_ids
             ):
                 ticket_boost = W_SCORE_OPEN_TICKET_BOOST
+            elif query_ticket_rows:
+                for ticket_row in query_ticket_rows.values():
+                    if _memory_relates_to_ticket(row, ticket_row):
+                        ticket_boost = W_SCORE_OPEN_TICKET_BOOST * 0.85
+                        break
             elif open_ticket_ids:
                 for ticket_id in open_ticket_ids:
                     ticket_row = open_tickets_by_id[ticket_id]
@@ -9033,6 +9043,24 @@ def ingest_handoff(
         handoff_ticket_bridge.require_handoff_memory_parity(int(memory_item_id), bridge)
         bridge["ticket_extraction_source"] = extraction_source
         result["handoff_ticket"] = bridge
+        try:
+            import memory_ticket_linkage
+
+            bridge_ticket_ids: list[int] = []
+            ticket_payload = bridge.get("ticket")
+            if isinstance(ticket_payload, dict) and ticket_payload.get("id") is not None:
+                bridge_ticket_ids.append(int(ticket_payload["id"]))
+            work_ticket_id = bridge.get("work_ticket_id")
+            if work_ticket_id is not None:
+                bridge_ticket_ids.append(int(work_ticket_id))
+            memory_ticket_linkage.sync_handoff_memory_links(
+                int(memory_item_id),
+                trimmed_content,
+                metadata=ingest_metadata,
+                ticket_ids=bridge_ticket_ids,
+            )
+        except Exception:
+            pass
 
     return result
 

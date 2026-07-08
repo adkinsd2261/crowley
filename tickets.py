@@ -319,27 +319,9 @@ def _format_ticket_event_feed_summary(
 
 
 def _tickets_by_linked_memory_ids(memory_ids: list[int]) -> dict[int, list[int]]:
-    if not memory_ids:
-        return {}
-    marks = ",".join("?" for _ in memory_ids)
-    conn = crowley.connect_db()
-    try:
-        rows = conn.execute(
-            f"""
-            SELECT id, linked_memory_id
-            FROM tickets
-            WHERE linked_memory_id IN ({marks})
-            ORDER BY id ASC
-            """,
-            memory_ids,
-        ).fetchall()
-    finally:
-        conn.close()
-    linked: dict[int, list[int]] = {}
-    for row in rows:
-        mem_id = int(row["linked_memory_id"])
-        linked.setdefault(mem_id, []).append(int(row["id"]))
-    return linked
+    import memory_ticket_linkage
+
+    return memory_ticket_linkage.batch_linked_ticket_ids(memory_ids)
 
 
 def _ticket_linked_handoff(memory_id: int | None) -> dict[str, object] | None:
@@ -488,6 +470,8 @@ def list_tickets(
     sort_norm = (sort or "priority").strip().lower()
     if sort_norm in {"newest", "created_desc", "recent"}:
         order_clause = "ORDER BY datetime(created_at) DESC, id DESC"
+    elif sort_norm in {"oldest", "created_asc"}:
+        order_clause = "ORDER BY datetime(created_at) ASC, id ASC"
     elif sort_norm in {"updated", "updated_desc"}:
         order_clause = "ORDER BY datetime(updated_at) DESC, id DESC"
     else:
@@ -527,8 +511,17 @@ def count_tickets(
         clauses.append(f"status IN ({marks})")
         params.extend(sorted(TICKET_OPEN_STATUSES))
     elif status is not None:
-        clauses.append("status = ?")
-        params.append(_validate_ticket_status(status))
+        status_norm = status.strip().lower()
+        if status_norm == "all":
+            pass
+        elif "," in status:
+            statuses = [_validate_ticket_status(part) for part in status.split(",")]
+            marks = ",".join("?" for _ in statuses)
+            clauses.append(f"status IN ({marks})")
+            params.extend(statuses)
+        else:
+            clauses.append("status = ?")
+            params.append(_validate_ticket_status(status))
     if assignee is not None:
         clauses.append("assignee = ?")
         params.append(_validate_ticket_assignee(assignee))
@@ -675,6 +668,12 @@ def update_ticket(
                     {"memory_id": new_linked},
                 )
             )
+            try:
+                import memory_ticket_linkage
+
+                memory_ticket_linkage.add_memory_ticket_link(new_linked, ticket_id)
+            except Exception:
+                pass
 
     if comment and comment.strip():
         event_ids.append(
@@ -765,7 +764,13 @@ def claim_ticket(ticket_id: int, *, actor: str) -> dict[str, object]:
     return result
 
 
-def get_ticket_detail(ticket_id: int, *, event_limit: int = 20) -> dict[str, object] | None:
+def get_ticket_detail(
+    ticket_id: int,
+    *,
+    event_limit: int = 20,
+    include_memories: bool = False,
+    memory_limit: int = 50,
+) -> dict[str, object] | None:
     row = get_ticket_by_id(ticket_id)
     if row is None:
         return None
@@ -781,7 +786,22 @@ def get_ticket_detail(ticket_id: int, *, event_limit: int = 20) -> dict[str, obj
     linked_handoff = _ticket_linked_handoff(
         int(linked_memory_id) if linked_memory_id is not None else None
     )
-    return {"ticket": ticket, "events": events, "linked_handoff": linked_handoff}
+    detail: dict[str, object] = {
+        "ticket": ticket,
+        "events": events,
+        "linked_handoff": linked_handoff,
+    }
+    if include_memories:
+        import memory_ticket_linkage
+
+        context = memory_ticket_linkage.ticket_memory_context(
+            ticket_id,
+            memory_limit=memory_limit,
+        )
+        detail["linked_memories"] = context["by_type"]
+        detail["linked_memories_total"] = context["total"]
+        detail["linked_handoffs"] = context["handoffs"]
+    return detail
 
 
 def group_tickets_by_parent(
@@ -836,6 +856,78 @@ def _enrich_tickets_with_handoff_links(
     return enriched
 
 
+def _ticket_anchor_payload(row: sqlite3.Row | dict[str, object]) -> dict[str, object]:
+    data = row if isinstance(row, dict) else _ticket_row_to_dict(row)
+    return {
+        "id": data.get("id"),
+        "title": data.get("title"),
+        "status": data.get("status"),
+        "created_at": data.get("created_at"),
+        "updated_at": data.get("updated_at"),
+    }
+
+
+def build_ticket_lineage(project_id: int | None) -> dict[str, object]:
+    """Compact ticket continuity metadata for sync and audit surfaces."""
+    if project_id is None:
+        return {
+            "total": 0,
+            "first_id": None,
+            "latest_id": None,
+            "gaps": [],
+            "by_status": {},
+            "first_ticket": None,
+            "latest_ticket": None,
+            "history_access": (
+                "ticket.list status=all sort=oldest | agent.deep_sync section=tickets scope=history"
+            ),
+        }
+
+    conn = crowley.connect_db()
+    try:
+        rows = conn.execute(
+            "SELECT id FROM tickets WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        ).fetchall()
+        ids = [int(row["id"]) for row in rows]
+        gap_list: list[int] = []
+        if ids:
+            id_set = set(ids)
+            gap_list = [i for i in range(ids[0], ids[-1] + 1) if i not in id_set]
+        status_rows = conn.execute(
+            "SELECT status, COUNT(*) AS c FROM tickets WHERE project_id = ? GROUP BY status",
+            (project_id,),
+        ).fetchall()
+        by_status = {str(row["status"]): int(row["c"]) for row in status_rows}
+    finally:
+        conn.close()
+
+    first_rows = list_tickets(
+        project_id=project_id,
+        status="all",
+        limit=1,
+        sort="oldest",
+    )
+    latest_rows = list_tickets(
+        project_id=project_id,
+        status="all",
+        limit=1,
+        sort="newest",
+    )
+    return {
+        "total": len(ids),
+        "first_id": ids[0] if ids else None,
+        "latest_id": ids[-1] if ids else None,
+        "gaps": gap_list,
+        "by_status": by_status,
+        "first_ticket": _ticket_anchor_payload(first_rows[0]) if first_rows else None,
+        "latest_ticket": _ticket_anchor_payload(latest_rows[0]) if latest_rows else None,
+        "history_access": (
+            "ticket.list status=all sort=oldest | agent.deep_sync section=tickets scope=history"
+        ),
+    }
+
+
 def build_tickets_summary(
     project_id: int | None,
     agent: str | None = None,
@@ -850,11 +942,18 @@ def build_tickets_summary(
             "assigned_to_agent": [],
             "blocked": [],
             "recently_closed": [],
+            "lineage": build_ticket_lineage(None),
             "counts": {
                 "open": 0,
                 "in_progress": 0,
                 "blocked": 0,
                 "done_recent": 0,
+                "total": 0,
+                "done": 0,
+                "cancelled": 0,
+                "first_id": None,
+                "latest_id": None,
+                "gaps": [],
             },
         }
 
@@ -880,7 +979,10 @@ def build_tickets_summary(
         project_id=project_id,
         status="done,cancelled",
         limit=max(1, min(int(closed_limit), 20)),
+        sort="newest",
     )
+    lineage = build_ticket_lineage(project_id)
+    by_status = lineage.get("by_status") if isinstance(lineage.get("by_status"), dict) else {}
     return {
         "open": open_payload,
         "grouped_open": grouped_open,
@@ -889,11 +991,18 @@ def build_tickets_summary(
         "recently_closed": _enrich_tickets_with_handoff_links(
             [_ticket_row_to_dict(row) for row in closed_rows]
         ),
+        "lineage": lineage,
         "counts": {
             "open": count_tickets(project_id=project_id, status="open"),
             "in_progress": count_tickets(project_id=project_id, status="in_progress"),
             "blocked": count_tickets(project_id=project_id, status="blocked"),
             "open_total": count_tickets(project_id=project_id, open_only=True),
+            "total": int(lineage.get("total") or 0),
+            "done": int(by_status.get("done", 0)),
+            "cancelled": int(by_status.get("cancelled", 0)),
+            "first_id": lineage.get("first_id"),
+            "latest_id": lineage.get("latest_id"),
+            "gaps": lineage.get("gaps") or [],
         },
     }
 

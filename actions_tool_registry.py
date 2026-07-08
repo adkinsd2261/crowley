@@ -586,9 +586,10 @@ def _register_v313_tools() -> None:
 
 
 def _handle_memory_get(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-    item = crowley.get_memory_item_api_by_id(_require_id(args))
+    memory_id = _require_entity_id(args, aliases=("memory_id",))
+    item = crowley.get_memory_item_api_by_id(memory_id)
     if item is None:
-        raise LookupError(f"memory not found: {args['id']}")
+        raise LookupError(f"memory not found: {memory_id}")
     return item, None
 
 
@@ -609,7 +610,13 @@ def _handle_memory_list(args: dict[str, Any]) -> tuple[dict[str, Any], int | Non
 
 def _handle_ticket_get(args: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
     ticket_id = _require_entity_id(args, aliases=("ticket_id",))
-    detail = tickets.get_ticket_detail(ticket_id)
+    include_memories = bool(args.get("include_memories"))
+    memory_limit = min(_optional_int(args, "memory_limit", 50), 200)
+    detail = tickets.get_ticket_detail(
+        ticket_id,
+        include_memories=include_memories,
+        memory_limit=memory_limit,
+    )
     if detail is None:
         raise LookupError(f"ticket not found: {ticket_id}")
     return detail, None
@@ -759,10 +766,20 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
 
 def _register_domain_read_tools() -> None:
     _domain_tools = [
-        ("memory.get", "Get one memory item by id (any status).", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_memory_get),
+        (
+            "memory.get",
+            "Get one memory item by id (any status).",
+            {
+                "properties": {
+                    "id": {"type": "integer", "description": "Memory id (canonical)"},
+                    "memory_id": {"type": "integer", "description": "Alias for id"},
+                }
+            },
+            _handle_memory_get,
+        ),
         ("memory.list", "List memory items with filters.", {"properties": {"q": {"type": "string"}, "source": {"type": "string"}, "memory_type": {"type": "string"}, "status": {"type": "string"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}}}, _handle_memory_list),
-        ("ticket.get", "Get ticket detail with events and linked handoff.", {"properties": {"id": {"type": "integer", "description": "Ticket id (canonical)"}, "ticket_id": {"type": "integer", "description": "Alias for id"}}}, _handle_ticket_get),
-        ("ticket.list", "List tickets for active project (default sort: newest first).", {"properties": {"status": {"type": "string"}, "assignee": {"type": "string"}, "priority": {"type": "integer"}, "parent_id": {"type": "integer"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}, "sort": {"type": "string", "description": "newest (default), priority, or updated"}}}, _handle_ticket_list),
+        ("ticket.get", "Get ticket detail with events, linked handoff, and optional linked memories.", {"properties": {"id": {"type": "integer", "description": "Ticket id (canonical)"}, "ticket_id": {"type": "integer", "description": "Alias for id"}, "include_memories": {"type": "boolean", "description": "When true, include linked_memories grouped by type"}, "memory_limit": {"type": "integer", "description": "Cap linked memories returned (default 50, max 200)"}}}, _handle_ticket_get),
+        ("ticket.list", "List tickets for active project (default sort: newest first).", {"properties": {"status": {"type": "string", "description": "open (default), all, done, cancelled, or comma-separated"}, "assignee": {"type": "string"}, "priority": {"type": "integer"}, "parent_id": {"type": "integer"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}, "sort": {"type": "string", "description": "newest (default), oldest, priority, or updated"}}}, _handle_ticket_list),
         ("session.get", "Get portable session receipt and linked sparks.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_session_get),
         ("session.list", "List portable terminal session receipts.", {"properties": {"status": {"type": "string"}, "limit": {"type": "integer"}, "offset": {"type": "integer"}}}, _handle_session_list),
         ("spark.get", "Get spark (memory event) by id.", {"required": ["id"], "properties": {"id": {"type": "integer"}}}, _handle_spark_get),
@@ -1011,6 +1028,7 @@ def _register_planning_tools() -> None:
         if not section:
             raise ValueError("section is required")
         cursor = _optional_str(args, "cursor")
+        scope = _optional_str(args, "scope") or "open"
         limit = min(_optional_int(args, "limit", 20), 50)
         try:
             return (
@@ -1019,6 +1037,7 @@ def _register_planning_tools() -> None:
                     section,
                     cursor=cursor,
                     limit=limit,
+                    scope=scope,
                 ),
                 None,
             )
@@ -1060,6 +1079,11 @@ def _register_planning_tools() -> None:
                 "properties": {
                     "agent": {"type": "string", "default": "chatgpt"},
                     "section": {"type": "string"},
+                    "scope": {
+                        "type": "string",
+                        "description": "For section=tickets: open (default), history (all oldest-first), closed",
+                        "enum": ["open", "history", "closed"],
+                    },
                     "cursor": {"type": "string"},
                     "limit": {"type": "integer"},
                 },

@@ -116,8 +116,8 @@ class WorldDashboardTests(IsolatedDbTestCase):
     def test_onboarding_docs_locked_for_v3915_gpt_toolbelt(self) -> None:
         where = (ROOT / "docs" / "WHERE_WE_ARE.md").read_text(encoding="utf-8")
         versions = (ROOT / "VERSIONS.md").read_text(encoding="utf-8")
-        self.assertIn('CROWLEY_VERSION = "3.9.19"', where)
-        self.assertTrue((ROOT / "docs" / "V3.9.19_MEMORY_QUALITY.md").is_file())
+        self.assertIn('CROWLEY_VERSION = "3.9.20"', where)
+        self.assertTrue((ROOT / "docs" / "V3.9.20_TICKET_MEMORY_LINKAGE.md").is_file())
         self.assertTrue((ROOT / "docs" / "V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md").is_file())
         self.assertIn("V3.9.15", where)
         self.assertIn("V3.9.15", versions)

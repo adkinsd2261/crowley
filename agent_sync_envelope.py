@@ -290,6 +290,7 @@ def build_deep_sync_page(
     *,
     cursor: str | None = None,
     limit: int = 20,
+    scope: str = "open",
 ) -> dict[str, Any]:
     """Cursor-paginated hydration for one agent.sync section (#230)."""
     import crowley
@@ -317,9 +318,44 @@ def build_deep_sync_page(
         items = feed.get("items") if isinstance(feed.get("items"), list) else []
         page = [compress_sync_item(item) for item in items[offset : offset + page_limit] if isinstance(item, dict)]
     elif section_norm == "tickets":
-        summary = tickets.build_tickets_summary(project_id, normalized_agent, open_limit=50, closed_limit=20)
-        open_rows = summary.get("open") if isinstance(summary.get("open"), list) else []
-        page = [compress_ticket_item(row) for row in open_rows[offset : offset + page_limit] if isinstance(row, dict)]
+        scope_norm = (scope or "open").strip().lower()
+        if scope_norm not in {"open", "history", "closed"}:
+            raise ValueError("scope must be open, history, or closed")
+        if scope_norm == "history":
+            rows = tickets.list_tickets(
+                project_id=project_id,
+                status="all",
+                sort="oldest",
+                limit=page_limit,
+                offset=offset,
+            )
+            total = tickets.count_tickets(project_id=project_id, status="all")
+        elif scope_norm == "closed":
+            rows = tickets.list_tickets(
+                project_id=project_id,
+                status="done,cancelled",
+                sort="newest",
+                limit=page_limit,
+                offset=offset,
+            )
+            total = tickets.count_tickets(project_id=project_id, status="done,cancelled")
+        else:
+            summary = tickets.build_tickets_summary(
+                project_id, normalized_agent, open_limit=50, closed_limit=20
+            )
+            open_rows = summary.get("open") if isinstance(summary.get("open"), list) else []
+            rows = open_rows[offset : offset + page_limit]
+            total = tickets.count_tickets(project_id=project_id, open_only=True)
+        if scope_norm == "open":
+            page = [
+                compress_ticket_item(row) for row in rows if isinstance(row, dict)
+            ]
+        else:
+            page = [
+                compress_ticket_item(tickets._ticket_row_to_dict(row))
+                for row in rows
+                if row is not None
+            ]
     elif section_norm == "memory":
         retrieval = crowley.retrieve_work_context_memories(project_id, normalized_agent, limit=50)
         memories = retrieval.get("memories") if isinstance(retrieval.get("memories"), list) else []
@@ -350,7 +386,7 @@ def build_deep_sync_page(
 
     next_offset = offset + len(page)
     has_more = len(page) >= page_limit
-    return {
+    result: dict[str, Any] = {
         "agent": normalized_agent,
         "section": section_norm,
         "items": page,
@@ -364,3 +400,7 @@ def build_deep_sync_page(
             "payload_bytes": payload_bytes({"items": page}),
         },
     }
+    if section_norm == "tickets":
+        result["scope"] = scope_norm
+        result["total"] = total
+    return result

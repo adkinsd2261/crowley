@@ -481,6 +481,7 @@ def api_tickets(
     parent_id: int | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    sort: str = Query("newest"),
 ) -> JSONResponse:
     project = crowley.get_active_project()
     project_id = int(project["id"]) if project is not None else None
@@ -495,6 +496,7 @@ def api_tickets(
         parent_id=parent_id,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
     total = crowley.count_tickets(
         project_id=project_id,
@@ -513,8 +515,16 @@ def api_tickets(
 
 
 @app.get("/api/tickets/{ticket_id}")
-def api_ticket_detail(ticket_id: int) -> JSONResponse:
-    detail = crowley.get_ticket_detail(ticket_id)
+def api_ticket_detail(
+    ticket_id: int,
+    include_memories: bool = Query(False),
+    memory_limit: int = Query(50, ge=1, le=200),
+) -> JSONResponse:
+    detail = crowley.get_ticket_detail(
+        ticket_id,
+        include_memories=include_memories,
+        memory_limit=memory_limit,
+    )
     if detail is None:
         return JSONResponse({"error": f"ticket not found: {ticket_id}"}, status_code=404)
     return JSONResponse(detail)

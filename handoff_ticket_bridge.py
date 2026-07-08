@@ -81,12 +81,31 @@ def extract_referenced_ticket_ids(
                 _add(metadata.get(key))
 
     context = _section_text(content, "Context Basis")
-    for blob in (context, content):
-        if not blob:
-            continue
-        for match in _WORK_TICKET_RE.finditer(blob):
+    if context:
+        for match in _WORK_TICKET_RE.finditer(context):
             _add(match.group(1))
-        for match in _BARE_TICKET_HASH_RE.finditer(blob):
+        for match in _BARE_TICKET_HASH_RE.finditer(context):
+            _add(match.group(1))
+
+    # Explicit ticket refs in builder sections (not Next Action — resume #N is not a close target).
+    for heading in ("Summary", "Build Complete", "QA Results"):
+        section = _section_text(content, heading)
+        if not section:
+            continue
+        for match in _WORK_TICKET_RE.finditer(section):
+            _add(match.group(1))
+        for match in _BARE_TICKET_HASH_RE.finditer(section):
+            _add(match.group(1))
+
+    next_action = _section_text(content, "Next Action")
+    body_without_next = content
+    if next_action:
+        body_without_next = content.replace(f"## Next Action\n\n{next_action}", "")
+        body_without_next = body_without_next.replace(f"## Next Action\n{next_action}", "")
+    if body_without_next.strip() and not context:
+        for match in _WORK_TICKET_RE.finditer(body_without_next):
+            _add(match.group(1))
+        for match in _BARE_TICKET_HASH_RE.finditer(body_without_next):
             _add(match.group(1))
     return ordered
 

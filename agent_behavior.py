@@ -787,7 +787,7 @@ def build_auto_handoff_feed(*, limit: int = 8) -> dict[str, object]:
 def behavior_payload() -> dict[str, object]:
     """Full agent behavior instructions for sync/catalog."""
     return {
-        "version": "3.9.19",
+        "version": "3.9.20",
         "system_query_policy": {
             "requires_agent_sync": True,
             "dedupe_sync_per_request_cycle": True,

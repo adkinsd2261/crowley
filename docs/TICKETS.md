@@ -1,13 +1,13 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.19 · V4.0 Cognitive Memory **mid-lock** T1–T13 (#203–#215) · 2026-07-07
+**As of:** V3.9.20 · V4.0 Cognitive Memory **mid-lock** T1–T14 (#203–#216) · 2026-07-08
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
 ## Active initiative — V4.0 Cognitive Memory
 
-**Current:** V3.9.19 Memory Quality shipped (#152–#166). **Active:** V4.0 Cognitive Memory — **14/24 tickets shipped** (#203–#216). **Not a release** — version constant still `3.9.19` until T24 (#226).
+**Current:** V3.9.20 Ticket Memory Linkage shipped (#264, #225). **Active:** V4.0 Cognitive Memory — **14/24 tickets shipped** (#203–#216). **V4 release bump** still at T24 (#226).
 
 **Packet:** `tickets/v4.0_cognitive_memory.json` (supersedes `v4.0_spark_lanes.json`)  
 **Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)  
@@ -27,6 +27,7 @@
 | V3.9.16 Workflow Enforcement      | #101–#111 | `tickets/v3.9.16_workflow_enforcement.json`   | **Shipped**  |
 | V3.9.17 Trust Control and Clarity | #112–#130 | —                                             | **Shipped**  |
 | V3.9.19 Memory Quality              | #152–#166 | —                                             | **Shipped**  |
+| V3.9.20 Ticket Memory Linkage       | #264, #225 | [V3.9.20_TICKET_MEMORY_LINKAGE.md](./V3.9.20_TICKET_MEMORY_LINKAGE.md) | **Shipped**  |
 | V3.9.18 Agent Retrieval Enforcement | #131–#135 | —                                             | **Shipped**  |
 | V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
@@ -59,6 +60,34 @@ See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · 
 | V4.0 Cognitive Memory (#203–#226)              | **Mid-lock** — T1–T14 (#203–#216) shipped; T15–T24 open |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
+
+### Querying full ticket history
+
+All tickets `#1–#N` live in the SQLite `tickets` table. Default surfaces show **open work only** (~16 rows today); closed history is not lost.
+
+| Need | API |
+|------|-----|
+| Open board (default) | `ticket.list` or `GET /api/tickets?status=open` |
+| Full arc oldest-first | `ticket.list` with `status=all`, `sort=oldest` |
+| Full arc newest-first | `ticket.list` with `status=all`, `sort=newest` |
+| Sync continuity metadata | `agent.sync` → `tickets.lineage` + `tickets.counts.total` |
+| Paginated history | `agent.deep_sync` `section=tickets`, `scope=history` |
+| Audit report | `./venv/bin/python3 scripts/audit_ticket_lineage.py --out docs/TICKET_LINEAGE_AUDIT.md` |
+
+See [TICKET_LINEAGE_AUDIT.md](./TICKET_LINEAGE_AUDIT.md) for the latest continuity audit.
+
+### Ticket ↔ memory linkage
+
+Persisted bidirectional index: `memory_items.linked_ticket_ids_json` ↔ `tickets.linked_memory_id`.
+
+| Need | API / script |
+|------|----------------|
+| Ticket with linked memories | `ticket.get` `include_memories=true` or `GET /api/tickets/{id}?include_memories=true` |
+| Planning bundle | `planning.ticket` (includes linked memories) |
+| Coverage audit | `./venv/bin/python3 scripts/audit_memory_ticket_linkage.py` |
+| Backfill links | `./venv/bin/python3 scripts/backfill_memory_ticket_linkage.py --apply` |
+
+See [V3.9.20_TICKET_MEMORY_LINKAGE.md](./V3.9.20_TICKET_MEMORY_LINKAGE.md) for operator verify curls.
 
 
 Run `scripts/codex_sync.py --before` and read [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
