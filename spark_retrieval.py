@@ -6,6 +6,8 @@ import sqlite3
 from dataclasses import dataclass
 
 import spark_graph
+import spark_lifecycle
+import spark_security
 import sparks
 
 W_SPARK_SEMANTIC = 0.40
@@ -28,6 +30,7 @@ class SparkRetrievalResult:
     confidence: float
     score: float
     score_breakdown: dict[str, float]
+    sensitivity: str = "normal"
 
 
 def _clamp01(value: float) -> float:
@@ -66,6 +69,8 @@ def _spark_semantic_candidate_scores(
 
     if sparks._ensure_spark_vec_table(conn):
         try:
+            import crowley
+
             rows = conn.execute(
                 f"""
                 SELECT spark_id, distance
@@ -74,7 +79,7 @@ def _spark_semantic_candidate_scores(
                 ORDER BY distance
                 LIMIT ?
                 """,
-                (query_embedding, limit),
+                (crowley._vec_bind(query_embedding), limit),
             ).fetchall()
             if rows:
                 eligible: dict[int, float] = {}
@@ -229,8 +234,9 @@ def _score_spark(
     *,
     semantic: float,
     graph: float,
+    live_confidence: float,
 ) -> tuple[float, dict[str, float]]:
-    confidence = _clamp01(float(row["confidence"]))
+    confidence = _clamp01(live_confidence)
     recency = _spark_recency_score(row)
     semantic_c = _clamp01(semantic)
     graph_c = _clamp01(graph)
@@ -275,6 +281,7 @@ def _rank_spark_candidates(
 ) -> list[SparkRetrievalResult]:
     results: list[SparkRetrievalResult] = []
     graph_boosts = graph_boosts or {}
+    pattern_spark_ids = spark_lifecycle.active_pattern_spark_ids(conn)
     for spark_id in candidate_ids:
         row = _load_spark_row(conn, spark_id, project_id=project_id, lanes=lanes)
         if row is None:
@@ -286,16 +293,27 @@ def _rank_spark_candidates(
             _spark_graph_reinforcement(conn, spark_id),
             graph_boosts.get(spark_id, 0.0),
         )
-        score, breakdown = _score_spark(row, semantic=semantic, graph=graph)
+        live_confidence = spark_lifecycle.live_confidence_for_spark(
+            conn,
+            row,
+            pattern_spark_ids=pattern_spark_ids,
+        )
+        score, breakdown = _score_spark(
+            row,
+            semantic=semantic,
+            graph=graph,
+            live_confidence=live_confidence,
+        )
         results.append(
             SparkRetrievalResult(
                 spark_id=spark_id,
                 content=str(row["content"]),
                 lane=str(row["lane"]),
                 trust_state=str(row["trust_state"]),
-                confidence=_clamp01(float(row["confidence"])),
+                confidence=live_confidence,
                 score=score,
                 score_breakdown=breakdown,
+                sensitivity=str(row["sensitivity"] or "normal"),
             )
         )
     return sorted(results, key=lambda item: (-item.score, item.spark_id))
@@ -311,6 +329,7 @@ def retrieve_sparks(
     bump_access: bool = True,
     expand_hops: int = 0,
     expand_max_nodes: int = spark_graph.SPARK_GRAPH_MAX_NODES,
+    depth: str | None = None,
 ) -> list[SparkRetrievalResult]:
     """Hybrid spark retrieval with canonical deterministic scoring."""
     import crowley
@@ -369,7 +388,12 @@ def retrieve_sparks(
                     lanes=lanes,
                 )
 
-        top = ranked[: max(0, limit)]
+        filtered = spark_security.filter_ranked_sparks(
+            ranked,
+            query_lanes=lanes,
+            depth=depth,
+        )
+        top = filtered[: max(0, limit)]
         if bump_access and top:
             now = crowley._now_iso()
             _bump_spark_access(db, [item.spark_id for item in top], now)

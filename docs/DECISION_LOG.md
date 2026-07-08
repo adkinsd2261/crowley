@@ -18,6 +18,36 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-045 — V4.0 Cognitive Memory shipped
+
+**Date:** 2026-07-08
+**Status:** Accepted
+**Evidence:** `crowley.py` version `4.0.0`, `sparks.py`, `spark_extraction.py`, `cognitive_ingest.py`, `spark_retrieval.py`, `spark_graph.py`, `patterns.py`, `context_orchestration.py`, `spark_lifecycle.py`, `spark_security.py`, `spark_sanitize.py`, `/api/cognitive/*`, `cognitive.context` Actions tool, `docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md`, tickets #203–#226
+
+### Context
+
+Crowley needed a cognitive memory layer stronger than raw `memory_items` and legacy passive sparks: lane-aware, graph-aware, auditable, bounded, and safe enough to expose through context APIs without replacing the existing memory system.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "4.0.0"`, `CROWLEY_RELEASE_LABEL = "Crowley V4.0 Cognitive Memory"`
+- Keep `memory_items` as raw receipts and add `sparks`, `spark_links`, `patterns`, and `spark_vec` as the V4 cognitive layer
+- Add `/api/cognitive/ingest`, `/api/cognitive/context`, `/api/cognitive/maintenance`, `/api/cognitive/sparks`, and `cognitive.context`
+- Keep retrieval, ranking, graph expansion, lifecycle, sensitivity filtering, sanitization, observability, and lineage deterministic
+- Use OpenAI only for JSON-array spark extraction
+- Enforce content validation, 32KB ingest cap, 10/min cognitive ingest rate limit, idempotent MEMORY_DATA wrapping, sensitivity gates, no hard delete, and traceable lineage
+
+### Rejected
+
+- Replacing `memory_items`
+- Auto-canonizing sparks or patterns
+- Using AI for retrieval/ranking/lane selection
+- Hard-deleting rejected sparks
+- Letting patterns feed back into extraction
+- Shipping V4 without observability and lineage
+
+---
+
 ## ADR-044 — V3.9.14 Durable ChatGPT Bridge shipped
 
 **Date:** 2026-07-05

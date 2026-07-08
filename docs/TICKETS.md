@@ -1,18 +1,19 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V3.9.20 · V4.0 Cognitive Memory **mid-lock** T1–T14 (#203–#216) · 2026-07-08
+**As of:** V4.0.0 · V4.0 Cognitive Memory **shipped** T1–T24 (#203–#226) · 2026-07-08
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Active initiative — V4.0 Cognitive Memory
+## Locked initiative — V4.0 Cognitive Memory
 
-**Current:** V3.9.20 Ticket Memory Linkage shipped (#264, #225). **Active:** V4.0 Cognitive Memory — **14/24 tickets shipped** (#203–#216). **V4 release bump** still at T24 (#226).
+**Current:** V4.0 Cognitive Memory shipped (#203–#226). V4.0 is release-locked; new work should be minted as V4.1/hardening tickets.
 
 **Packet:** `tickets/v4.0_cognitive_memory.json` (supersedes `v4.0_spark_lanes.json`)  
+**Release lock:** [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)  
 **Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)  
 **Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)  
-**T14 context resolution (2026-07-07):** [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md) — resume **#217 (T15)**
+**T14 context resolution (2026-07-07):** [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md)
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
 
@@ -31,7 +32,7 @@
 | V3.9.18 Agent Retrieval Enforcement | #131–#135 | —                                             | **Shipped**  |
 | V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
-| V4.0 Cognitive Memory      | #203–#226 | `tickets/v4.0_cognitive_memory.json`      | **In progress** · T1–T14 shipped · T15–T24 open |
+| V4.0 Cognitive Memory      | #203–#226 | `tickets/v4.0_cognitive_memory.json`      | **Shipped** · T1–T24 complete |
 
 
 See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).
@@ -57,7 +58,7 @@ See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · 
 | V3.9.17 Trust Control and Clarity (#112–#130)  | **Shipped** — attribution, audit, tiers, agent behavior |
 | V3.9.19 Memory Quality (#152–#166)             | **Shipped** — ingest dedup, lifecycle, validation runtime wiring |
 | V3.9.18 Agent Retrieval Enforcement (#131–#135) | **Shipped** — gating, domain triggers, handoff tickets |
-| V4.0 Cognitive Memory (#203–#226)              | **Mid-lock** — T1–T14 (#203–#216) shipped; T15–T24 open |
+| V4.0 Cognitive Memory (#203–#226)              | **Shipped** — T1–T24 complete; see release lock |
 
 **Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. Portable Context Terminal proves packet-in/writeback-out. V4.0 makes sparks the core memory unit with lanes: learning, work, relationships, money, health, operating_style.
 
@@ -114,7 +115,7 @@ Resolved: test DB isolation (#13, shipped).
 
 - **V4.0 Part 1 bridge E2E (2026-07-07)** — ChatGPT Actions loop verified; sqlite-vec, auto-promote, retrieve hardening — [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 - **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE (#229–#231) + GitHub read envelope — [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
-- **V4.0 Cognitive Memory (partial · mid-lock #215)** — sparks through context orchestration — see [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
+- **V4.0 Cognitive Memory (final #226)** — sparks, graph links, patterns, context orchestration, safeguards, observability, lineage — see [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
 - **V3.9.13 Secure ChatGPT Actions API** — bearer `/api/actions/*`, `CROWLEY_ACTION_KEY`, OpenAPI, bridge (`start_chatgpt_bridge.sh`)
 - **#81 Sync parity** — codex_sync `--known-issue` parity with cursor_sync
 - **V3.9.12 Portable Context Terminal** — packet export, writeback parse/ingest, CLI (#76–#80)

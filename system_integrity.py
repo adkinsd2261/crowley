@@ -10,10 +10,12 @@ CheckContext = Literal["sync", "write", "qa", "dispatch"]
 
 MIN_AUTO_RESOLVE_CONFIDENCE = 0.75
 WRITE_RATE_LIMIT_PER_MINUTE = 30
+COGNITIVE_INGEST_RATE_LIMIT_PER_MINUTE = 10
 AUDIT_SAMPLE_EVERY = 10
 
 _lock = threading.Lock()
 _write_timestamps: dict[str, list[float]] = {}
+_cognitive_ingest_timestamps: dict[str, list[float]] = {}
 _dispatch_counter = 0
 _audit_counter = 0
 
@@ -497,6 +499,23 @@ def check_automation_guardrails(agent_id: str, action: str) -> tuple[bool, str |
     with _lock:
         _audit_counter += 1
         extra["audit_sample"] = _audit_counter % AUDIT_SAMPLE_EVERY == 0
+        if action == "cognitive.ingest":
+            cognitive_stamps = _cognitive_ingest_timestamps.setdefault(agent, [])
+            cognitive_stamps[:] = [t for t in cognitive_stamps if now - t < 60]
+            extra["cognitive_ingest_rate_limit_per_minute"] = (
+                COGNITIVE_INGEST_RATE_LIMIT_PER_MINUTE
+            )
+            if len(cognitive_stamps) >= COGNITIVE_INGEST_RATE_LIMIT_PER_MINUTE:
+                return (
+                    False,
+                    (
+                        "automation_guardrail: cognitive ingest rate limit "
+                        f"exceeded ({COGNITIVE_INGEST_RATE_LIMIT_PER_MINUTE}/min)"
+                    ),
+                    extra,
+                )
+            cognitive_stamps.append(now)
+
         stamps = _write_timestamps.setdefault(agent, [])
         stamps[:] = [t for t in stamps if now - t < 60]
         if action.startswith(("write", "ticket.", "handoff.", "memory.", "audit.")):
@@ -745,5 +764,6 @@ def integrity_payload() -> dict[str, object]:
         "invariants": INVARIANT_REGISTRY,
         "min_auto_resolve_confidence": MIN_AUTO_RESOLVE_CONFIDENCE,
         "write_rate_limit_per_minute": WRITE_RATE_LIMIT_PER_MINUTE,
+        "cognitive_ingest_rate_limit_per_minute": COGNITIVE_INGEST_RATE_LIMIT_PER_MINUTE,
         "audit_sample_every": AUDIT_SAMPLE_EVERY,
     }

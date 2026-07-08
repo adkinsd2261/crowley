@@ -1,7 +1,7 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.  
-**As of:** V3.9.19 + V4 mid-lock + Part 1 bridge E2E · **2026-07-07**
+**As of:** V4.0.0 Cognitive Memory shipped · **2026-07-08**
 **Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).  
 Inferences marked **(inference)**.
 
@@ -87,15 +87,15 @@ V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
                     V3.9.13 ChatGPT Actions API ✅
                               │
                               ▼
-                    V4.0 Cognitive Memory ◄── YOU ARE HERE (mid-lock · T1–T14 shipped)
+                    V4.0 Cognitive Memory ✅ (T1–T24 shipped)
                               │
                               ▼
-                    T15–T24 open (#217–#226) · version bump at T24 only
+                    V4.1 hardening / review UX (next packet)
 ```
 
 **Shipped through V3.9.19:** … memory quality (#152–#166); post-3.9.19 integrity hardening on `main`.
 
-**Active initiative:** V4.0 Cognitive Memory — **partial (14/24 tickets)**. T14 lock: [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md). **Not a release** — `CROWLEY_VERSION` stays `3.9.19` until T24.
+**Current initiative:** V4.0 Cognitive Memory — **shipped (24/24 tickets)**. Release lock: [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md). `CROWLEY_VERSION = "4.0.0"`.
 
 ---
 
@@ -302,7 +302,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
 | V3.9.13 | Secure ChatGPT Actions API | Shipped on `main` |
 | V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
-| **V4.0** | Cognitive Memory | **In progress** — T1–T14 shipped; T15–T24 open; bridge E2E + T14 resolution locked; bump at T24 (#226) |
+| **V4.0.0** | Cognitive Memory | **Shipped** — T1–T24 complete; release lock at #226 |
 
 ---
 

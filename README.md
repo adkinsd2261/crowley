@@ -4,7 +4,7 @@
 
 Crowley abstracts away model dependencies and context management. Developers integrate once, swap between OpenAI, Anthropic, Ollama, and others freely—with persistent semantic memory that survives model changes.
 
-**v3.9.20 (Stable — July 2026)** — ticket lineage + memory linkage, V4 cognitive memory mid-lock (T1–T14), ChatGPT Actions E2E verified. V4 final bump at T24 (#226).
+**v4.0.0 (Stable — July 2026)** — Cognitive Memory: raw receipts -> sparks -> graph links -> patterns -> sanitized context, with API limits, observability, and lineage locked.
 
 ---
 
@@ -31,16 +31,17 @@ Think of it as a **local-first memory server** that lets you coordinate multiple
 
 ## Status
 
-**v3.9.19 (Stable — July 6, 2026)**
+**v4.0.0 (Stable — July 8, 2026)**
 
-- **471 unit tests** locally; GitHub Actions regression gate on `main`
-- **Memory quality:** constraint/semantic ingest dedup, lifecycle cleanup, validation runtime wiring on Actions + sync API
-- **Retrieval enforcement:** pre-response gating, domain triggers, proactive chaining on complex queries
+- **Cognitive memory:** `memory_items` receipts, lane-scoped `sparks`, `spark_links`, `patterns`, deterministic `/api/cognitive/context`
+- **Security:** input caps, rate limits, content validation, sensitivity exposure gates, idempotent output sanitization
+- **Auditability:** observability hash-chain logging for cognitive endpoints and per-spark lineage in context traces
+- **Legacy compatibility:** existing memory, ticketing, portable writeback, and ChatGPT Actions gateway remain available
 - **Handoff persistence:** completed handoffs auto-create durable done tickets
 - **Trust & control (V3.9.17):** write attribution, permissions, audit, memory tiers, conflict resolution
 - **Production ready:** web chat, memory retrieval, ticketing, multi-agent handoffs, ChatGPT Actions API
 
-Release spec: [docs/V3.9.19_MEMORY_QUALITY.md](./docs/V3.9.19_MEMORY_QUALITY.md)
+Release spec: [docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
 
 Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
@@ -72,6 +73,10 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 ├── conflict_engine.py      # V3.9.17 conflict detection + resolution
 ├── handoff_ticket_bridge.py # V3.9.18 handoff → ticket persistence
 ├── agent_behavior.py       # V3.9.17+ retrieval policy, gating, observability
+├── sparks.py               # V4 spark schema, validation, dedup, lineage
+├── cognitive_ingest.py     # V4 cognitive ingest receipt + extraction pipeline
+├── spark_retrieval.py      # V4 deterministic spark retrieval
+├── context_orchestration.py # V4 cognitive context assembly
 ├── requirements.txt        # Dependencies
 ├── .env.example            # Configuration template
 ├── static/                 # Web UI (HTML/CSS/JS) — dashboard, memory search, tickets
@@ -86,8 +91,8 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 │   ├── WHERE_WE_ARE.md     # Current project state (read first)
 │   ├── MEMORY_HIERARCHY.md # Authority order for facts
 │   ├── CHATGPT_SETUP.md    # Custom GPT + tunnel setup
-│   └── V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md  # Latest release spec
-├── tests/                  # Regression suite (430 tests)
+│   └── V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md  # Latest release spec
+├── tests/                  # Regression suite
 ├── tickets/                # JSON templates for `--create-tickets`
 ├── CODEX.md                # Codex agent ritual
 ├── CURSOR.md               # Cursor agent ritual (hooks setup)
@@ -369,9 +374,12 @@ Unlicensed (or add your license here).
 
 ## Roadmap
 
-**Current:** v3.9.20 (Stable)
+**Current:** v4.0.0 (Stable)
 
 - [x] Persistent semantic memory + retrieval
+- [x] Cognitive memory: sparks, lanes, graph links, patterns, context orchestration
+- [x] Cognitive safeguards: validation, sensitivity gates, sanitization, rate limits
+- [x] Cognitive observability and lineage traces
 - [x] Model hotswapping (OpenAI, Anthropic, Ollama)
 - [x] Concurrent ticketing board
 - [x] Multi-agent orchestration (Codex, Cursor)
@@ -381,11 +389,11 @@ Unlicensed (or add your license here).
 - [x] Context packet export
 - [x] CI regression gate on GitHub Actions
 
-**Next:** v4.0 Spark Lanes
+**Next:** V4.1 hardening and UX polish
 
-- [ ] Memory lanes (narrative threads)
-- [ ] Trust states (confidence scoring)
-- [ ] Lane-aware retrieval
+- [ ] Field-level encryption
+- [ ] Cognitive UI controls and review surfaces
+- [ ] Broader cognitive prompt integration after operational burn-in
 - [ ] Distributed agent coordination
 
 ---

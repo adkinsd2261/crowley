@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.13 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
+"""Crowley V4.0 — local web transport layer (FastAPI). Engine logic lives in crowley.py."""
 
 from __future__ import annotations
 
@@ -128,10 +128,55 @@ class PortableWritebackParseRequest(BaseModel):
 
 
 class CognitiveIngestRequest(BaseModel):
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=32 * 1024)
     project: str = "crowley"
     source: Literal["cursor", "chatgpt", "codex", "manual", "crowley"] = "manual"
     metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class CognitiveMaintenanceRequest(BaseModel):
+    dry_run: bool = True
+    project: str | None = None
+
+
+class CognitiveSparkSeedRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=300)
+    lane: str
+    why_keep: str = Field(min_length=1)
+    worth_reason: str = Field(min_length=1)
+    confidence: float = Field(ge=0.0, le=1.0)
+    sensitivity: Literal["normal", "sensitive", "high"] = "normal"
+    project: str = "crowley"
+    source: Literal["cursor", "chatgpt", "codex", "manual", "crowley"] = "manual"
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+COGNITIVE_API_OBSERVABILITY_SESSION = "api:cognitive"
+
+
+def _record_cognitive_api_observability(
+    tool_name: str,
+    *,
+    http_status: int,
+    reason: str | None = None,
+) -> None:
+    """Record direct /api/cognitive/* calls in the dispatch observability chain."""
+    try:
+        import agent_behavior
+        import system_integrity
+
+        dispatch_id = system_integrity.next_dispatch_id()
+        agent_behavior.begin_dispatch(COGNITIVE_API_OBSERVABILITY_SESSION, dispatch_id)
+        system_integrity.record_dispatch_observability(
+            COGNITIVE_API_OBSERVABILITY_SESSION,
+            tool_name,
+            dispatch_id=dispatch_id,
+            query_text=reason,
+            triggering_rule="direct_cognitive_api",
+            http_status=http_status,
+        )
+    except Exception:
+        pass
 
 
 @app.get("/api/brain")
@@ -380,6 +425,20 @@ def api_cognitive_ingest(
     ok, block = system_integrity.enforce_dispatch_invariants("cognitive.ingest")
     if not ok:
         return JSONResponse(block, status_code=428)
+    guard_ok, guard_msg, guard_extra = system_integrity.check_automation_guardrails(
+        body.source,
+        "cognitive.ingest",
+    )
+    if not guard_ok:
+        return JSONResponse(
+            {
+                "status": "error",
+                "error": "automation_guardrail",
+                "message": guard_msg,
+                "automation_guardrails": guard_extra,
+            },
+            status_code=429,
+        )
     try:
         result = cognitive_ingest.ingest_cognitive_content(
             body.content,
@@ -389,7 +448,79 @@ def api_cognitive_ingest(
             sync=bool(sync),
         )
     except ValueError as exc:
+        _record_cognitive_api_observability(
+            "cognitive.ingest",
+            http_status=404,
+            reason=body.project,
+        )
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=404)
+    if result.get("status") == "error":
+        _record_cognitive_api_observability(
+            "cognitive.ingest",
+            http_status=500,
+            reason=body.project,
+        )
+        return JSONResponse(result, status_code=500)
+    _record_cognitive_api_observability(
+        "cognitive.ingest",
+        http_status=201,
+        reason=body.project,
+    )
+    return JSONResponse(result, status_code=201)
+
+
+@app.post("/api/cognitive/maintenance")
+def api_cognitive_maintenance(
+    body: CognitiveMaintenanceRequest | None = None,
+    dry_run: bool | None = Query(None),
+    project: str | None = Query(None),
+) -> JSONResponse:
+    import cognitive_maintenance
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("cognitive.maintenance")
+    if not ok:
+        return JSONResponse(block, status_code=428)
+    payload = body or CognitiveMaintenanceRequest()
+    resolved_dry_run = payload.dry_run if dry_run is None else dry_run
+    resolved_project = project if project is not None else payload.project
+    try:
+        result = cognitive_maintenance.run_cognitive_maintenance(
+            dry_run=resolved_dry_run,
+            project=resolved_project,
+        )
+    except ValueError as exc:
+        _record_cognitive_api_observability(
+            "cognitive.maintenance",
+            http_status=400,
+            reason=resolved_project,
+        )
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
+    _record_cognitive_api_observability(
+        "cognitive.maintenance",
+        http_status=200,
+        reason=resolved_project,
+    )
+    return JSONResponse(result)
+
+
+@app.post("/api/cognitive/sparks")
+def api_cognitive_spark_seed(body: CognitiveSparkSeedRequest) -> JSONResponse:
+    import cognitive_maintenance
+    import system_integrity
+
+    ok, block = system_integrity.enforce_dispatch_invariants("cognitive.spark_seed")
+    if not ok:
+        return JSONResponse(block, status_code=428)
+    try:
+        result = cognitive_maintenance.seed_manual_spark(
+            body.model_dump(exclude={"project", "source", "metadata"}),
+            project=body.project,
+            source=body.source,
+            metadata=body.metadata,
+        )
+    except ValueError as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
     if result.get("status") == "error":
         return JSONResponse(result, status_code=500)
     return JSONResponse(result, status_code=201)
@@ -420,7 +551,17 @@ def api_cognitive_context(
             debug=debug,
         )
     except ValueError as exc:
+        _record_cognitive_api_observability(
+            "cognitive.context",
+            http_status=400,
+            reason=q,
+        )
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=400)
+    _record_cognitive_api_observability(
+        "cognitive.context",
+        http_status=200,
+        reason=q,
+    )
     return JSONResponse(result)
 
 

@@ -67,7 +67,7 @@ class ProjectFilesContextTests(unittest.TestCase):
         ctx = crowley.get_project_files_context()
         if crowley.VERSIONS_MD_PATH.is_file():
             self.assertIsNotNone(ctx["versions_md_excerpt"])
-            self.assertIn("V3", str(ctx["versions_md_excerpt"]))
+            self.assertIn(crowley.CROWLEY_VERSION, str(ctx["versions_md_excerpt"]))
 
     def test_prompt_section_mentions_known_release(self) -> None:
         section = crowley._format_project_files_prompt_section(

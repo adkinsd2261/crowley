@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 import sys
 import unittest
 from pathlib import Path
@@ -225,7 +224,7 @@ class SparkSchemaTests(IsolatedDbTestCase):
         conn = crowley.connect_db()
         try:
             now = crowley._now_iso()
-            with self.assertRaises(sqlite3.IntegrityError):
+            with self.assertRaises(crowley.sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO sparks (
@@ -474,7 +473,7 @@ class SparkLinksSchemaTests(IsolatedDbTestCase):
             conn.execute("PRAGMA foreign_keys = ON")
             spark_id = _insert_spark(conn)
             now = crowley._now_iso()
-            with self.assertRaises(sqlite3.IntegrityError):
+            with self.assertRaises(crowley.sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO spark_links (
@@ -629,7 +628,7 @@ class PatternsSchemaTests(IsolatedDbTestCase):
         conn = crowley.connect_db()
         try:
             now = crowley._now_iso()
-            with self.assertRaises(sqlite3.IntegrityError):
+            with self.assertRaises(crowley.sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO patterns (

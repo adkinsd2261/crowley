@@ -1,0 +1,260 @@
+"""V4 T15/T16 — spark confidence decay (read-time) and lifecycle maintenance."""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
+import patterns
+from memory_tiers import MIN_CONFIDENCE
+
+SPARK_DECAY_HALF_LIFE_DAYS = 30
+STALE_INACTIVITY_DAYS = 60
+STALE_MAX_ACCESS_COUNT = 0
+MAINTENANCE_STALE_FROM = frozenset({"active", "candidate"})
+SPARK_SEED_TRUST_STATE = "candidate"
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def time_decay_factor(days_since_last_access: float) -> float:
+    """Halve effective confidence every 30 days since last access."""
+    days = max(0.0, float(days_since_last_access))
+    return 0.5 ** (days / SPARK_DECAY_HALF_LIFE_DAYS)
+
+
+def days_since_last_access(
+    row: sqlite3.Row,
+    *,
+    now: datetime | None = None,
+) -> float:
+    """Days since last_accessed_at when present, otherwise created_at."""
+    import crowley
+
+    ref = row["last_accessed_at"] or row["created_at"]
+    ts = crowley._parse_memory_timestamp(str(ref))
+    if ts is None:
+        return 0.0
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    now_dt = now or datetime.now(timezone.utc)
+    return max(0.0, (now_dt - ts).total_seconds() / 86400.0)
+
+
+def active_pattern_spark_ids(conn: sqlite3.Connection) -> frozenset[int]:
+    """Spark ids referenced by active patterns."""
+    rows = conn.execute(
+        """
+        SELECT source_spark_ids_json
+        FROM patterns
+        WHERE trust_state = ?
+        """,
+        (patterns.PATTERN_ACTIVE_TRUST_STATE,),
+    ).fetchall()
+    ids: set[int] = set()
+    for row in rows:
+        raw = row["source_spark_ids_json"]
+        if not raw:
+            continue
+        try:
+            parsed = json.loads(str(raw))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, list):
+            continue
+        for item in parsed:
+            try:
+                ids.add(int(item))
+            except (TypeError, ValueError):
+                continue
+    return frozenset(ids)
+
+
+def compute_live_confidence(
+    base_confidence: float,
+    days_since_last_access: float,
+    *,
+    pattern_participant: bool = False,
+) -> float:
+    """Read-time confidence from base_confidence decay and optional pattern boost."""
+    base = _clamp01(float(base_confidence))
+    decayed = base * time_decay_factor(days_since_last_access)
+    if pattern_participant:
+        decayed = min(base, decayed + patterns.PATTERN_LIFECYCLE_BOOST)
+    return max(MIN_CONFIDENCE, _clamp01(decayed))
+
+
+def live_confidence_for_spark(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    pattern_spark_ids: frozenset[int] | None = None,
+    now: datetime | None = None,
+) -> float:
+    """Compute live confidence for a spark row without persisting it."""
+    spark_id = int(row["id"])
+    if pattern_spark_ids is None:
+        pattern_spark_ids = active_pattern_spark_ids(conn)
+    return compute_live_confidence(
+        float(row["base_confidence"]),
+        days_since_last_access(row, now=now),
+        pattern_participant=spark_id in pattern_spark_ids,
+    )
+
+
+@dataclass(frozen=True)
+class SparkMaintenanceResult:
+    ok: bool
+    dry_run: bool
+    stale_candidates: list[int] = field(default_factory=list)
+    rejected_candidates: list[int] = field(default_factory=list)
+    stale_applied: int = 0
+    rejected_applied: int = 0
+
+
+def _project_clause(project_id: int | None) -> tuple[str, list[object]]:
+    if project_id is None:
+        return "AND project_id IS NULL", []
+    return "AND project_id = ?", [project_id]
+
+
+def should_mark_stale(row: sqlite3.Row, *, now: datetime | None = None) -> bool:
+    """Low-usage active/candidate sparks become stale; pinned sparks are exempt."""
+    trust_state = str(row["trust_state"])
+    if trust_state == "pinned":
+        return False
+    if trust_state not in MAINTENANCE_STALE_FROM:
+        return False
+    if int(row["access_count"] or 0) > STALE_MAX_ACCESS_COUNT:
+        return False
+    return days_since_last_access(row, now=now) >= STALE_INACTIVITY_DAYS
+
+
+def should_mark_rejected(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    pattern_spark_ids: frozenset[int],
+    now: datetime | None = None,
+) -> bool:
+    if str(row["trust_state"]) != "stale":
+        return False
+    live = live_confidence_for_spark(
+        conn,
+        row,
+        pattern_spark_ids=pattern_spark_ids,
+        now=now,
+    )
+    return live <= MIN_CONFIDENCE
+
+
+def run_spark_lifecycle_maintenance(
+    conn: sqlite3.Connection,
+    *,
+    dry_run: bool = True,
+    project_id: int | None = None,
+    now: datetime | None = None,
+) -> SparkMaintenanceResult:
+    """Apply or preview stale/rejected transitions. Never hard-deletes rows."""
+    import crowley
+
+    now_dt = now or datetime.now(timezone.utc)
+    project_sql, project_params = _project_clause(project_id)
+    pattern_spark_ids = active_pattern_spark_ids(conn)
+
+    stale_rows = conn.execute(
+        f"""
+        SELECT *
+        FROM sparks
+        WHERE trust_state IN ('active', 'candidate')
+          AND trust_state != 'pinned'
+          {project_sql}
+        """,
+        project_params,
+    ).fetchall()
+    stale_candidates = [
+        int(row["id"]) for row in stale_rows if should_mark_stale(row, now=now_dt)
+    ]
+
+    reject_rows = conn.execute(
+        f"""
+        SELECT *
+        FROM sparks
+        WHERE trust_state = 'stale'
+          {project_sql}
+        """,
+        project_params,
+    ).fetchall()
+    rejected_candidates = [
+        int(row["id"])
+        for row in reject_rows
+        if should_mark_rejected(
+            conn,
+            row,
+            pattern_spark_ids=pattern_spark_ids,
+            now=now_dt,
+        )
+    ]
+
+    stale_applied = 0
+    rejected_applied = 0
+    if not dry_run:
+        now_iso = crowley._now_iso()
+        for spark_id in stale_candidates:
+            row = conn.execute("SELECT * FROM sparks WHERE id = ?", (spark_id,)).fetchone()
+            if row is None or not should_mark_stale(row, now=now_dt):
+                continue
+            live = live_confidence_for_spark(
+                conn,
+                row,
+                pattern_spark_ids=pattern_spark_ids,
+                now=now_dt,
+            )
+            conn.execute(
+                """
+                UPDATE sparks
+                SET trust_state = 'stale', confidence = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (live, now_iso, spark_id),
+            )
+            stale_applied += 1
+
+        for spark_id in rejected_candidates:
+            row = conn.execute("SELECT * FROM sparks WHERE id = ?", (spark_id,)).fetchone()
+            if row is None or not should_mark_rejected(
+                conn,
+                row,
+                pattern_spark_ids=pattern_spark_ids,
+                now=now_dt,
+            ):
+                continue
+            live = live_confidence_for_spark(
+                conn,
+                row,
+                pattern_spark_ids=pattern_spark_ids,
+                now=now_dt,
+            )
+            conn.execute(
+                """
+                UPDATE sparks
+                SET trust_state = 'rejected', confidence = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (live, now_iso, spark_id),
+            )
+            rejected_applied += 1
+
+    return SparkMaintenanceResult(
+        ok=True,
+        dry_run=dry_run,
+        stale_candidates=stale_candidates,
+        rejected_candidates=rejected_candidates,
+        stale_applied=stale_applied,
+        rejected_applied=rejected_applied,
+    )
+

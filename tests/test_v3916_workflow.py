@@ -134,8 +134,8 @@ class WorkflowCrowleyEngineTests(IsolatedDbTestCase):
         self.assertIn("boot_sequence", sync)
         self.assertEqual(sync["boot_sequence"]["required_first_tool"], "agent.sync")
 
-    def test_version_is_3916(self) -> None:
-        self.assertEqual(crowley.CROWLEY_VERSION, "3.9.20")
+    def test_version_is_current_release(self) -> None:
+        self.assertEqual(crowley.CROWLEY_VERSION, "4.0.0")
 
     def test_fresh_chat_stability_keys(self) -> None:
         """#105 — structural keys stable across repeated sync calls."""

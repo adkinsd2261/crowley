@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V3.9.20 · V4.0 Cognitive Memory **mid-lock** (T1–T14) · Part 1 **bridge E2E verified** · **2026-07-08**
+**As of:** V4.0.0 · V4.0 Cognitive Memory **shipped** (T1–T24) · **2026-07-08**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V3.9.20 Ticket Memory Linkage shipped (#264 lineage, #225 memory index). V3.9.19 Memory Quality (#152–#166) plus post-3.9.19 integrity hardening (#167–#193) remain on `main`. Restart bus after version bumps so `/api/health` matches constants.
+**Git note:** V4.0 Cognitive Memory shipped locally through T24 (#203–#226). Restart bus after version bumps so `/api/health` matches constants.
 
 ---
 
@@ -55,13 +55,13 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.15** | **Shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100) |
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
-| **V4.0** | **In progress (mid-lock)** — Cognitive Memory T1–T14 (#203–#216); Part 1 bridge E2E lock — **not complete** until T24 |
+| **V4.0.0** | **Shipped** — Cognitive Memory T1–T24 (#203–#226): sparks, graph links, patterns, context orchestration, safeguards, observability, lineage, docs lock |
 
-**Current constants (local code):** `CROWLEY_VERSION = "3.9.20"` (`Crowley V3.9.20 Ticket Memory Linkage`)
+**Current constants (local code):** `CROWLEY_VERSION = "4.0.0"` (`Crowley V4.0 Cognitive Memory`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
-**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proves the portable context terminal loop; V3.9.13 adds bearer Actions for Custom GPT; **V4.0 Cognitive Memory is half-built** — sparks/patterns/graph/context orchestration landed; depth modes, lifecycle, security, and release lock remain.
+**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proved the portable context terminal loop; V3.9.13 added bearer Actions for Custom GPT; **V4.0 Cognitive Memory is now shipped** — raw receipts feed lane-scoped sparks, graph links, patterns, deterministic context orchestration, security gates, observability, and lineage traces.
 
 ---
 
@@ -169,9 +169,9 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.17 Trust Control and Clarity** | Cursor | **Shipped** · #112–#130 · attribution, audit, tiers, agent behavior |
 | **V3.9.19 Memory Quality** | Cursor | **Shipped** · #152–#166 · ingest dedup, validation runtime wiring |
 | **V3.9.18 Agent Retrieval Enforcement** | Cursor | **Shipped** · #131–#135 · gating, domain triggers, handoff tickets |
-| **V4.0 Cognitive Memory** | Cursor | **Mid-lock** · T1–T14 (#203–#216) · [T14 lock](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md) · [bridge E2E](./V4.0_PART1_BRIDGE_E2E_LOCK.md) |
+| **V4.0 Cognitive Memory** | Codex | **Shipped** · T1–T24 (#203–#226) · [release lock](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md) |
 
-**Resume workflow:** Cursor claims **#217 (T15)** — spark confidence decay. **Do not** bump version or declare V4.0 shipped until **#226 (T24)**.
+**Next workflow:** V4.1 hardening or UI polish should be minted as a new ticket packet. V4.0 itself is locked; avoid broadening the shipped release after T24 except for targeted bugfixes.
 
 ---
 
@@ -208,6 +208,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | `scripts/cleanup_chatgpt_bridge.sh` | Kill duplicate cloudflared + wedged bus recovery |
 | `scripts/watch_crowley_bus.sh` | LaunchAgent bus health watchdog |
 | `docs/V4.0_T14_CONTEXT_RESOLUTION_LOCK.md` | T14 depth modes + cross-source resolution lock |
+| `docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md` | V4.0 final cognitive memory release lock |
 | `docs/V4.0_PART1_BRIDGE_E2E_LOCK.md` | Part 1 bridge + ChatGPT E2E doc lock |
 | `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | V4 part 1 patch — agent.sync ASE + GitHub envelope |
 | `docs/V4.0_COGNITIVE_MEMORY_MID_LOCK.md` | V4 partial ship doc lock (T1–T13) |

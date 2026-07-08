@@ -92,9 +92,9 @@ The Memory tab lists stored rows. Hybrid retrieval matches (used in chat) are la
 
 ---
 
-## 7. V4 cognitive memory (partial · mid-lock)
+## 7. V4 cognitive memory (shipped)
 
-**Status:** T1–T13 shipped (#203–#215). **Not V4.0 complete.** See [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md).
+**Status:** V4.0 shipped T1–T24 (#203–#226). See [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md).
 
 V4 adds a parallel stack **on top of** `memory_items` — it does not replace them.
 
@@ -104,8 +104,14 @@ V4 adds a parallel stack **on top of** `memory_items` — it does not replace th
 | Sparks | `sparks` | Durable lane-scoped units (max 300 chars); `trust_state` on spark |
 | Graph | `spark_links` | Reinforcement edges between sparks |
 | Patterns | `patterns` | Cluster summaries from sparks; T12 promotes to `active` only |
-| Context bundle | `GET /api/cognitive/context` | Read-only orchestration — core/supporting sparks + attached patterns |
+| Context bundle | `GET /api/cognitive/context`, `cognitive.context` Actions tool | Read-only orchestration — core/supporting sparks + attached patterns + trace lineage |
 
-**Authority:** For version and ship status, filesystem docs still win. V4 tables are **not** yet wired into main chat prompt injection — that remains T14+ work.
+**Safeguards:** Cognitive ingest is capped at 32KB and 10/min per source. Spark content is capped at 300 chars. `validate_spark()` rejects instruction-like content, secret patterns, prompt wrappers, raw `MEMORY_DATA` delimiter smuggling, and spark-shaped hallucinated structures. Context output sanitizes returned memory text with neutralization, redaction, and idempotent `MEMORY_DATA` wrapping.
+
+**Sensitivity:** `sensitive` and `high` sparks are exposure-gated by lane. `high` also requires non-light depth and score > 0.7.
+
+**Lineage:** Created sparks store `lineage_json` with `memory_item_id`/`source_memory_item_id`, extraction or seed/writeback metadata, and `dedup_action`; context trace exposes this lineage without changing content authority.
+
+**Authority:** For version and ship status, filesystem docs still win. V4 cognitive tables provide structured recall and context, not canon.
 
 **Legacy note:** CLI trim sparks still use `memories` / implicit spark path. V4 `sparks` table is the new cognitive unit.

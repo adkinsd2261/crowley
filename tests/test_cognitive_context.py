@@ -18,6 +18,7 @@ import actions_tool_registry  # noqa: E402
 import app as crowley_app  # noqa: E402
 import context_orchestration  # noqa: E402
 import crowley  # noqa: E402
+import spark_sanitize  # noqa: E402
 import spark_graph  # noqa: E402
 import spark_retrieval  # noqa: E402
 from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
@@ -181,7 +182,9 @@ class CognitiveContextTests(IsolatedDbTestCase):
                 )
 
             self.assertEqual(len(payload["patterns"]), 1)
-            self.assertEqual(payload["patterns"][0]["content"], "active matching pattern")
+            pattern_content = payload["patterns"][0]["content"]
+            self.assertIn(spark_sanitize.MEMORY_DATA_BEGIN, pattern_content)
+            self.assertIn("active matching pattern", pattern_content)
             self.assertEqual(payload["patterns"][0]["source_spark_ids"], [2, 99])
         finally:
             conn.close()

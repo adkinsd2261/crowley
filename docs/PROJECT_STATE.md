@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V3.9.20 · V4.0 Cognitive Memory mid-lock (T1–T14)
-**Last doc sync:** 2026-07-08 (V3.9.20 ticket lineage + memory linkage lock)
+**As of:** V4.0.0 · V4.0 Cognitive Memory shipped (T1–T24)
+**Last doc sync:** 2026-07-08 (V4.0 cognitive memory release lock)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -45,8 +45,8 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.12 shipped on `main`** — portable context packet export, writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80)
 - **V4.0 Part 1 bridge E2E (2026-07-07)** — sqlite-vec per-connection, Actions auto-promote, retrieve hardening, bridge verify; see [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 - **V4.0 Part 1 patch (2026-07-07)** — agent.sync ASE + GitHub envelope on Actions bridge; see [V4.0_PART1_PATCH_AGENT_GITHUB.md](./V4.0_PART1_PATCH_AGENT_GITHUB.md)
-- **V4.0 Cognitive Memory mid-lock (2026-07-07)** — T1–T14 (#203–#216): sparks schema, ingest, retrieval, graph, patterns, context API, **cross-source resolution** — **14/24 tickets; not V4.0 complete**; see [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md)
-- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 cognitive stack half-built; resume at T15 (#217).
+- **V4.0 Cognitive Memory shipped (2026-07-08)** — T1–T24 (#203–#226): sparks schema, ingest, retrieval, graph, patterns, context API, lifecycle, sensitivity filtering, sanitization, content validation, API limits, observability, lineage, docs/version lock; see [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
+- **Direction pivot** — Crowley is the persistent context layer across reasoning surfaces; V4 makes lane-scoped sparks the cognitive memory unit while retaining raw `memory_items`.
 
 It is **not** a multi-user service and **not** a full agent framework with tool use. The browser UI is one cockpit, not the identity boundary.
 
@@ -72,19 +72,24 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | `scripts/backfill_handoff_tickets.py` | **Active** | Backfill handoffs as tickets (V3.9.18) |
 | `scripts/reconcile_handoff_ticket_parity.py` | **Active** | Parity audit/fix + unique index (V3.9.18 #151) |
 | `memory_quality.py` | **Active** | Ingest dedup, retrieval strength, lifecycle cleanup (V3.9.19) |
-| `sparks.py` | **Active (V4 partial)** | Sparks/patterns schema + validation (T1–T3) |
-| `spark_extraction.py` | **Active (V4 partial)** | LLM spark extraction (T4) |
-| `cognitive_ingest.py` | **Active (V4 partial)** | Cognitive ingest receipt + pipeline (T5) |
-| `spark_retrieval.py` | **Active (V4 partial)** | Deterministic spark retrieval (T8) |
-| `spark_graph.py` | **Active (V4 partial)** | Spark links, graph expansion (T9–T10) |
-| `patterns.py` | **Active (V4 partial)** | Pattern detection + safety (T11–T12) |
+| `sparks.py` | **Active (V4)** | Sparks schema, validation, embeddings, dedup, lineage |
+| `spark_extraction.py` | **Active (V4)** | LLM JSON-array spark extraction |
+| `cognitive_ingest.py` | **Active (V4)** | Cognitive ingest receipt + spark pipeline |
+| `spark_retrieval.py` | **Active (V4)** | Deterministic spark retrieval + canonical scoring |
+| `spark_graph.py` | **Active (V4)** | Spark links, graph expansion, pruning |
+| `patterns.py` | **Active (V4)** | Pattern detection + safety gates |
+| `context_orchestration.py` | **Active (V4)** | Cognitive context assembly, cold start, trace lineage |
+| `spark_lifecycle.py` | **Active (V4)** | Confidence decay and lifecycle maintenance |
+| `spark_security.py` | **Active (V4)** | Sensitivity exposure gates |
+| `spark_sanitize.py` | **Active (V4)** | Output sanitization and MEMORY_DATA wrapping |
 | `agent_sync_envelope.py` | **Active (V4 part 1)** | ASE + deep_sync pagination (#229–#230) |
 | `actions_tool_runtime.py` | **Active (V4 part 1)** | Actions tool concurrency + timeouts |
 | `scripts/cleanup_chatgpt_bridge.sh` | **Active (V4 part 1)** | Bridge cleanup — duplicate cloudflared, wedged bus |
 | `scripts/watch_crowley_bus.sh` | **Active (V4 part 1)** | Bus watchdog for durable LaunchAgent bridge |
 | `docs/V4.0_PART1_BRIDGE_E2E_LOCK.md` | **Active** | Part 1 bridge + ChatGPT E2E doc lock |
 | `docs/V4.0_PART1_PATCH_AGENT_GITHUB.md` | **Active** | V4 part 1 patch — sync ASE + GitHub envelope |
-| `tickets/v4.0_cognitive_memory.json` | **Active** | V4 ticket packet (#203–#226) |
+| `tickets/v4.0_cognitive_memory.json` | **Locked** | V4 ticket packet (#203–#226) |
+| `docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md` | **Active** | Final V4 release lock |
 | `scripts/backfill_constraint_deduplication.py` | **Active** | Constraint dedup backfill (V3.9.19 #163) |
 | `docs/V3.9.19_MEMORY_QUALITY.md` | **Active** | V3.9.19 release spec |
 | `docs/V3.9.18_AGENT_RETRIEVAL_ENFORCEMENT.md` | **Active** | V3.9.18 release spec |
@@ -153,7 +158,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.7 | Experience & Reliability | UI polish, embed fallback, CI slim deps, module extraction, metrics, preflight |
 | V3.9.14 | Durable ChatGPT Bridge | LaunchAgent, API-only tunnel, verify tooling |
 | V3.9.12 | Portable Context Terminal | Packet export, writeback parse/ingest, CLI (#76–#80) |
-| V4.0 | Cognitive Memory | **In progress** — T1–T14 shipped; T15–T24 open; version bump at T24 only |
+| V4.0.0 | Cognitive Memory | **Shipped** — T1–T24 complete; version bumped at T24 |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 
@@ -170,7 +175,7 @@ Full history: [VERSIONS.md](../VERSIONS.md).
 | Handoff ingest API | ✅ V3.7 | `POST /api/ingest` |
 | ChatGPT Actions API | ✅ V3.9.13 | Bearer-auth `/api/actions/*` — context, retrieve, packet, writeback only |
 | portable context terminal | ✅ V3.9.12 | Export packet; import episodic receipt + staged spark candidates |
-| Spark lanes | Planned V4.0 | learning, work, relationships, money, health, operating_style |
+| Spark lanes | ✅ V4.0 | learning, work, relationships, money, health, operating_style |
 | Bus health API | ✅ V3.7 | `GET /api/bus/health` |
 | Inbox file ingest | ✅ V3.7 | `scripts/ingest_inbox.py` |
 | Handoff templates | ✅ V3.7 | `scripts/crowley_handoff.py` |

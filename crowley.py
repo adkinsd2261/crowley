@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V3.9.14 — local AI OS with memory backend, context bridge, and web workspace UI."""
+"""Crowley V4.0 — local AI OS with cognitive memory and context orchestration."""
 
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "3.9.20"
-CROWLEY_RELEASE_LABEL = "Crowley V3.9.20 Ticket Memory Linkage"
+CROWLEY_VERSION = "4.0.0"
+CROWLEY_RELEASE_LABEL = "Crowley V4.0 Cognitive Memory"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME
@@ -2050,7 +2050,7 @@ def build_qa_visibility_bundle() -> dict[str, object]:
         name = type(exc).__name__
         if name == "GitHubNotConfiguredError":
             bundle["github"] = {"configured": False}
-        elif isinstance(exc, RuntimeError):
+        elif name == "GitHubReadError" or isinstance(exc, RuntimeError):
             bundle["github"] = {"configured": True, "error": str(exc)}
         else:
             raise
@@ -4019,6 +4019,11 @@ def _pack_embedding(vector: list[float]) -> bytes:
     return struct.pack(f"{len(vector)}f", *vector)
 
 
+def _vec_bind(vector: list[float]) -> bytes:
+    """Packed float bytes for sqlite-vec INSERT and MATCH bindings."""
+    return _pack_embedding(vector)
+
+
 def _ensure_memory_vec_table(conn: sqlite3.Connection) -> bool:
     if not _try_load_sqlite_vec(conn):
         return False
@@ -4190,7 +4195,7 @@ def index_memory_embedding(
         )
         conn.execute(
             "INSERT INTO memory_vec(memory_id, embedding) VALUES (?, ?)",
-            (memory_id, embedding),
+            (memory_id, _vec_bind(embedding)),
         )
     except Exception:
         # embedding_blob is already stored; vec index is optional acceleration.
@@ -5565,7 +5570,7 @@ def _semantic_candidate_scores(
                 ORDER BY distance
                 LIMIT ?
                 """,
-                (query_embedding, limit),
+                (_vec_bind(query_embedding), limit),
             ).fetchall()
             if rows:
                 return {
@@ -7773,6 +7778,7 @@ def _normalize_terminal_spark(
         "content": content,
         "lane": lane,
         "why_keep": why_keep,
+        "worth_reason": str(raw.get("worth_reason") or why_keep).strip(),
         "confidence": confidence if confidence is not None else 0.0,
         "sensitivity": sensitivity,
     }
@@ -7969,38 +7975,73 @@ def ingest_terminal_writeback(
         }
 
     spark_ids: list[int] = []
+    v4_spark_ids: list[int] = []
+    v4_spark_actions: list[str] = []
     rejected_sparks: list[str] = []
     sparks_raw = writeback.get("sparks") or []
     assert isinstance(sparks_raw, list)
 
-    for spark in sparks_raw:
-        if not isinstance(spark, dict):
-            rejected_sparks.append("invalid spark object")
-            continue
-        content = str(spark.get("content") or "").strip()
-        sensitivity = str(spark.get("sensitivity") or "normal").lower()
-        is_sensitive = sensitivity in {"sensitive", "high"}
-        spark_metadata = _portable_spark_metadata(
-            spark,
-            session=normalized_session,
-            session_receipt_id=int(session_receipt_id),
-        )
-        item_id = save_memory_item(
-            "event",
-            content,
-            summary=str(spark.get("why_keep") or "").strip() or None,
-            source=PORTABLE_TERMINAL_SOURCE,
-            project_id=project_id,
-            importance=2 if is_sensitive else 3,
-            confidence=float(spark.get("confidence") or 0.5),
-            pinned=False,
-            status=PORTABLE_SPARK_STATUS,
-            metadata=spark_metadata,
-        )
-        if item_id is None:
-            rejected_sparks.append(_truncate(content, 64))
-        else:
+    conn = connect_db()
+    try:
+        for spark in sparks_raw:
+            if not isinstance(spark, dict):
+                rejected_sparks.append("invalid spark object")
+                continue
+            content = str(spark.get("content") or "").strip()
+            sensitivity = str(spark.get("sensitivity") or "normal").lower()
+            is_sensitive = sensitivity in {"sensitive", "high"}
+            spark_metadata = _portable_spark_metadata(
+                spark,
+                session=normalized_session,
+                session_receipt_id=int(session_receipt_id),
+            )
+            item_id = save_memory_item(
+                "event",
+                content,
+                summary=str(spark.get("why_keep") or "").strip() or None,
+                source=PORTABLE_TERMINAL_SOURCE,
+                project_id=project_id,
+                importance=2 if is_sensitive else 3,
+                confidence=float(spark.get("confidence") or 0.5),
+                pinned=False,
+                status=PORTABLE_SPARK_STATUS,
+                metadata=spark_metadata,
+                write_action="portable.writeback.ingest",
+                conn=conn,
+            )
+            if item_id is None:
+                rejected_sparks.append(_truncate(content, 64))
+                continue
+
             spark_ids.append(int(item_id))
+            try:
+                import portable_writeback_sparks_bridge
+
+                upsert = portable_writeback_sparks_bridge.upsert_portable_spark_to_v4(
+                    conn,
+                    spark,
+                    source_memory_item_id=int(item_id),
+                    project_id=project_id,
+                    session_receipt_id=int(session_receipt_id),
+                    session=normalized_session,
+                )
+            except ValueError as exc:
+                rejected_sparks.append(f"{_truncate(content, 48)}: {exc}")
+                continue
+
+            v4_spark_ids.append(int(upsert.spark_id))
+            v4_spark_actions.append(str(upsert.action))
+            attach_memory_item_metadata(
+                int(item_id),
+                {
+                    "v4_spark_id": int(upsert.spark_id),
+                    "v4_spark_action": str(upsert.action),
+                },
+                conn=conn,
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
     do_not_save = writeback.get("do_not_save") or []
     skipped_do_not_save = (
@@ -8012,6 +8053,8 @@ def ingest_terminal_writeback(
         "status": "ok",
         "session_receipt_id": int(session_receipt_id),
         "spark_ids": spark_ids,
+        "v4_spark_ids": v4_spark_ids,
+        "v4_spark_actions": v4_spark_actions,
         "rejected_sparks": rejected_sparks,
         "skipped_do_not_save": skipped_do_not_save,
         "metadata": session_metadata,

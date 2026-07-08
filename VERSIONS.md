@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V3.9.20 (`Crowley V3.9.20 Ticket Memory Linkage`)
-**Next planned:** V4.0 Cognitive Memory (mid-lock — final bump at T24 #226)
+**Current:** V4.0.0 (`Crowley V4.0 Cognitive Memory`)
+**Next planned:** V4.1 cognitive hardening and review UX
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
@@ -44,7 +44,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.20 | shipped  | 2026-07-08 | Ticket lineage + memory linkage — full arc query, bidirectional index, audit/backfill (#264, #225) |
 | V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
-| V4.0    | in progress | 2026-07-07 | Cognitive Memory mid-lock T1–T13; Part 1 ASE/GitHub + bridge E2E; bump at T24 |
+| V4.0.0  | shipped  | 2026-07-08 | Cognitive Memory — raw receipts, sparks, graph links, patterns, context orchestration, safeguards, observability, lineage (#203–#226) |
 
 ---
 
@@ -642,6 +642,20 @@ Plan: [docs/V3.9.10_TASK_FRAME_CONTEXT.md](./docs/V3.9.10_TASK_FRAME_CONTEXT.md)
 **Version:** `CROWLEY_VERSION = "3.9.9"`, `CROWLEY_RELEASE_LABEL = "Crowley V3.9.9 Context That Feeds"`
 
 Plan: [docs/V3.9.9_CONTEXT_THAT_FEEDS.md](./docs/V3.9.9_CONTEXT_THAT_FEEDS.md)
+
+---
+
+## V4.0.0 — Cognitive Memory
+
+**Version:** `CROWLEY_VERSION = "4.0.0"`, `CROWLEY_RELEASE_LABEL = "Crowley V4.0 Cognitive Memory"`
+
+Lock: [docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
+
+Tickets `#203–#226` shipped the cognitive memory stack: raw `memory_items`
+receipts, `sparks`, `spark_links`, `patterns`, deterministic context
+orchestration, lifecycle maintenance, sensitivity filtering, prompt-injection
+sanitization, write-time security validation, API limits/rate limits,
+observability hash-chain logging, lineage traces, and final docs/version lock.
 
 ---
 

@@ -271,6 +271,25 @@ class SparkEmbeddingTests(IsolatedDbTestCase):
         finally:
             conn.close()
 
+    def test_real_spark_vec_insert_when_sqlite_vec_available(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            sparks._spark_vec_ready_cache.pop(id(conn), None)
+            if not sparks._ensure_spark_vec_table(conn):
+                self.skipTest("sqlite-vec unavailable in this environment")
+            spark_id = _insert_bare_spark(conn)
+            vector = _unit_vector()
+            ok = sparks.index_spark_embedding(conn, spark_id, vector, "test-model")
+            self.assertTrue(ok)
+            row = conn.execute(
+                "SELECT COUNT(*) AS c FROM spark_vec WHERE spark_id = ?",
+                (spark_id,),
+            ).fetchone()
+            assert row is not None
+            self.assertEqual(int(row["c"]), 1)
+        finally:
+            conn.close()
+
     def test_reindex_same_model_preserves_updated_at(self) -> None:
         conn = crowley.connect_db()
         try:

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import math
 import json
+import math
+import re
 import sqlite3
 from dataclasses import dataclass
 from typing import Literal
@@ -50,6 +51,30 @@ _SPARK_INSTRUCTION_MARKERS = (
     "system prompt",
     "new instructions",
     "override your",
+    "forget everything",
+    "you are now",
+)
+_SPARK_PROMPT_WRAPPER_MARKERS = (
+    "<<sys>>",
+    "[inst]",
+    "<|system|>",
+)
+_SPARK_PROMPT_WRAPPER_RES = (
+    re.compile(r"<\|im_(?:start|end)\|>\s*(?:system|assistant|user)\b", re.IGNORECASE),
+)
+_SPARK_MEMORY_DATA_BEGIN = "<<<MEMORY_DATA>>>"
+_SPARK_MEMORY_DATA_END = "<<<END_MEMORY_DATA>>>"
+_SPARK_SCHEMA_KEYS = frozenset({
+    "content",
+    "lane",
+    "why_keep",
+    "worth_reason",
+    "confidence",
+})
+_SPARK_SECRET_SK_RE = re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")
+_SPARK_SECRET_BEARER_RE = re.compile(
+    r"\bBearer\s+[A-Za-z0-9._-]{12,}\b",
+    re.IGNORECASE,
 )
 _SPARK_VAGUE_PHRASES = frozenset({
     "noted",
@@ -86,6 +111,68 @@ def _normalize_text(value: object) -> str:
 def _contains_marker(text: str, markers: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(marker in lowered for marker in markers)
+
+
+def _content_has_prompt_wrapper_blob(content: str) -> bool:
+    if _contains_marker(content, _SPARK_PROMPT_WRAPPER_MARKERS):
+        return True
+    return any(pattern.search(content) for pattern in _SPARK_PROMPT_WRAPPER_RES)
+
+
+def _spark_json_blob_candidate(text: str) -> str | None:
+    stripped = str(text or "").strip()
+    if stripped.startswith("{") or stripped.startswith("["):
+        return stripped
+    if stripped.startswith("```"):
+        match = re.search(r"```(?:json)?\s*([\s\S]*?)```", stripped, flags=re.IGNORECASE)
+        if match:
+            inner = match.group(1).strip()
+            if inner.startswith("{") or inner.startswith("["):
+                return inner
+    return None
+
+
+def _object_has_spark_schema_keys(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    keys = {str(key).strip().lower() for key in value.keys()}
+    return len(keys & _SPARK_SCHEMA_KEYS) >= 2
+
+
+def _content_looks_like_hallucinated_structure(content: str) -> bool:
+    candidate = _spark_json_blob_candidate(content)
+    if candidate is None:
+        return False
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        return False
+    if isinstance(parsed, dict):
+        return _object_has_spark_schema_keys(parsed)
+    if isinstance(parsed, list) and parsed:
+        dict_items = [item for item in parsed[:3] if isinstance(item, dict)]
+        if not dict_items:
+            return False
+        return any(_object_has_spark_schema_keys(item) for item in dict_items)
+    return False
+
+
+def _spark_content_security_errors(content: str) -> list[str]:
+    """T20 write-time content security gates (normalized content only)."""
+    errors: list[str] = []
+    if _contains_marker(content, _SPARK_INSTRUCTION_MARKERS):
+        errors.append("content looks like instruction phrasing")
+    if _content_has_prompt_wrapper_blob(content):
+        errors.append("content contains prompt wrapper token")
+    if _SPARK_SECRET_SK_RE.search(content):
+        errors.append("content contains embedded secret pattern")
+    if _SPARK_SECRET_BEARER_RE.search(content):
+        errors.append("content contains embedded secret pattern")
+    if _SPARK_MEMORY_DATA_BEGIN in content or _SPARK_MEMORY_DATA_END in content:
+        errors.append("content contains memory delimiter smuggling")
+    if _content_looks_like_hallucinated_structure(content):
+        errors.append("content looks like hallucinated spark structure")
+    return errors
 
 
 def validate_spark(raw: object) -> SparkValidationResult:
@@ -136,12 +223,11 @@ def validate_spark(raw: object) -> SparkValidationResult:
         errors.append(f"invalid sensitivity: {sensitivity}")
 
     if content:
-        if _contains_marker(content, _SPARK_INSTRUCTION_MARKERS):
-            errors.append("content looks like instruction phrasing")
-        elif content.lower() in _SPARK_VAGUE_PHRASES:
+        if content.lower() in _SPARK_VAGUE_PHRASES:
             errors.append("content is too vague")
         elif _contains_marker(content, _SPARK_SUMMARY_MARKERS):
             errors.append("content looks like a whole-input summary")
+        errors.extend(_spark_content_security_errors(content))
 
     if errors:
         return SparkValidationResult(ok=False, errors=errors)
@@ -361,11 +447,18 @@ def _ensure_spark_vec_table(conn: sqlite3.Connection) -> bool:
 def _write_spark_vec_row(
     conn: sqlite3.Connection, spark_id: int, embedding: list[float]
 ) -> None:
-    conn.execute("DELETE FROM spark_vec WHERE spark_id = ?", (spark_id,))
-    conn.execute(
-        "INSERT INTO spark_vec(spark_id, embedding) VALUES (?, ?)",
-        (spark_id, embedding),
-    )
+    import crowley
+
+    try:
+        vec_blob = crowley._vec_bind(embedding)
+        conn.execute("DELETE FROM spark_vec WHERE spark_id = ?", (spark_id,))
+        conn.execute(
+            "INSERT INTO spark_vec(spark_id, embedding) VALUES (?, ?)",
+            (spark_id, vec_blob),
+        )
+    except Exception:
+        # embedding_blob is already stored; vec index is optional acceleration.
+        return
 
 
 def index_spark_embedding(
@@ -566,6 +659,25 @@ def _merge_spark_ref(
     )
 
 
+def _lineage_with_dedup_action(
+    lineage_json: dict[str, object] | None,
+    *,
+    action: str,
+    source_memory_item_id: int,
+    keeper_id: int | None = None,
+    similarity: float | None = None,
+) -> dict[str, object]:
+    lineage: dict[str, object] = dict(lineage_json or {})
+    lineage.setdefault("memory_item_id", source_memory_item_id)
+    lineage.setdefault("source_memory_item_id", source_memory_item_id)
+    lineage["dedup_action"] = action
+    if keeper_id is not None:
+        lineage["keeper_id"] = keeper_id
+    if similarity is not None:
+        lineage["similarity"] = similarity
+    return lineage
+
+
 def _upsert_reinforces_link(
     conn: sqlite3.Connection,
     from_spark_id: int,
@@ -620,7 +732,13 @@ def upsert_spark_with_dedup(
                 keeper_id,
                 source_memory_item_id=source_memory_item_id,
                 new_confidence=incoming_confidence,
-                lineage_json=lineage_json,
+                lineage_json=_lineage_with_dedup_action(
+                    lineage_json,
+                    action="merged",
+                    source_memory_item_id=source_memory_item_id,
+                    keeper_id=keeper_id,
+                    similarity=sim,
+                ),
             )
             return SparkUpsertResult(
                 action="merged",
@@ -635,7 +753,13 @@ def upsert_spark_with_dedup(
                 source_memory_item_id=source_memory_item_id,
                 project_id=project_id,
                 trust_state=trust_state,
-                lineage_json=lineage_json,
+                lineage_json=_lineage_with_dedup_action(
+                    lineage_json,
+                    action="linked",
+                    source_memory_item_id=source_memory_item_id,
+                    keeper_id=keeper_id,
+                    similarity=sim,
+                ),
             )
             if vector is not None:
                 embed_and_index_spark(conn, new_id, normalized, vector=vector)
@@ -664,7 +788,11 @@ def upsert_spark_with_dedup(
         source_memory_item_id=source_memory_item_id,
         project_id=project_id,
         trust_state=trust_state,
-        lineage_json=lineage_json,
+        lineage_json=_lineage_with_dedup_action(
+            lineage_json,
+            action="inserted",
+            source_memory_item_id=source_memory_item_id,
+        ),
     )
     if vector is not None:
         embed_and_index_spark(conn, new_id, normalized, vector=vector)
