@@ -1,7 +1,7 @@
 # Crowley — Project State
 
-**As of:** V4.0.0 · V4.0 Cognitive Memory shipped (T1–T24)
-**Last doc sync:** 2026-07-08 (V4.0 cognitive memory release lock)
+**As of:** V4.1.0 · V4.1 Architecture and MCP Readiness shipped (#316–#325)
+**Last doc sync:** 2026-07-09 (V4.1 architecture foundation release lock)
 **Onboarding:** [WHERE_WE_ARE.md](./WHERE_WE_ARE.md) — read first in new Codex/Cursor sessions  
 **Source:** `crowley.py`, `app.py`, `VERSIONS.md`, `requirements.txt`  
 Inferences marked **(inference)**.
@@ -38,6 +38,8 @@ Crowley is a **local-first persistent context layer** for a single developer/use
 - **V3.9.17 shipped** — Trust Control and Clarity: write attribution, permissions, audit/rollback, memory tiers, conflict engine, agent behavior layer (#112–#130)
 - **V3.9.20 shipped** — Ticket lineage + memory linkage: `sort=oldest`, `tickets.lineage`, `linked_ticket_ids_json`, `ticket.get include_memories` (#264, #225)
 - **V3.9.19 shipped** — Memory Quality: ingest dedup, retrieval strength, lifecycle cleanup, observability-backed validation runtime wiring (#152–#166)
+- **V4.0.0 shipped** — Cognitive Memory: raw receipts, lane-scoped sparks, graph links, patterns, context orchestration, safeguards, observability, lineage (#203–#226)
+- **V4.1.0 shipped** — Architecture and MCP Readiness: `crowley.py` facade extraction, local security baseline, shared tool contract, Actions adapter, MCP-ready metadata (#316–#325)
 - **V3.9.18 shipped** — Agent Retrieval Enforcement + integrity patch: handoff→ticket bridge, gating, system integrity, parity reconcile (#131–#151)
 - **V3.9.15 shipped** — GPT Toolbelt: hybrid gateway, tool registry, inspect/planning/GitHub read (#94–#100)
 - **V3.9.14 shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86)
@@ -159,6 +161,7 @@ It is **not** a multi-user service and **not** a full agent framework with tool 
 | V3.9.14 | Durable ChatGPT Bridge | LaunchAgent, API-only tunnel, verify tooling |
 | V3.9.12 | Portable Context Terminal | Packet export, writeback parse/ingest, CLI (#76–#80) |
 | V4.0.0 | Cognitive Memory | **Shipped** — T1–T24 complete; version bumped at T24 |
+| V4.1.0 | Architecture and MCP Readiness | **Shipped** — #316–#325 complete; facade extraction, security baseline, tool contract, final audit |
 
 Full history: [VERSIONS.md](../VERSIONS.md).
 

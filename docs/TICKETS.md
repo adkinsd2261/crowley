@@ -1,18 +1,19 @@
 # Crowley — Backlog & Tickets
 
-**As of:** V4.0.0 · V4.0 Cognitive Memory **shipped** T1–T24 (#203–#226) · 2026-07-08
+**As of:** V4.1.0 · V4.1 Architecture and MCP Readiness **shipped** (#316–#325) · 2026-07-09
 **Source of truth:** `tickets` table (agent board) · legacy `project_state`, `open_loops`, `tasks` in SQLite
 
 ---
 
-## Locked initiative — V4.0 Cognitive Memory
+## Locked initiative — V4.1 Architecture and MCP Readiness
 
-**Current:** V4.0 Cognitive Memory shipped (#203–#226). V4.0 is release-locked; new work should be minted as V4.1/hardening tickets.
+**Current:** V4.1 Architecture and MCP Readiness shipped (#316–#325). V4.1 is release-locked; new work should be minted as V4.2 MCP/review UX tickets.
 
-**Packet:** `tickets/v4.0_cognitive_memory.json` (supersedes `v4.0_spark_lanes.json`)  
-**Release lock:** [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)  
-**Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)  
-**Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)  
+**Packet:** `tickets/v4.1_architecture_security_mcp.json`
+**Prior V4.0 release lock:** [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
+**V4.1 release lock:** [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md)
+**Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)
+**Part 1 bridge E2E (2026-07-07):** [V4.0_PART1_BRIDGE_E2E_LOCK.md](./V4.0_PART1_BRIDGE_E2E_LOCK.md)
 **T14 context resolution (2026-07-07):** [V4.0_T14_CONTEXT_RESOLUTION_LOCK.md](./V4.0_T14_CONTEXT_RESOLUTION_LOCK.md)
 
 **Next ladders (minted, do not claim until prior ladder doc-locked):**
@@ -33,6 +34,7 @@
 | V3.9.14 Durable ChatGPT Bridge       | #82–#86 | `tickets/v3.9.14_durable_chatgpt_bridge.json`   | **Shipped**  |
 | V3.9.13 Secure ChatGPT Actions API  | —       | `docs/V3.9.13_SECURE_CHATGPT_ACTIONS_API.md`       | **Shipped on `main`**  |
 | V4.0 Cognitive Memory      | #203–#226 | `tickets/v4.0_cognitive_memory.json`      | **Shipped** · T1–T24 complete |
+| V4.1 Architecture + MCP Readiness | #316–#325 | `tickets/v4.1_architecture_security_mcp.json` | **Shipped** · final architecture audit locked |
 
 
 See [V3.9.14_DURABLE_CHATGPT_BRIDGE.md](./V3.9.14_DURABLE_CHATGPT_BRIDGE.md) · [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md) · [WHERE_WE_ARE.md](./WHERE_WE_ARE.md).

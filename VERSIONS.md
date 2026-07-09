@@ -2,8 +2,8 @@
 
 Single source of truth for release history. Update this file at the end of every version.
 
-**Current:** V4.0.0 (`Crowley V4.0 Cognitive Memory`)
-**Next planned:** V4.1 cognitive hardening and review UX
+**Current:** V4.1.0 (`Crowley V4.1 Architecture and MCP Readiness`)
+**Next planned:** V4.2 MCP transport and cognitive review UX
 
 **North star:** Crowley is the persistent context layer that follows D across reasoning surfaces. Models and UIs are swappable terminals; sparks are the memory unit.
 
@@ -45,6 +45,7 @@ Single source of truth for release history. Update this file at the end of every
 | V3.9.18 | shipped  | 2026-07-06 | Agent Retrieval Enforcement — handoff tickets, gating, integrity patch (#131–#151) |
 | V3.9.14 | shipped  | 2026-07-05 | Durable ChatGPT Bridge — LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | V4.0.0  | shipped  | 2026-07-08 | Cognitive Memory — raw receipts, sparks, graph links, patterns, context orchestration, safeguards, observability, lineage (#203–#226) |
+| V4.1.0  | shipped  | 2026-07-09 | Architecture and MCP Readiness — `crowley.py` facade extraction, security baseline, shared tool contract, Actions adapter, final audit (#316–#325) |
 
 ---
 
@@ -656,6 +657,21 @@ receipts, `sparks`, `spark_links`, `patterns`, deterministic context
 orchestration, lifecycle maintenance, sensitivity filtering, prompt-injection
 sanitization, write-time security validation, API limits/rate limits,
 observability hash-chain logging, lineage traces, and final docs/version lock.
+
+---
+
+## V4.1.0 — Architecture and MCP Readiness
+
+**Version:** `CROWLEY_VERSION = "4.1.0"`, `CROWLEY_RELEASE_LABEL = "Crowley V4.1 Architecture and MCP Readiness"`
+
+Lock: [docs/V4.1_FINAL_ARCHITECTURE_AUDIT.md](./docs/V4.1_FINAL_ARCHITECTURE_AUDIT.md)
+
+Tickets `#316–#325` shipped the foundation release: `crowley.py` remains the
+import-compatible facade while core runtime, model runtime, memory store and
+retrieval, world/sync/portable context, conversation runtime, and CLI shell
+logic live in focused modules. V4.1 also locks a local-first security baseline
+and moves ChatGPT Actions onto a shared `crowley_tools.py` contract with MCP
+metadata prepared for a future transport.
 
 ---
 

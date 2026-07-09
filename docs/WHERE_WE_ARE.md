@@ -1,9 +1,9 @@
 # Where We Are — Crowley (Codex / Cursor onboarding)
 
-**As of:** V4.0.0 · V4.0 Cognitive Memory **shipped** (T1–T24) · **2026-07-08**
+**As of:** V4.1.0 · V4.1 Architecture and MCP Readiness **shipped** (#316–#325) · **2026-07-09**
 **Read this first** on any new Codex or Cursor session after `scripts/codex_sync.py --before` or `scripts/cursor_sync.py --before`.
 
-**Git note:** V4.0 Cognitive Memory shipped locally through T24 (#203–#226). Restart bus after version bumps so `/api/health` matches constants.
+**Git note:** V4.1 architecture foundation shipped locally through #325. Restart bus after version bumps so `/api/health` matches constants.
 
 ---
 
@@ -56,12 +56,13 @@ D ──► Crowley (memory, tickets, chat, docs)
 | **V3.9.14** | **Shipped** — Durable ChatGPT Bridge: LaunchAgent, API-only tunnel, verify tooling (#82–#86) |
 | **V3.9.13** | **Shipped on `main`** — Secure ChatGPT Actions API: bearer `/api/actions/*`, bridge scripts, `CHATGPT_SETUP.md` |
 | **V4.0.0** | **Shipped** — Cognitive Memory T1–T24 (#203–#226): sparks, graph links, patterns, context orchestration, safeguards, observability, lineage, docs lock |
+| **V4.1.0** | **Shipped** — Architecture and MCP Readiness (#316–#325): `crowley.py` facade extraction, security baseline, shared tool contract, Actions adapter, final audit |
 
-**Current constants (local code):** `CROWLEY_VERSION = "4.0.0"` (`Crowley V4.0 Cognitive Memory`)
+**Current constants (local code):** `CROWLEY_VERSION = "4.1.0"` (`Crowley V4.1 Architecture and MCP Readiness`)
 
 **Repository:** [github.com/adkinsd2261/crowley](https://github.com/adkinsd2261/crowley)
 
-**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proved the portable context terminal loop; V3.9.13 added bearer Actions for Custom GPT; **V4.0 Cognitive Memory is now shipped** — raw receipts feed lane-scoped sparks, graph links, patterns, deterministic context orchestration, security gates, observability, and lineage traces.
+**Direction pivot:** Crowley is the persistent context layer that follows D across reasoning surfaces. The browser UI is one cockpit; ChatGPT, Claude, Codex, Cursor, local models, and future models are terminals/reasoning surfaces. V3.9.12 proved the portable context terminal loop; V3.9.13 added bearer Actions for Custom GPT; **V4.0 Cognitive Memory shipped** raw receipts, lane-scoped sparks, graph links, patterns, deterministic context orchestration, security gates, observability, and lineage traces. **V4.1 shipped the architecture foundation**: focused runtime modules, local security baseline, shared tool contract, and MCP-ready metadata without shipping an MCP server.
 
 ---
 
@@ -171,7 +172,7 @@ Pre-V4 quality arc complete through **V3.9.13 on `main`**. See [PRE_V4_FUTURE_RE
 | **V3.9.18 Agent Retrieval Enforcement** | Cursor | **Shipped** · #131–#135 · gating, domain triggers, handoff tickets |
 | **V4.0 Cognitive Memory** | Codex | **Shipped** · T1–T24 (#203–#226) · [release lock](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md) |
 
-**Next workflow:** V4.1 hardening or UI polish should be minted as a new ticket packet. V4.0 itself is locked; avoid broadening the shipped release after T24 except for targeted bugfixes.
+**Next workflow:** V4.2 MCP transport or cognitive review UX should be minted as a new ticket packet. V4.1 itself is locked; avoid broadening the shipped release except for targeted bugfixes.
 
 ---
 

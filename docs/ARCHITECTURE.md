@@ -1,8 +1,8 @@
 # Crowley — System Architecture
 
 **Document status:** Reverse-engineered from codebase  
-**Last reviewed against code:** 2026-07-08
-**Code version:** `CROWLEY_VERSION = "4.0.0"` (`Crowley V4.0 Cognitive Memory`)
+**Last reviewed against code:** 2026-07-09
+**Code version:** `CROWLEY_VERSION = "4.1.0"` (`Crowley V4.1 Architecture and MCP Readiness`)
 **Scope:** Facts from code are stated plainly. Inferences are labeled **(inference)**.
 
 ---
@@ -32,6 +32,7 @@ Crowley is a **local-first persistent context layer** for a single user (“D”
 20. **V3.9.12 Portable Context Terminal (2026-07)** — local/manual packet export, structured writeback parse/ingest, staged spark candidates, CLI workflow (#76–#80).
 22. **V3.9.14 Durable ChatGPT Bridge (2026-07)** — LaunchAgent service, API-only tunnel ingress, bridge verify tooling, hardened start script.
 22. **V4.0 Cognitive Memory (shipped 2026-07-08)** — separate `sparks` / `spark_links` / `patterns` tables layered on `memory_items`; `/api/cognitive/*` namespace; deterministic context orchestration; lifecycle, sensitivity gates, sanitization, validation, rate limits, observability, and lineage ([V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)).
+23. **V4.1 Architecture and MCP Readiness (shipped 2026-07-09)** — `crowley.py` is now an import-compatible facade over focused runtime, memory, world/sync/portable, conversation, and CLI modules; ChatGPT Actions consumes a shared `crowley_tools.py` contract with MCP exposure metadata prepared for a future transport ([V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md)).
 
 Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/actions/*` uses bearer auth when `CROWLEY_ACTION_KEY` is set; full internal API remains localhost-first.
 
@@ -41,7 +42,14 @@ Persistence is local SQLite (`crowley.db`). No cloud sync, no MCP (yet). `/api/a
 
 | Path | Role |
 |------|------|
-| `crowley.py` | Engine — CLI, memory, world model, extraction, memory bus (~5600 lines) |
+| `crowley.py` | Import-compatible engine facade — stable public symbols, compatibility wrappers, shared constants |
+| `crowley_core.py` | DB path/connect helpers, setup delegation, shared row/time/text helpers |
+| `model_runtime.py` | Brain provider selection, model streaming/calls, runtime diagnostics, test-mode stubs |
+| `memory_store.py` / `memory_embeddings.py` / `memory_retrieval.py` | Memory item CRUD/metadata/quality gate, optional embeddings, retrieval/scoring/explanations |
+| `world_state.py` | Projects, decisions, loops, tasks, dashboard/context bundle, metrics, activity wire |
+| `portable_context.py` / `agent_sync_bundle.py` | Portable packet/writeback/acceptance reports and agent sync bundles |
+| `conversation_runtime.py` / `cli_shell.py` | Prompt assembly, chat turn, response mode/depth, CLI commands, debug commands, interactive loop |
+| `crowley_tools.py` | Transport-neutral tool contract and MCP exposure classification |
 | `diagnostics.py` | Diagnostics domain — gather, prompt, stream tokens (re-exported by engine) |
 | `tickets.py` | Ticketing domain — CRUD, summaries, changes feed (re-exported by engine) |
 | `chatgpt_actions.py` | Actions router — bearer-auth `/api/actions/*` (V3.9.13) |
@@ -260,8 +268,8 @@ crowley.py (+ diagnostics.py, tickets.py)
 
 | Symbol | Value (code) |
 |--------|----------------|
-| `CROWLEY_VERSION` | `"4.0.0"` |
-| `CROWLEY_RELEASE_LABEL` | `"Crowley V4.0 Cognitive Memory"` |
+| `CROWLEY_VERSION` | `"4.1.0"` |
+| `CROWLEY_RELEASE_LABEL` | `"Crowley V4.1 Architecture and MCP Readiness"` |
 
 ---
 
@@ -272,6 +280,7 @@ crowley.py (+ diagnostics.py, tickets.py)
 - [ROADMAP.md](./ROADMAP.md)
 - [DECISION_LOG.md](./DECISION_LOG.md)
 - [VERSIONS.md](../VERSIONS.md)
+- [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md)
 - [V3.6_MEMORY_BACKEND.md](./V3.6_MEMORY_BACKEND.md)
 - [V3.8.1_AGENT_PARITY.md](./V3.8.1_AGENT_PARITY.md)
 - [V3.8_MEMORY_TRAIL.md](./V3.8_MEMORY_TRAIL.md)

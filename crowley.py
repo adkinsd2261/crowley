@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crowley V4.0 — local AI OS with cognitive memory and context orchestration."""
+"""Crowley V4.1 — local AI OS with cognitive memory and context orchestration."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ _load_local_env()
 
 # --- constants ----------------------------------------------------------------
 
-CROWLEY_VERSION = "4.0.0"
-CROWLEY_RELEASE_LABEL = "Crowley V4.0 Cognitive Memory"
+CROWLEY_VERSION = "4.1.0"
+CROWLEY_RELEASE_LABEL = "Crowley V4.1 Architecture and MCP Readiness"
 
 USER_NAME = "D"
 USER_NAME_PERSONALITY = "Mr. Go"  # occasional flavor; default address is USER_NAME

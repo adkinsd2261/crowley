@@ -18,6 +18,40 @@ New decisions should append entries at the top (newest first) when shipping vers
 
 ---
 
+## ADR-046 — V4.1 shipped as architecture and MCP-readiness foundation
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Evidence:** `crowley.py` version `4.1.0`, `crowley_core.py`, `model_runtime.py`, `memory_embeddings.py`, `memory_store.py`, `memory_retrieval.py`, `world_state.py`, `portable_context.py`, `agent_sync_bundle.py`, `conversation_runtime.py`, `cli_shell.py`, `crowley_tools.py`, `actions_tool_registry.py`, `docs/V4.1_FINAL_ARCHITECTURE_AUDIT.md`, tickets #316–#325
+
+### Context
+
+V4.0 made Crowley powerful enough that the original monolithic `crowley.py`
+shape became a scaling risk. The next release also needed to prepare MCP without
+broadening public exposure or breaking the existing ChatGPT Actions contract.
+
+### Decision
+
+- Bump to `CROWLEY_VERSION = "4.1.0"`, `CROWLEY_RELEASE_LABEL = "Crowley V4.1 Architecture and MCP Readiness"`
+- Keep `crowley.py` as the import-compatible facade while moving runtime,
+  memory, world/sync/portable, conversation, and CLI logic into focused modules
+- Keep FastAPI routes, CLI commands, sync payloads, Actions routes, and DB schema stable
+- Lock the local-first security baseline: localhost internal API, bearer-gated
+  `/api/actions/*`, API-only tunnel boundary, write guardrails, cognitive
+  redaction, and read-only secret hygiene
+- Prepare MCP through `crowley_tools.py` metadata and the Actions registry
+  adapter, not through a new transport in this release
+
+### Rejected
+
+- Big-bang rewrite
+- Shipping an MCP server before auth/permission prompts/rate-limit parity are designed
+- Public full-API hosting, OAuth, accounts, or localhost UI auth in V4.1
+- Field encryption, cognitive review UX, truth arbitration, workflow
+  determinism expansion, voice/TTS, automation, and a full migration framework
+
+---
+
 ## ADR-045 — V4.0 Cognitive Memory shipped
 
 **Date:** 2026-07-08
