@@ -668,6 +668,23 @@ def _impl_build_portable_writeback_acceptance_report(
                             },
                             conn=conn,
                         )
+                        spark_meta_raw = str(spark_row["metadata_json"] or "{}")
+                        try:
+                            spark_meta = json.loads(spark_meta_raw)
+                        except json.JSONDecodeError:
+                            spark_meta = {}
+                        v4_spark_id = spark_meta.get("v4_spark_id")
+                        if v4_spark_id is not None:
+                            import spark_lifecycle
+
+                            spark_lifecycle.promote_spark_to_active(
+                                conn,
+                                int(v4_spark_id),
+                                dry_run=False,
+                                manual=True,
+                                promoted_by=reviewer,
+                                promotion_source="portable_acceptance",
+                            )
                         vector = embed_text(str(spark_row["content"]))
                         if vector and len(vector) == EMBED_DIM:
                             provider = _memory_embed_provider()

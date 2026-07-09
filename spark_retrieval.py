@@ -15,6 +15,12 @@ W_SPARK_CONFIDENCE = 0.25
 W_SPARK_RECENCY = 0.15
 W_SPARK_GRAPH = 0.20
 
+CERTAINTY_SCORE_MULTIPLIERS = {
+    "confirmed": 1.00,
+    "exploratory": 0.92,
+    "tentative": 0.85,
+}
+
 SPARK_RETRIEVE_VECTOR_CANDIDATES = 50
 SPARK_RETRIEVE_KEYWORD_CANDIDATES = 50
 SPARK_DEFAULT_LIMIT = 12
@@ -229,6 +235,11 @@ def _spark_graph_reinforcement(conn: sqlite3.Connection, spark_id: int) -> float
     return _clamp01(float(max_conf))
 
 
+def _certainty_multiplier(row: sqlite3.Row) -> float:
+    certainty = str(row["certainty"] or "tentative")
+    return CERTAINTY_SCORE_MULTIPLIERS.get(certainty, 0.85)
+
+
 def _score_spark(
     row: sqlite3.Row,
     *,
@@ -240,11 +251,13 @@ def _score_spark(
     recency = _spark_recency_score(row)
     semantic_c = _clamp01(semantic)
     graph_c = _clamp01(graph)
+    certainty_multiplier = _certainty_multiplier(row)
     breakdown = {
         "semantic": round(semantic_c, 4),
         "confidence": round(confidence, 4),
         "recency": round(recency, 4),
         "graph_reinforcement": round(graph_c, 4),
+        "certainty_multiplier": round(certainty_multiplier, 4),
     }
     score = (
         W_SPARK_SEMANTIC * semantic_c
@@ -252,7 +265,7 @@ def _score_spark(
         + W_SPARK_RECENCY * recency
         + W_SPARK_GRAPH * graph_c
     )
-    return round(score, 4), breakdown
+    return round(score * certainty_multiplier, 4), breakdown
 
 
 def _bump_spark_access(

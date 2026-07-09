@@ -80,7 +80,7 @@ class CognitiveIngestTests(IsolatedDbTestCase):
             conn.close()
         self.assertIsNotNone(row)
         assert row is not None
-        self.assertEqual(row["trust_state"], "candidate")
+        self.assertEqual(row["trust_state"], "active")
 
     def test_receipt_created_synchronously_async(self) -> None:
         os.environ["CROWLEY_TEST_MODE"] = "1"
@@ -241,6 +241,197 @@ class CognitiveIngestTests(IsolatedDbTestCase):
         assert row is not None
         meta = json.loads(str(row["metadata_json"] or "{}"))
         self.assertEqual(meta.get("extraction_status"), "failed")
+
+    def test_intent_ignore_skips_extraction_sync(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        client = TestClient(crowley_app.app)
+        res = client.post(
+            "/api/cognitive/ingest?sync=1",
+            json={"content": "hey"},
+        )
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        self.assertEqual(data["intent"]["intent"], "ignore")
+        self.assertEqual(data["extraction"]["status"], "skipped")
+        memory_item_id = data["memory_item_id"]
+
+        conn = crowley.connect_db()
+        try:
+            count = conn.execute("SELECT COUNT(*) AS n FROM sparks").fetchone()
+            row = conn.execute(
+                "SELECT metadata_json FROM memory_items WHERE id = ?",
+                (memory_item_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        assert count is not None
+        self.assertEqual(int(count["n"]), 0)
+        assert row is not None
+        meta = json.loads(str(row["metadata_json"] or "{}"))
+        self.assertEqual(meta.get("extraction_status"), "skipped_intent")
+        self.assertTrue(meta.get("non_retrieval"))
+
+    def test_intent_ignore_excluded_from_retrieval(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        text = "hey"
+        client = TestClient(crowley_app.app)
+        res = client.post("/api/cognitive/ingest?sync=1", json={"content": text})
+        self.assertEqual(res.status_code, 201, res.text)
+        memory_item_id = int(res.json()["memory_item_id"])
+        hits = crowley.retrieve_memories("hey", limit=20)
+        self.assertNotIn(memory_item_id, [int(hit["id"]) for hit in hits])
+
+    def test_temporary_intent_excluded_from_retrieval(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        text = "remind me to check this later today only"
+        client = TestClient(crowley_app.app)
+        res = client.post("/api/cognitive/ingest?sync=1", json={"content": text})
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        memory_item_id = int(data["memory_item_id"])
+        self.assertEqual(data["intent"]["intent"], "temporary")
+
+        conn = crowley.connect_db()
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) AS n FROM sparks WHERE source_memory_item_id = ?",
+                (memory_item_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        assert count is not None
+        self.assertEqual(int(count["n"]), 0)
+
+        hits = crowley.retrieve_memories("remind me later today", limit=20)
+        self.assertNotIn(memory_item_id, [int(hit["id"]) for hit in hits])
+
+    def test_intent_temporary_skips_extraction_and_flags_audit_only(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        client = TestClient(crowley_app.app)
+        res = client.post(
+            "/api/cognitive/ingest?sync=1",
+            json={"content": "remind me to check this later today only"},
+        )
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        self.assertEqual(data["intent"]["intent"], "temporary")
+        memory_item_id = data["memory_item_id"]
+
+        conn = crowley.connect_db()
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) AS n FROM sparks WHERE source_memory_item_id = ?",
+                (memory_item_id,),
+            ).fetchone()
+            row = conn.execute(
+                "SELECT metadata_json FROM memory_items WHERE id = ?",
+                (memory_item_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        assert count is not None
+        self.assertEqual(int(count["n"]), 0)
+        assert row is not None
+        meta = json.loads(str(row["metadata_json"] or "{}"))
+        self.assertTrue(meta.get("non_retrieval"))
+        self.assertEqual(meta.get("retention"), "audit_only")
+
+    def test_low_confidence_store_sets_tentative_certainty(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        client = TestClient(crowley_app.app)
+        res = client.post(
+            "/api/cognitive/ingest?sync=1",
+            json={"content": "maybe later"},
+        )
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        self.assertEqual(data["intent"]["intent"], "store")
+        memory_item_id = data["memory_item_id"]
+
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                "SELECT certainty, trust_state FROM sparks WHERE source_memory_item_id = ? LIMIT 1",
+                (memory_item_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row["certainty"], "tentative")
+        self.assertEqual(row["trust_state"], "candidate")
+
+    def test_high_confidence_store_auto_promotes_spark(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        client = TestClient(crowley_app.app)
+        res = client.post(
+            "/api/cognitive/ingest?sync=1",
+            json={"content": INGEST_TEXT},
+        )
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        memory_item_id = int(data["memory_item_id"])
+        self.assertGreaterEqual(int(data["extraction"]["promotion"]["promoted"]), 1)
+
+        conn = crowley.connect_db()
+        try:
+            row = conn.execute(
+                """
+                SELECT certainty, trust_state
+                FROM sparks
+                WHERE source_memory_item_id = ?
+                LIMIT 1
+                """,
+                (memory_item_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row["certainty"], "confirmed")
+        self.assertEqual(row["trust_state"], "active")
+
+    def test_chunked_mixed_topic_ingest(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        text = (
+            ROOT / "tests" / "fixtures" / "cognitive_chunking_mixed_topic.txt"
+        ).read_text(encoding="utf-8")
+        client = TestClient(crowley_app.app)
+        res = client.post("/api/cognitive/ingest?sync=1", json={"content": text})
+        self.assertEqual(res.status_code, 201, res.text)
+        data = res.json()
+        self.assertEqual(data["intent"]["reason"], "chunked_ingest")
+        memory_item_id = int(data["memory_item_id"])
+        extraction = data["extraction"]
+        self.assertTrue(extraction["ok"])
+        self.assertIn("chunking", extraction)
+        self.assertGreaterEqual(extraction["chunking"]["chunk_count"], 2)
+        self.assertGreaterEqual(extraction["chunking"]["chunks_skipped_intent"], 1)
+
+        conn = crowley.connect_db()
+        try:
+            meta_row = conn.execute(
+                "SELECT metadata_json FROM memory_items WHERE id = ?",
+                (memory_item_id,),
+            ).fetchone()
+            spark_rows = conn.execute(
+                """
+                SELECT lineage_json FROM sparks
+                WHERE source_memory_item_id = ?
+                """,
+                (memory_item_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+        assert meta_row is not None
+        meta = json.loads(str(meta_row["metadata_json"] or "{}"))
+        self.assertGreaterEqual(int(meta.get("spark_count", 0)), 1)
+        self.assertFalse(meta.get("non_retrieval"))
+        self.assertIn("chunk_manifest", meta)
+        self.assertTrue(spark_rows)
+        lineage = json.loads(str(spark_rows[0]["lineage_json"]))
+        self.assertEqual(int(lineage["memory_item_id"]), memory_item_id)
+        self.assertIn("chunk_index", lineage)
 
     def test_existing_ingest_endpoint_unchanged(self) -> None:
         client = TestClient(crowley_app.app)

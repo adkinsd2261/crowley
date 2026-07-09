@@ -1,0 +1,134 @@
+{
+  "objective": "V4.6 Explore Activation — parallel mode=explore path that clusters weakly related sparks into ephemeral themes with determinism, lane isolation, and sensitivity enforcement, without replacing precise top-K retrieval.",
+  "context": "Architecture approved 2026-07-09 (Mr. Go). Spec: docs/V4.6_EXPLORE_ACTIVATION_RFC.md and docs/V4_COGNITIVE_SPEC_GAP_ANALYSIS.md Explore activation section. ChatGPT proposed activation/concepts/query-expansion; pressure-tested against shipped spine (spark_retrieval, patterns, spark_graph, sanitize/security) and minted V4.3–V4.5. Concepts are ephemeral only — no Concept table. Do NOT mint until V4.5 #374 completion lock is done. Do NOT amend open tickets #358–#374.",
+  "decisions": [
+    "Mint only after ticket #374 (V4.5 cognitive completion lock) is done.",
+    "Cursor implements all V4.6 tickets when directed after mint.",
+    "mode=precise remains default; mode=explore is parallel only.",
+    "Clusters are ephemeral per-query objects; no concepts table in V4.6.",
+    "Extractive theme labels only; no LLM synthesis as default path.",
+    "Wire GET /api/cognitive/context and Actions cognitive.context — not GET /api/retrieve.",
+    "Reuse embed_text / spark_vec; no new embedding or ML clustering infra.",
+    "Lane-homogeneous clusters; sensitivity=max(members); sanitize before clustering.",
+    "Hard caps: max_candidates=100, max_clusters=5; deterministic sort (-score, spark_id).",
+    "Feature work stays out of crowley.py except thin facade re-exports.",
+    "patterns.py remains lifecycle pattern detection; explore does not replace it."
+  ],
+  "non_goals": [
+    "Concept table, Concept CRUD, or user-named concepts",
+    "Replacing precise top-K retrieval or changing canonical score constants",
+    "LLM ranking, lane selection, or default cluster synthesis",
+    "Hooking or changing GET /api/retrieve legacy memory contract for explore",
+    "Graph DB or heavy ML clustering service",
+    "Amending or reminting V4.2–V4.5 tickets #352–#374",
+    "Pattern-to-extraction feedback loop",
+    "Silent explore in chat before V4.4 wire and V4.6 acceptance are green"
+  ],
+  "risks": [
+    "Cross-lane leakage if clustering skips lane split",
+    "Sensitive data amplification when weak private sparks cluster",
+    "Hallucinated themes if LLM synthesis sneaks in as default",
+    "DoS / latency from broad candidate pools without hard caps",
+    "Nondeterministic tests if cluster ordering is unstable",
+    "Premature mint before V4.3–V4.5 prerequisites ship"
+  ],
+  "qa_expectations": "Per ticket: focused tests in tests/test_cognitive_clustering.py and tests/test_activation_resolution.py. T4 security fixtures for lane isolation and sensitivity max. T6: docs/V4.6_EXPLORE_ACTIVATION_LOCK.md + acceptance that fragmented query yields themes without cross-lane leak; full unittest discovery green.",
+  "next_action": "Do not mint until #374 done. After #374: set approval.status to approved if still needed, then scripts/codex_sync.py --create-tickets tickets/v4.6_explore_activation.json. Cursor claims T1 when directed.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "Architecture approved. MINT GATE: wait until V4.5 #374 completion lock is done. Do not run --create-tickets while V4.5 is open."
+  },
+  "tickets": [
+    {
+      "title": "V4.6 T1: explore mode API and precise passthrough",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add mode=precise|explore to spark_retrieval entry and GET /api/cognitive/context (plus Actions cognitive.context). Default precise leaves retrieve_sparks behavior unchanged. Explore stub may return fallback_used=true until T3 lands. Do not change GET /api/retrieve. Thin crowley.py re-exports only. Files: spark_retrieval.py, context_orchestration.py, app.py, actions_tool_registry.py, tests/test_activation_resolution.py. Depends on V4.5 #374.",
+      "non_goals": "Clustering logic; Concept table; legacy /api/retrieve changes.",
+      "qa_expectation": "tests/test_activation_resolution.py mode passthrough; existing spark_retrieval tests green.",
+      "acceptance": [
+        "mode defaults to precise and preserves existing retrieve_sparks results on fixtures",
+        "mode=explore accepted on GET /api/cognitive/context without changing GET /api/retrieve",
+        "Explore stub sets fallback_used when activation path not yet complete",
+        "No crowley.py feature logic beyond thin re-exports",
+        "Focused activation mode tests pass"
+      ]
+    },
+    {
+      "title": "V4.6 T2: cognitive_clustering module",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add cognitive_clustering.py: group sparks by embedding similarity within a single lane, enforce max cluster size and similarity threshold, compute centroid as mean of sorted member embeddings, stable ordering. Must be fast at SQLite scale and degrade gracefully with empty/small pools. Files: cognitive_clustering.py, tests/test_cognitive_clustering.py. Depends on V4.6 T1.",
+      "non_goals": "Persistence; LLM themes; cross-lane clusters; graph DB.",
+      "qa_expectation": "tests/test_cognitive_clustering.py deterministic fixtures.",
+      "acceptance": [
+        "Same input embeddings produce identical cluster membership in CROWLEY_TEST_MODE",
+        "Clusters never mix lanes",
+        "max_clusters and max_cluster_size caps enforced",
+        "Centroid uses sorted member order for determinism",
+        "tests/test_cognitive_clustering.py passes"
+      ]
+    },
+    {
+      "title": "V4.6 T3: activation_resolution path",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Implement activation_resolution() in spark_retrieval.py: broad retrieve (limit 50-100, low floor) → sanitize candidates → lane-split → cognitive_clustering → cluster_score (semantic * confidence * recency) → top 3-5 themes with extractive labels and supporting_spark_ids. Fallback to precise when fewer than 2 viable clusters. Reuse embed_text/spark_vec. Files: spark_retrieval.py, cognitive_clustering.py, spark_sanitize.py, tests/test_activation_resolution.py. Depends on V4.6 T2.",
+      "non_goals": "LLM synthesis; Concept persistence; changing precise score constants.",
+      "qa_expectation": "tests/test_activation_resolution.py explore path + fallback.",
+      "acceptance": [
+        "Explore returns clusters with theme, lane, supporting_spark_ids, confidence, sensitivity",
+        "max_candidates<=100 and max_clusters<=5 enforced",
+        "Fewer than 2 viable clusters sets fallback_used and returns precise results",
+        "Precise path regression suite still passes",
+        "tests/test_activation_resolution.py covers explore and fallback"
+      ]
+    },
+    {
+      "title": "V4.6 T4: explore security gates",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Enforce explore security: lane-homogeneous clusters only; cluster.sensitivity=max(members); omit or block synthesis when exposure_class=private or high without auth; sanitize candidate content BEFORE clustering; reuse spark_security and spark_sanitize. Files: spark_retrieval.py, cognitive_clustering.py, spark_security.py, spark_sanitize.py, tests/test_activation_resolution.py. Depends on V4.6 T3.",
+      "non_goals": "New crypto; weakening V4.5 sensitivity rules.",
+      "qa_expectation": "Security fixtures in tests/test_activation_resolution.py.",
+      "acceptance": [
+        "Cross-lane candidate pools never produce a mixed-lane cluster",
+        "Cluster sensitivity equals max member sensitivity",
+        "Private/high members blocked from explore payload without authorization",
+        "Sanitize runs before clustering (instruction-like content neutralized)",
+        "Security-focused activation tests pass"
+      ]
+    },
+    {
+      "title": "V4.6 T5: bounded rules-first alias expand",
+      "assignee": "cursor",
+      "priority": 2,
+      "description": "Optional thin expand_query before explore retrieve: rules-first aliases only, hard bound on expansion terms, no synonym explosion. Skip implementing if T3 fixtures already activate explore adequately — document skip in ticket close note. Files: cognitive_query.py or activation helper, spark_retrieval.py, tests/test_activation_resolution.py. Depends on V4.6 T3.",
+      "non_goals": "Embedding-based expansion; LLM rewrite; changing V4.3 intent modes.",
+      "qa_expectation": "If shipped: bounded expand tests; else documented skip with fixture evidence.",
+      "acceptance": [
+        "Either expand is bounded (fixed max terms) and rules-first in test mode, or ticket closed as skipped with evidence explore activates without it",
+        "No unbounded synonym lists",
+        "Precise mode unaffected",
+        "Focused tests or skip rationale recorded in handoff"
+      ]
+    },
+    {
+      "title": "V4.6 T6: explore doc lock and acceptance tests",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.6_EXPLORE_ACTIVATION_LOCK.md listing modules, caps, security rules, and QA evidence. Wire explore clusters into cognitive context/trace when mode=explore. Add acceptance tests: fragmented/weak-signal query yields themes; no cross-lane leak; precise default unchanged. Update docs/TICKETS.md. Full unittest discovery. Depends on V4.6 T1–T4 (T5 if shipped).",
+      "non_goals": "V5 concept persistence; chat silent auto-explore without explicit mode.",
+      "qa_expectation": "Full unittest discovery; lock doc present.",
+      "acceptance": [
+        "V4.6 lock doc records modules, caps, security, and mint gate history",
+        "Fragmented query explore path returns themes with supporting_spark_ids",
+        "Acceptance proves no cross-lane cluster leakage",
+        "docs/TICKETS.md shows V4.6 shipped/in-progress state",
+        "Full unittest discovery passes"
+      ]
+    }
+  ]
+}

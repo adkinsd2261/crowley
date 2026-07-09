@@ -3,9 +3,15 @@
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 import unittest
 from pathlib import Path
+
+try:
+    import pysqlite3 as _sqlite3
+except ImportError:
+    _sqlite3 = sqlite3
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -27,6 +33,10 @@ _REQUIRED_WITH_DEFAULT = frozenset({
     "confidence",
     "base_confidence",
     "sensitivity",
+    "spark_type",
+    "certainty",
+    "secondary_lanes_json",
+    "exposure_class",
     "access_count",
     "content_encrypted",
     "updated_at",
@@ -218,13 +228,88 @@ class SparkSchemaTests(IsolatedDbTestCase):
         self.assertEqual(row["confidence"], 0.5)
         self.assertEqual(row["base_confidence"], 0.5)
         self.assertEqual(row["sensitivity"], "normal")
+        self.assertEqual(row["spark_type"], "observation")
+        self.assertEqual(row["certainty"], "tentative")
+        self.assertEqual(row["secondary_lanes_json"], "[]")
+        self.assertEqual(row["exposure_class"], "public")
         self.assertIsNone(row["tags_json"])
+
+    def test_v42_column_defaults_on_insert(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            values = _minimal_spark_values()
+            conn.execute(
+                """
+                INSERT INTO sparks (
+                    content, lane, why_keep, worth_reason, trust_state,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    values["content"],
+                    values["lane"],
+                    values["why_keep"],
+                    values["worth_reason"],
+                    values["trust_state"],
+                    values["created_at"],
+                    values["updated_at"],
+                ),
+            )
+            conn.commit()
+            row = conn.execute(
+                """
+                SELECT spark_type, certainty, secondary_lanes_json, exposure_class
+                FROM sparks WHERE id = last_insert_rowid()
+                """
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row["spark_type"], "observation")
+        self.assertEqual(row["certainty"], "tentative")
+        self.assertEqual(row["secondary_lanes_json"], "[]")
+        self.assertEqual(row["exposure_class"], "public")
+
+    def test_sensitive_spark_exposure_backfill(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            values = _minimal_spark_values()
+            conn.execute(
+                """
+                INSERT INTO sparks (
+                    content, lane, why_keep, worth_reason, trust_state,
+                    sensitivity, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 'high', ?, ?)
+                """,
+                (
+                    values["content"],
+                    values["lane"],
+                    values["why_keep"],
+                    values["worth_reason"],
+                    values["trust_state"],
+                    values["created_at"],
+                    values["updated_at"],
+                ),
+            )
+            sparks._migrate_v42_spark_columns(conn)
+            conn.commit()
+            row = conn.execute(
+                "SELECT exposure_class FROM sparks WHERE id = last_insert_rowid()"
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row["exposure_class"], "private")
 
     def test_invalid_spark_insert_missing_required(self) -> None:
         conn = crowley.connect_db()
         try:
             now = crowley._now_iso()
-            with self.assertRaises(crowley.sqlite3.IntegrityError):
+            with self.assertRaises(_sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO sparks (
@@ -473,7 +558,7 @@ class SparkLinksSchemaTests(IsolatedDbTestCase):
             conn.execute("PRAGMA foreign_keys = ON")
             spark_id = _insert_spark(conn)
             now = crowley._now_iso()
-            with self.assertRaises(crowley.sqlite3.IntegrityError):
+            with self.assertRaises(_sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO spark_links (
@@ -628,7 +713,7 @@ class PatternsSchemaTests(IsolatedDbTestCase):
         conn = crowley.connect_db()
         try:
             now = crowley._now_iso()
-            with self.assertRaises(crowley.sqlite3.IntegrityError):
+            with self.assertRaises(_sqlite3.IntegrityError):
                 conn.execute(
                     """
                     INSERT INTO patterns (

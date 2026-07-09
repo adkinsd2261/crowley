@@ -26,6 +26,21 @@ SPARK_TRUST_STATES = frozenset({
     "rejected",
 })
 SPARK_CONTENT_MAX_LEN = 300
+SPARK_TYPES = frozenset({"fact", "decision", "intent", "observation"})
+SPARK_CERTAINTIES = frozenset({"tentative", "exploratory", "confirmed"})
+SPARK_EXPOSURE_CLASSES = frozenset({"public", "private"})
+SPARK_TYPE_DEFAULT = "observation"
+SPARK_CERTAINTY_DEFAULT = "tentative"
+SPARK_EXPOSURE_CLASS_DEFAULT = "public"
+SPARK_SECONDARY_LANES_DEFAULT = "[]"
+
+DOMAIN_ALIASES: dict[str, str] = {
+    "finance": "money",
+    "financial": "money",
+    "career": "work",
+    "job": "work",
+    "general": "operating_style",
+}
 
 SPARK_DEDUP_LINK_SIM = 0.85
 SPARK_DEDUP_MERGE_SIM = 0.95
@@ -108,6 +123,76 @@ def _normalize_text(value: object) -> str:
     return " ".join(str(value or "").split())
 
 
+def normalize_lane(value: object) -> str:
+    """Map portable/domain aliases to canonical SPARK_LANES values."""
+    lane = str(value or "").strip().lower()
+    return DOMAIN_ALIASES.get(lane, lane)
+
+
+def _meaningful_char_count(text: str) -> int:
+    return sum(1 for char in text if char.isalnum())
+
+
+def _decode_secondary_lanes(raw: object) -> tuple[list[str] | None, list[str]]:
+    """Parse secondary_lanes list or secondary_lanes_json string."""
+    errors: list[str] = []
+    if raw is None or raw == "":
+        return [], errors
+    if isinstance(raw, list):
+        lanes = [normalize_lane(item) for item in raw]
+    elif isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return None, ["secondary_lanes_json must be valid JSON"]
+        if not isinstance(parsed, list):
+            return None, ["secondary_lanes_json must be a JSON array"]
+        lanes = [normalize_lane(item) for item in parsed]
+    else:
+        return None, ["secondary_lanes must be a list or JSON array string"]
+
+    normalized: list[str] = []
+    for lane in lanes:
+        if not lane:
+            errors.append("secondary lane entries must be non-empty")
+            continue
+        if lane not in SPARK_LANES:
+            errors.append(f"invalid secondary lane: {lane}")
+            continue
+        if lane in normalized:
+            errors.append(f"duplicate secondary lane: {lane}")
+            continue
+        normalized.append(lane)
+    if errors:
+        return None, errors
+    return normalized, errors
+
+
+def _default_exposure_class(sensitivity: str) -> str:
+    if sensitivity in {"sensitive", "high"}:
+        return "private"
+    return SPARK_EXPOSURE_CLASS_DEFAULT
+
+
+def _apply_spark_field_defaults(spark: dict[str, object]) -> dict[str, object]:
+    sensitivity = str(spark.get("sensitivity") or "normal")
+    secondary_lanes = spark.get("secondary_lanes_json")
+    if secondary_lanes is None and "secondary_lanes" in spark:
+        lanes, _ = _decode_secondary_lanes(spark.get("secondary_lanes"))
+        secondary_lanes = json.dumps(lanes or [], ensure_ascii=False)
+    if secondary_lanes is None:
+        secondary_lanes = SPARK_SECONDARY_LANES_DEFAULT
+    return {
+        **spark,
+        "spark_type": str(spark.get("spark_type") or SPARK_TYPE_DEFAULT),
+        "certainty": str(spark.get("certainty") or SPARK_CERTAINTY_DEFAULT),
+        "secondary_lanes_json": str(secondary_lanes),
+        "exposure_class": str(
+            spark.get("exposure_class") or _default_exposure_class(sensitivity)
+        ),
+    }
+
+
 def _contains_marker(text: str, markers: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(marker in lowered for marker in markers)
@@ -183,11 +268,14 @@ def validate_spark(raw: object) -> SparkValidationResult:
         return SparkValidationResult(ok=False, errors=["spark must be an object"])
 
     content = _normalize_text(raw.get("content"))
-    lane = str(raw.get("lane") or "").strip().lower()
+    lane = normalize_lane(raw.get("lane"))
     why_keep = _normalize_text(raw.get("why_keep"))
     worth_reason = _normalize_text(raw.get("worth_reason"))
     confidence_raw = raw.get("confidence")
     sensitivity = str(raw.get("sensitivity", "normal") or "normal").strip().lower()
+    spark_type = str(raw.get("spark_type") or "").strip().lower()
+    certainty = str(raw.get("certainty") or "").strip().lower()
+    exposure_class = str(raw.get("exposure_class") or "").strip().lower()
 
     if not content:
         errors.append("content is required")
@@ -222,6 +310,26 @@ def validate_spark(raw: object) -> SparkValidationResult:
     if sensitivity not in SPARK_SENSITIVITIES:
         errors.append(f"invalid sensitivity: {sensitivity}")
 
+    if spark_type and spark_type not in SPARK_TYPES:
+        errors.append(f"invalid spark_type: {spark_type}")
+    if certainty and certainty not in SPARK_CERTAINTIES:
+        errors.append(f"invalid certainty: {certainty}")
+    if exposure_class and exposure_class not in SPARK_EXPOSURE_CLASSES:
+        errors.append(f"invalid exposure_class: {exposure_class}")
+
+    secondary_lanes: list[str] | None = []
+    if "secondary_lanes" in raw or "secondary_lanes_json" in raw:
+        raw_secondary = raw.get("secondary_lanes_json")
+        if raw_secondary is None:
+            raw_secondary = raw.get("secondary_lanes")
+        parsed_lanes, lane_errors = _decode_secondary_lanes(raw_secondary)
+        if lane_errors:
+            errors.extend(lane_errors)
+        elif parsed_lanes is not None:
+            secondary_lanes = parsed_lanes
+            if lane and lane in secondary_lanes:
+                errors.append("secondary lanes must not include primary lane")
+
     if content:
         if content.lower() in _SPARK_VAGUE_PHRASES:
             errors.append("content is too vague")
@@ -233,17 +341,31 @@ def validate_spark(raw: object) -> SparkValidationResult:
         return SparkValidationResult(ok=False, errors=errors)
 
     assert confidence is not None
+    spark_payload: dict[str, object] = {
+        "content": content,
+        "lane": lane,
+        "why_keep": why_keep,
+        "worth_reason": worth_reason,
+        "confidence": confidence,
+        "sensitivity": sensitivity,
+    }
+    if spark_type:
+        spark_payload["spark_type"] = spark_type
+    if certainty:
+        spark_payload["certainty"] = certainty
+    if exposure_class:
+        spark_payload["exposure_class"] = exposure_class
+    if secondary_lanes is not None and (
+        "secondary_lanes" in raw or "secondary_lanes_json" in raw
+    ):
+        spark_payload["secondary_lanes_json"] = json.dumps(
+            secondary_lanes,
+            ensure_ascii=False,
+        )
     return SparkValidationResult(
         ok=True,
         errors=[],
-        spark={
-            "content": content,
-            "lane": lane,
-            "why_keep": why_keep,
-            "worth_reason": worth_reason,
-            "confidence": confidence,
-            "sensitivity": sensitivity,
-        },
+        spark=_apply_spark_field_defaults(spark_payload),
     )
 
 
@@ -252,6 +374,10 @@ CREATE TABLE IF NOT EXISTS sparks (
     id INTEGER PRIMARY KEY,
     content TEXT NOT NULL,
     lane TEXT NOT NULL,
+    spark_type TEXT NOT NULL DEFAULT 'observation',
+    certainty TEXT NOT NULL DEFAULT 'tentative',
+    secondary_lanes_json TEXT NOT NULL DEFAULT '[]',
+    exposure_class TEXT NOT NULL DEFAULT 'public',
     sensitivity TEXT NOT NULL DEFAULT 'normal',
     tags_json TEXT,
     why_keep TEXT NOT NULL,
@@ -326,9 +452,37 @@ CREATE INDEX IF NOT EXISTS idx_patterns_sources
 """
 
 
+def _spark_table_columns(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute("PRAGMA table_info(sparks)").fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _migrate_v42_spark_columns(conn: sqlite3.Connection) -> None:
+    """Additive V4.2 schema extensions (idempotent)."""
+    columns = _spark_table_columns(conn)
+    migrations = (
+        ("spark_type", "TEXT NOT NULL DEFAULT 'observation'"),
+        ("certainty", "TEXT NOT NULL DEFAULT 'tentative'"),
+        ("secondary_lanes_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("exposure_class", "TEXT NOT NULL DEFAULT 'public'"),
+    )
+    for name, ddl in migrations:
+        if name not in columns:
+            conn.execute(f"ALTER TABLE sparks ADD COLUMN {name} {ddl}")
+    conn.execute(
+        """
+        UPDATE sparks
+        SET exposure_class = 'private'
+        WHERE sensitivity IN ('sensitive', 'high')
+          AND exposure_class = 'public'
+        """
+    )
+
+
 def setup_spark_tables(conn: sqlite3.Connection) -> None:
     """Create sparks, spark_links, and patterns tables if missing."""
     conn.executescript(_SPARKS_DDL)
+    _migrate_v42_spark_columns(conn)
 
 
 def insert_spark(
@@ -347,22 +501,28 @@ def insert_spark(
     """Insert a validated spark row. Prefer upsert_spark_with_dedup() at ingest."""
     import crowley
 
+    spark = _apply_spark_field_defaults(spark)
     now = crowley._now_iso()
     confidence = float(spark["confidence"])
     lineage_blob = json.dumps(lineage_json or {}, sort_keys=True, ensure_ascii=False)
     cur = conn.execute(
         """
         INSERT INTO sparks (
-            content, lane, why_keep, worth_reason, trust_state,
+            content, lane, spark_type, certainty, secondary_lanes_json,
+            exposure_class, why_keep, worth_reason, trust_state,
             confidence, base_confidence, sensitivity,
             source_memory_item_id, project_id, lineage_json,
             source_refs_json, embedding_blob, embed_model, embed_dim,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             str(spark["content"]),
             str(spark["lane"]),
+            str(spark["spark_type"]),
+            str(spark["certainty"]),
+            str(spark["secondary_lanes_json"]),
+            str(spark["exposure_class"]),
             str(spark["why_keep"]),
             str(spark["worth_reason"]),
             trust_state,
@@ -632,7 +792,9 @@ def _merge_spark_ref(
     refs = _parse_source_refs(row["source_refs_json"])
     ref_entry: dict[str, object] = {
         "source_memory_item_id": source_memory_item_id,
+        "memory_item_id": source_memory_item_id,
         "merged_at": now,
+        "dedup_action": "merged",
     }
     if lineage_json:
         ref_entry.update(lineage_json)
@@ -659,25 +821,6 @@ def _merge_spark_ref(
     )
 
 
-def _lineage_with_dedup_action(
-    lineage_json: dict[str, object] | None,
-    *,
-    action: str,
-    source_memory_item_id: int,
-    keeper_id: int | None = None,
-    similarity: float | None = None,
-) -> dict[str, object]:
-    lineage: dict[str, object] = dict(lineage_json or {})
-    lineage.setdefault("memory_item_id", source_memory_item_id)
-    lineage.setdefault("source_memory_item_id", source_memory_item_id)
-    lineage["dedup_action"] = action
-    if keeper_id is not None:
-        lineage["keeper_id"] = keeper_id
-    if similarity is not None:
-        lineage["similarity"] = similarity
-    return lineage
-
-
 def _upsert_reinforces_link(
     conn: sqlite3.Connection,
     from_spark_id: int,
@@ -699,6 +842,18 @@ def _upsert_reinforces_link(
     )
     if not result.ok:
         raise ValueError("; ".join(result.errors))
+
+
+def _lineage_with_dedup_action(
+    lineage_json: dict[str, object] | None,
+    *,
+    action: str,
+    source_memory_item_id: int,
+) -> dict[str, object]:
+    enriched = dict(lineage_json or {})
+    enriched.setdefault("dedup_action", action)
+    enriched.setdefault("memory_item_id", source_memory_item_id)
+    return enriched
 
 
 def upsert_spark_with_dedup(
@@ -732,13 +887,7 @@ def upsert_spark_with_dedup(
                 keeper_id,
                 source_memory_item_id=source_memory_item_id,
                 new_confidence=incoming_confidence,
-                lineage_json=_lineage_with_dedup_action(
-                    lineage_json,
-                    action="merged",
-                    source_memory_item_id=source_memory_item_id,
-                    keeper_id=keeper_id,
-                    similarity=sim,
-                ),
+                lineage_json=lineage_json,
             )
             return SparkUpsertResult(
                 action="merged",
@@ -757,8 +906,6 @@ def upsert_spark_with_dedup(
                     lineage_json,
                     action="linked",
                     source_memory_item_id=source_memory_item_id,
-                    keeper_id=keeper_id,
-                    similarity=sim,
                 ),
             )
             if vector is not None:

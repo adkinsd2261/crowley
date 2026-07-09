@@ -146,6 +146,55 @@ class SparkValidationTests(unittest.TestCase):
         self.assertIn("why_keep is required", result.errors)
         self.assertIn("worth_reason is required", result.errors)
 
+    def test_lane_alias_normalizes_finance_to_money(self) -> None:
+        result = sparks.validate_spark(_valid_spark(lane="finance"))
+        self.assertTrue(result.ok, result.errors)
+        assert result.spark is not None
+        self.assertEqual(result.spark["lane"], "money")
+
+    def test_applies_v42_defaults(self) -> None:
+        result = sparks.validate_spark(_valid_spark())
+        self.assertTrue(result.ok, result.errors)
+        assert result.spark is not None
+        self.assertEqual(result.spark["spark_type"], "observation")
+        self.assertEqual(result.spark["certainty"], "tentative")
+        self.assertEqual(result.spark["secondary_lanes_json"], "[]")
+        self.assertEqual(result.spark["exposure_class"], "public")
+
+    def test_rejects_invalid_spark_type(self) -> None:
+        result = sparks.validate_spark(_valid_spark(spark_type="myth"))
+        self.assertFalse(result.ok)
+        self.assertTrue(any("invalid spark_type" in err for err in result.errors))
+
+    def test_rejects_invalid_certainty(self) -> None:
+        result = sparks.validate_spark(_valid_spark(certainty="guess"))
+        self.assertFalse(result.ok)
+        self.assertTrue(any("invalid certainty" in err for err in result.errors))
+
+    def test_rejects_primary_lane_in_secondary_lanes(self) -> None:
+        result = sparks.validate_spark(
+            _valid_spark(lane="work", secondary_lanes=["work", "money"])
+        )
+        self.assertFalse(result.ok)
+        self.assertTrue(any("primary lane" in err for err in result.errors))
+
+    def test_accepts_secondary_lanes(self) -> None:
+        result = sparks.validate_spark(
+            _valid_spark(lane="work", secondary_lanes=["money", "learning"])
+        )
+        self.assertTrue(result.ok, result.errors)
+        assert result.spark is not None
+        self.assertEqual(
+            result.spark["secondary_lanes_json"],
+            '["money", "learning"]',
+        )
+
+    def test_sensitive_default_exposure_class_private(self) -> None:
+        result = sparks.validate_spark(_valid_spark(sensitivity="high"))
+        self.assertTrue(result.ok, result.errors)
+        assert result.spark is not None
+        self.assertEqual(result.spark["exposure_class"], "private")
+
     def test_rejects_multiple_errors_without_short_circuit(self) -> None:
         result = sparks.validate_spark(
             _valid_spark(

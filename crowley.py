@@ -590,12 +590,17 @@ def _call_ollama(
 
 
 def _call_openai(
-    messages: list[dict[str, str]], stream: bool, *, model: str | None = None
+    messages: list[dict[str, str]],
+    stream: bool,
+    *,
+    model: str | None = None,
+    temperature: float | None = None,
 ) -> str:
     return model_runtime._call_openai(
         messages,
         stream,
         model=model,
+        temperature=temperature,
         get_active_model_name_func=get_active_model_name,
         iter_openai_tokens=_iter_openai_tokens,
     )
@@ -4622,12 +4627,17 @@ def retrieve_memories_api(
                 conn,
                 project_id=project_id,
             )
+            cold_start_spark_count = context_resolution.count_cold_start_sparks(
+                conn,
+                project_id=project_id,
+            )
         finally:
             conn.close()
         trace = context_resolution.apply_memory_fallback_trace(
             trace,
             active_spark_count=active_spark_count,
-            fallback_used=active_spark_count
+            cold_start_spark_count=cold_start_spark_count,
+            fallback_used=cold_start_spark_count
             < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD,
         )
         payload = {

@@ -215,14 +215,14 @@ class SparkLifecycleMaintenanceTests(IsolatedDbTestCase):
         finally:
             conn.close()
 
-    def test_manual_seed_defaults_candidate_and_links_receipt(self) -> None:
+    def test_manual_seed_promotes_to_active_and_links_receipt(self) -> None:
         result = cognitive_maintenance.seed_manual_spark(
             _valid_spark(content="manual seed spark for maintenance tests"),
             project=crowley.DEFAULT_PROJECT_SLUG,
             source="cursor",
         )
         self.assertEqual(result["status"], "ok")
-        self.assertEqual(result["trust_state"], "candidate")
+        self.assertEqual(result["trust_state"], "active")
         memory_item_id = int(result["memory_item_id"])
         spark_id = int(result["spark_id"])
 
@@ -234,7 +234,7 @@ class SparkLifecycleMaintenanceTests(IsolatedDbTestCase):
                 (memory_item_id,),
             ).fetchone()
             assert spark is not None and memory is not None
-            self.assertEqual(str(spark["trust_state"]), "candidate")
+            self.assertEqual(str(spark["trust_state"]), "active")
             self.assertEqual(int(spark["source_memory_item_id"]), memory_item_id)
             self.assertIn("Cognitive manual spark seed", str(memory["summary"]))
         finally:

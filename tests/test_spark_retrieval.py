@@ -89,7 +89,12 @@ class SparkRetrievalTests(IsolatedDbTestCase):
             self.assertEqual(results[0].spark_id, high_id)
             self.assertGreater(results[0].score, results[1].score)
             expected_high = round(
-                0.40 * 0.8 + 0.25 * 0.9 + 0.15 * results[0].score_breakdown["recency"],
+                (
+                    0.40 * 0.8
+                    + 0.25 * 0.9
+                    + 0.15 * results[0].score_breakdown["recency"]
+                )
+                * results[0].score_breakdown["certainty_multiplier"],
                 4,
             )
             self.assertEqual(results[0].score, expected_high)

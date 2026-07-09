@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import struct
 from datetime import datetime, timezone
@@ -19,6 +20,22 @@ MEMORY_TYPE_INCLUSION_LABELS = {
     "event": "event memory",
     "bug": "bug memory",
 }
+
+
+def memory_item_excluded_from_retrieval(metadata_json: str | None) -> bool:
+    """Skip audit-only cognitive receipts from hybrid retrieval and context paths."""
+    if not metadata_json:
+        return False
+    try:
+        meta = json.loads(metadata_json)
+    except (TypeError, json.JSONDecodeError):
+        return False
+    if not isinstance(meta, dict):
+        return False
+    if meta.get("non_retrieval") is True:
+        return True
+    intent = str(meta.get("intent") or "").strip().lower()
+    return intent in {"ignore", "temporary"}
 
 
 def get_last_retrieval_mode(rt: Any) -> str:
@@ -142,13 +159,17 @@ def semantic_candidate_scores(
 
     rows = conn.execute(
         """
-        SELECT id, embedding_blob
+        SELECT id, embedding_blob, metadata_json
         FROM memory_items
         WHERE status = 'active' AND embedding_blob IS NOT NULL
         """
     ).fetchall()
     scored: list[tuple[int, float]] = []
     for row in rows:
+        if memory_item_excluded_from_retrieval(
+            str(row["metadata_json"]) if row["metadata_json"] else None
+        ):
+            continue
         vector = unpack_embedding(row["embedding_blob"])
         if not vector:
             continue
@@ -164,6 +185,10 @@ def keyword_candidate_scores(rt: Any, conn: Any, query: str, limit: int) -> dict
     ).fetchall()
     scored: list[tuple[int, float, int, str]] = []
     for row in rows:
+        if memory_item_excluded_from_retrieval(
+            str(row["metadata_json"]) if row["metadata_json"] else None
+        ):
+            continue
         kw = keyword_score_for_item(tokens, str(row["content"]), row["summary"])
         scored.append(
             (int(row["id"]), kw, int(row["importance"]), str(row["created_at"]))
@@ -497,6 +522,10 @@ def retrieve_memories(
         for memory_id in candidate_ids:
             row = load_active_memory_item(conn, memory_id)
             if row is None:
+                continue
+            if memory_item_excluded_from_retrieval(
+                str(row["metadata_json"]) if row["metadata_json"] else None
+            ):
                 continue
             score, breakdown = score_memory_item(
                 rt,

@@ -146,7 +146,13 @@ class SparkSecuritySensitivityTests(IsolatedDbTestCase):
                 sensitivity="high",
                 lane="work",
                 confidence=0.95,
+                content="sensitivity gate retrieval content confirmed high",
             )
+            conn.execute(
+                "UPDATE sparks SET certainty = 'confirmed' WHERE id = ?",
+                (spark_id,),
+            )
+            conn.commit()
             semantic = {spark_id: 0.95}
             with mock.patch.object(
                 spark_retrieval, "_spark_semantic_candidate_scores", return_value=semantic

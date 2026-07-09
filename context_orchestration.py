@@ -85,60 +85,6 @@ def _parse_pattern_source_ids(raw: object) -> set[int]:
     return ids
 
 
-def _parse_json_object(raw: object) -> dict[str, Any]:
-    try:
-        decoded = json.loads(str(raw or "{}"))
-    except json.JSONDecodeError:
-        return {}
-    return decoded if isinstance(decoded, dict) else {}
-
-
-def _parse_json_list(raw: object) -> list[dict[str, Any]]:
-    try:
-        decoded = json.loads(str(raw or "[]"))
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(decoded, list):
-        return []
-    return [item for item in decoded if isinstance(item, dict)]
-
-
-def _spark_lineage_trace(
-    conn: sqlite3.Connection,
-    spark_ids: list[int],
-) -> list[dict[str, Any]]:
-    if not spark_ids:
-        return []
-    placeholders = ", ".join("?" for _ in spark_ids)
-    rows = conn.execute(
-        f"""
-        SELECT id, source_memory_item_id, lineage_json, source_refs_json
-        FROM sparks
-        WHERE id IN ({placeholders})
-        """,
-        spark_ids,
-    ).fetchall()
-    by_id = {int(row["id"]): row for row in rows}
-    lineage: list[dict[str, Any]] = []
-    for spark_id in spark_ids:
-        row = by_id.get(int(spark_id))
-        if row is None:
-            continue
-        lineage.append(
-            {
-                "spark_id": int(row["id"]),
-                "source_memory_item_id": (
-                    int(row["source_memory_item_id"])
-                    if row["source_memory_item_id"] is not None
-                    else None
-                ),
-                "lineage": _parse_json_object(row["lineage_json"]),
-                "source_refs": _parse_json_list(row["source_refs_json"]),
-            }
-        )
-    return lineage
-
-
 def _active_patterns_for_context(
     conn: sqlite3.Connection,
     context_spark_ids: set[int],
@@ -183,6 +129,38 @@ def _context_confidence(core: list[spark_retrieval.SparkRetrievalResult]) -> flo
     return round(sum(item.score for item in core) / len(core), 4)
 
 
+def _trace_lineage_for_sparks(
+    conn: sqlite3.Connection,
+    results: list[spark_retrieval.SparkRetrievalResult],
+) -> list[dict[str, Any]]:
+    lineage_trace: list[dict[str, Any]] = []
+    for result in results:
+        row = conn.execute(
+            """
+            SELECT id, source_memory_item_id, lineage_json
+            FROM sparks
+            WHERE id = ?
+            """,
+            (int(result.spark_id),),
+        ).fetchone()
+        if row is None:
+            continue
+        try:
+            lineage = json.loads(str(row["lineage_json"] or "{}"))
+        except json.JSONDecodeError:
+            lineage = {}
+        if not isinstance(lineage, dict):
+            lineage = {}
+        lineage_trace.append(
+            {
+                "spark_id": int(row["id"]),
+                "source_memory_item_id": row["source_memory_item_id"],
+                "lineage": lineage,
+            }
+        )
+    return lineage_trace
+
+
 def _memory_fallback_items(
     query: str,
     *,
@@ -196,7 +174,6 @@ def _memory_fallback_items(
         str(query or ""),
         limit=limit,
         project_id=project_id,
-        conn=conn,
     )
     fallback: list[dict[str, Any]] = []
     for memory in memories:
@@ -247,6 +224,10 @@ def build_cognitive_context(
             db,
             project_id=resolved_project_id,
         )
+        cold_start_spark_count = context_resolution.count_cold_start_sparks(
+            db,
+            project_id=resolved_project_id,
+        )
         ranked = spark_retrieval.retrieve_sparks(
             str(query or ""),
             limit=core_limit + support_limit,
@@ -259,7 +240,10 @@ def build_cognitive_context(
         )
         core = ranked[:core_limit]
         supporting = ranked[core_limit : core_limit + support_limit]
-        fallback_used = active_spark_count < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD
+        fallback_used = (
+            cold_start_spark_count
+            < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD
+        )
         memory_fallback: list[dict[str, Any]] = []
         if fallback_used and support_limit > 0:
             memory_fallback = _memory_fallback_items(
@@ -269,9 +253,9 @@ def build_cognitive_context(
                 conn=db,
             )
         context_ids = {int(item.spark_id) for item in [*core, *supporting]}
-        context_id_order = [int(item.spark_id) for item in [*core, *supporting]]
         attached_patterns = _active_patterns_for_context(db, context_ids)
         attached_patterns = attached_patterns[:pattern_limit]
+        trace_lineage = _trace_lineage_for_sparks(db, [*core, *supporting])
         trace: dict[str, Any] = {
             "depth": resolved_depth,
             "lanes_used": sorted(lane_filter) if lane_filter else [],
@@ -282,14 +266,15 @@ def build_cognitive_context(
             "expand_hops": spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
             "selection_reason": "ranked retrieval split into core and supporting sparks",
             "score_basis": COGNITIVE_CONTEXT_SCORE_BASIS,
-            "lineage": _spark_lineage_trace(db, context_id_order),
+            "lineage": trace_lineage,
             "fallback_used": fallback_used,
             "active_spark_count": active_spark_count,
+            "cold_start_spark_count": cold_start_spark_count,
         }
         if fallback_used:
             trace["selection_reason"] = (
                 f"{trace['selection_reason']}; memory_items fallback "
-                f"(active sparks < {context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD})"
+                f"(cold-start sparks < {context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD})"
             )
         payload: dict[str, Any] = {
             "core_sparks": [_spark_payload(item) for item in core],

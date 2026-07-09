@@ -40,6 +40,7 @@ def _spark(
 class SparkExtractionTests(unittest.TestCase):
     def tearDown(self) -> None:
         os.environ.pop("CROWLEY_TEST_MODE", None)
+        spark_extraction.clear_extraction_cache()
 
     def test_valid_json_array_parsed(self) -> None:
         payload = json.dumps([_spark()])
@@ -182,6 +183,149 @@ class SparkExtractionTests(unittest.TestCase):
         source = (ROOT / "spark_extraction.py").read_text(encoding="utf-8")
         self.assertNotIn("patterns", source.lower())
         self.assertNotIn("connect_db", source)
+
+    def test_live_extraction_uses_temperature_zero(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        payload = json.dumps([_spark()])
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(
+                crowley,
+                "_call_openai",
+                return_value=payload,
+            ) as call_mock:
+                result = spark_extraction.extract_sparks_from_text("source text")
+        self.assertTrue(result.ok, result.errors)
+        self.assertFalse(result.cache_hit)
+        call_mock.assert_called()
+        _, kwargs = call_mock.call_args
+        self.assertEqual(kwargs.get("temperature"), 0.0)
+
+    def test_canonical_key_order(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        payload = json.dumps(
+            [
+                {
+                    "confidence": 0.8,
+                    "worth_reason": "Avoids flaky network dependencies in CI.",
+                    "why_keep": "Preserves offline retrieval behavior.",
+                    "lane": "work",
+                    "content": (
+                        "Cache embeddings locally for deterministic offline retrieval tests."
+                    ),
+                    "secondary_lanes": ["health", "money"],
+                }
+            ]
+        )
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(crowley, "_call_openai", return_value=payload):
+                result = spark_extraction.extract_sparks_from_text("source text")
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(len(result.sparks), 1)
+        keys = list(result.sparks[0].keys())
+        expected_prefix = [
+            "content",
+            "lane",
+            "why_keep",
+            "worth_reason",
+            "confidence",
+            "sensitivity",
+            "spark_type",
+            "certainty",
+            "secondary_lanes_json",
+            "exposure_class",
+        ]
+        self.assertEqual(keys, expected_prefix)
+        self.assertEqual(
+            result.sparks[0]["secondary_lanes_json"],
+            json.dumps(["health", "money"], ensure_ascii=False),
+        )
+
+    def test_canonical_batch_sort_order(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        payload = json.dumps(
+            [
+                _spark(
+                    content="Zebra note about work delivery discipline and review.",
+                    lane="work",
+                    why_keep="z",
+                    worth_reason="z",
+                ),
+                _spark(
+                    content="Alpha note about health habit tracking and sleep.",
+                    lane="health",
+                    why_keep="a",
+                    worth_reason="a",
+                ),
+            ]
+        )
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(crowley, "_call_openai", return_value=payload):
+                result = spark_extraction.extract_sparks_from_text("source text")
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(
+            [str(s["lane"]) for s in result.sparks],
+            ["health", "work"],
+        )
+
+    def test_receipt_idempotency_cache_hit(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        payload = json.dumps([_spark()])
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(
+                crowley,
+                "_call_openai",
+                return_value=payload,
+            ) as call_mock:
+                first = spark_extraction.extract_sparks_from_text("same receipt text")
+                second = spark_extraction.extract_sparks_from_text("same receipt text")
+        self.assertTrue(first.ok, first.errors)
+        self.assertFalse(first.cache_hit)
+        self.assertEqual(first.attempts, 1)
+        self.assertTrue(second.ok, second.errors)
+        self.assertTrue(second.cache_hit)
+        self.assertEqual(second.attempts, 0)
+        self.assertEqual(second.sparks, first.sparks)
+        self.assertEqual(call_mock.call_count, 1)
+
+    def test_cache_not_used_on_failure(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        good = json.dumps([_spark()])
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(
+                crowley,
+                "_call_openai",
+                side_effect=["not json", "still not json", good],
+            ) as call_mock:
+                failed = spark_extraction.extract_sparks_from_text("receipt for cache miss")
+                succeeded = spark_extraction.extract_sparks_from_text(
+                    "receipt for cache miss"
+                )
+        self.assertFalse(failed.ok)
+        self.assertFalse(failed.cache_hit)
+        self.assertTrue(succeeded.ok, succeeded.errors)
+        self.assertFalse(succeeded.cache_hit)
+        self.assertEqual(call_mock.call_count, 3)
+
+    def test_clear_extraction_cache(self) -> None:
+        os.environ.pop("CROWLEY_TEST_MODE", None)
+        payload = json.dumps([_spark()])
+        with mock.patch.object(crowley, "_has_openai_key", return_value=True):
+            with mock.patch.object(
+                crowley,
+                "_call_openai",
+                return_value=payload,
+            ) as call_mock:
+                spark_extraction.extract_sparks_from_text("clearable receipt")
+                spark_extraction.clear_extraction_cache()
+                spark_extraction.extract_sparks_from_text("clearable receipt")
+        self.assertEqual(call_mock.call_count, 2)
+
+    def test_test_mode_fixture_is_canonicalized(self) -> None:
+        os.environ["CROWLEY_TEST_MODE"] = "1"
+        result = spark_extraction.extract_sparks_from_text("ignored")
+        self.assertTrue(result.ok, result.errors)
+        self.assertEqual(list(result.sparks[0].keys())[0], "content")
+        self.assertIn("secondary_lanes_json", result.sparks[0])
 
 
 if __name__ == "__main__":

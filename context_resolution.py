@@ -19,7 +19,7 @@ COGNITIVE_DEPTH_LIMITS: dict[str, dict[str, int]] = {
     "deep": {"core": 12, "supporting": 20, "patterns": 5},
 }
 
-COLD_START_ACTIVE_SPARK_THRESHOLD = 10
+COLD_START_ACTIVE_SPARK_THRESHOLD = 8
 CLUSTER_JACCARD_THRESHOLD = 0.55
 SIGNATURE_PHRASE_RE = re.compile(r"\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)+\b")
 
@@ -52,6 +52,35 @@ def count_active_sparks(
             """
             SELECT COUNT(*) AS n FROM sparks
             WHERE trust_state IN ('active', 'pinned')
+              AND ((project_id IS NULL AND ? IS NULL) OR project_id = ?)
+            """,
+            (project_id, project_id),
+        ).fetchone()
+    return int(row["n"]) if row is not None else 0
+
+
+def count_cold_start_sparks(
+    conn: Any,
+    *,
+    project_id: int | None = None,
+) -> int:
+    """Count retrieval-ready sparks for cold-start fallback decisions."""
+    if project_id is None:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM sparks
+            WHERE trust_state IN ('active', 'pinned')
+               OR (trust_state = 'candidate' AND certainty = 'confirmed')
+            """
+        ).fetchone()
+    else:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM sparks
+            WHERE (
+                trust_state IN ('active', 'pinned')
+                OR (trust_state = 'candidate' AND certainty = 'confirmed')
+            )
               AND ((project_id IS NULL AND ? IS NULL) OR project_id = ?)
             """,
             (project_id, project_id),
@@ -329,13 +358,16 @@ def apply_memory_fallback_trace(
     *,
     active_spark_count: int,
     fallback_used: bool,
+    cold_start_spark_count: int | None = None,
 ) -> dict[str, Any]:
     updated = dict(trace)
     updated["active_spark_count"] = active_spark_count
+    if cold_start_spark_count is not None:
+        updated["cold_start_spark_count"] = cold_start_spark_count
     updated["fallback_used"] = fallback_used
     if fallback_used:
         updated["selection_reason"] = (
-            f"{updated.get('selection_reason', '')}; memory_items fallback (active sparks "
+            f"{updated.get('selection_reason', '')}; memory_items fallback (cold-start sparks "
             f"< {COLD_START_ACTIVE_SPARK_THRESHOLD})"
         ).strip("; ")
     return updated

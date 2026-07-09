@@ -1,7 +1,8 @@
-"""V4 T4 — LLM spark extraction with strict JSON + validate_spark gate."""
+"""V4 T4/T5 — LLM spark extraction with strict JSON + validate_spark gate."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -14,9 +15,27 @@ MAX_SPARKS_PER_EXTRACTION = 5
 MIN_TOTAL_CONTENT_LENGTH = 40
 MAX_RETRY_ERROR_CHARS = 500
 
+# Bump when _build_attempt_*_messages prompts change (invalidates cache fingerprints).
+EXTRACTION_PROMPT_VERSION = "v1"
+
+_CANONICAL_SPARK_KEYS = (
+    "content",
+    "lane",
+    "why_keep",
+    "worth_reason",
+    "confidence",
+    "sensitivity",
+    "spark_type",
+    "certainty",
+    "secondary_lanes_json",
+    "exposure_class",
+)
+
 _FIXTURE_PATH = (
     Path(__file__).resolve().parent / "tests" / "fixtures" / "spark_extraction_valid.json"
 )
+
+_extraction_cache: dict[str, list[dict[str, object]]] = {}
 
 
 @dataclass(frozen=True)
@@ -25,6 +44,50 @@ class SparkExtractionResult:
     sparks: list[dict[str, object]]
     errors: list[str]
     attempts: int = 0
+    cache_hit: bool = False
+
+
+def clear_extraction_cache() -> None:
+    """Clear the in-process receipt-hash extraction cache."""
+    _extraction_cache.clear()
+
+
+def receipt_fingerprint(source_text: str) -> str:
+    """Stable fingerprint for identical receipt text + prompt version."""
+    normalized = " ".join(source_text.split())
+    payload = f"{EXTRACTION_PROMPT_VERSION}\n{normalized}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def canonicalize_spark_batch(
+    sparks_batch: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Normalize key order and batch sort for comparable validated output."""
+    canonical: list[dict[str, object]] = []
+    for spark in sparks_batch:
+        item: dict[str, object] = {}
+        for key in _CANONICAL_SPARK_KEYS:
+            if key not in spark:
+                continue
+            value = spark[key]
+            if key == "secondary_lanes_json":
+                lanes, lane_errors = sparks._decode_secondary_lanes(value)
+                if not lane_errors and lanes is not None:
+                    value = json.dumps(sorted(lanes), ensure_ascii=False)
+                else:
+                    value = str(value)
+            item[key] = value
+        canonical.append(item)
+
+    canonical.sort(
+        key=lambda s: (
+            str(s.get("lane") or ""),
+            str(s.get("content") or ""),
+            str(s.get("why_keep") or ""),
+            str(s.get("worth_reason") or ""),
+        )
+    )
+    return canonical
 
 
 def parse_spark_extraction_response(text: str) -> tuple[list[object] | None, list[str]]:
@@ -75,6 +138,8 @@ def _build_attempt_1_messages(source_text: str) -> list[dict[str, str]]:
         "Return ONLY a JSON array. No markdown, no commentary, no wrapper object. "
         f"Each item must include: content (max {sparks.SPARK_CONTENT_MAX_LEN} chars), "
         "lane, why_keep, worth_reason, confidence (0-1). "
+        "Optional: spark_type (fact|decision|intent|observation), "
+        "certainty (tentative|exploratory|confirmed), secondary_lanes (lane array). "
         f"Allowed lanes: {_lanes_for_prompt()}. "
         f"Return at most {MAX_SPARKS_PER_EXTRACTION} items."
     )
@@ -110,6 +175,7 @@ def _build_attempt_2_messages(
         "You previously failed to follow spark extraction instructions. "
         "Return ONLY a valid JSON array with no surrounding text. "
         f"Each item must include content, lane, why_keep, worth_reason, confidence. "
+        "Optional: spark_type, certainty, secondary_lanes. "
         f"Allowed lanes: {_lanes_for_prompt()}. "
         f"Return at most {MAX_SPARKS_PER_EXTRACTION} items."
     )
@@ -180,8 +246,27 @@ def _process_parsed_batch(
     return _validate_batch(parsed)
 
 
+def _success_result(
+    sparks_batch: list[dict[str, object]],
+    *,
+    attempts: int,
+    cache_key: str | None = None,
+    cache_hit: bool = False,
+) -> SparkExtractionResult:
+    canonical = canonicalize_spark_batch(sparks_batch)
+    if cache_key is not None and not cache_hit:
+        _extraction_cache[cache_key] = [dict(item) for item in canonical]
+    return SparkExtractionResult(
+        ok=True,
+        sparks=canonical,
+        errors=[],
+        attempts=attempts,
+        cache_hit=cache_hit,
+    )
+
+
 def extract_sparks_from_text(source_text: str) -> SparkExtractionResult:
-    """Extract validated spark candidates from raw text via OpenAI (T4)."""
+    """Extract validated spark candidates from raw text via OpenAI (T4/T5)."""
     if crowley.is_test_mode():
         try:
             parsed = _load_test_fixture()
@@ -194,7 +279,7 @@ def extract_sparks_from_text(source_text: str) -> SparkExtractionResult:
             )
         validated, parse_errors, validation_errors = _process_parsed_batch(parsed)
         if validated is not None:
-            return SparkExtractionResult(ok=True, sparks=validated, errors=[], attempts=1)
+            return _success_result(validated, attempts=1)
         return SparkExtractionResult(
             ok=False,
             sparks=[],
@@ -210,6 +295,17 @@ def extract_sparks_from_text(source_text: str) -> SparkExtractionResult:
             attempts=0,
         )
 
+    cache_key = receipt_fingerprint(source_text)
+    cached = _extraction_cache.get(cache_key)
+    if cached is not None:
+        return SparkExtractionResult(
+            ok=True,
+            sparks=[dict(item) for item in cached],
+            errors=[],
+            attempts=0,
+            cache_hit=True,
+        )
+
     parse_errors: list[str] = []
     validation_errors: list[str] = []
 
@@ -219,7 +315,7 @@ def extract_sparks_from_text(source_text: str) -> SparkExtractionResult:
         else:
             messages = _build_attempt_2_messages(parse_errors, validation_errors)
 
-        raw = crowley._call_openai(messages, stream=False)
+        raw = crowley._call_openai(messages, stream=False, temperature=0.0)
         parsed, parse_errors = parse_spark_extraction_response(raw)
         if parsed is None:
             validation_errors = []
@@ -233,17 +329,16 @@ def extract_sparks_from_text(source_text: str) -> SparkExtractionResult:
             continue
 
         if len(parsed) == 0:
-            return SparkExtractionResult(ok=True, sparks=[], errors=[], attempts=attempt)
+            return _success_result([], attempts=attempt, cache_key=cache_key)
 
         validated, batch_parse_errors, batch_validation_errors = _validate_batch(parsed)
         parse_errors = batch_parse_errors
         validation_errors = batch_validation_errors
         if validated is not None:
-            return SparkExtractionResult(
-                ok=True,
-                sparks=validated,
-                errors=[],
+            return _success_result(
+                validated,
                 attempts=attempt,
+                cache_key=cache_key,
             )
         if attempt == 2:
             return SparkExtractionResult(

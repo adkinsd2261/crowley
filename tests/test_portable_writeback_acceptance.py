@@ -80,6 +80,22 @@ class PortableWritebackAcceptanceTests(IsolatedDbTestCase):
         statuses = {str(row["status"]) for row in active_rows}
         self.assertIn("active", statuses)
 
+        conn = crowley.connect_db()
+        try:
+            v4_rows = conn.execute(
+                """
+                SELECT s.trust_state
+                FROM sparks s
+                JOIN memory_items m ON m.id = s.source_memory_item_id
+                WHERE m.source = ?
+                  AND s.trust_state = 'active'
+                """,
+                (crowley.PORTABLE_TERMINAL_SOURCE,),
+            ).fetchall()
+        finally:
+            conn.close()
+        self.assertGreaterEqual(len(v4_rows), 1)
+
     def test_sensitive_sparks_rejected_for_auto_promotion(self) -> None:
         payload = {
             "format": "crowley_terminal_writeback_v1",

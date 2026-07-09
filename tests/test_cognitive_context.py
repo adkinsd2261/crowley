@@ -17,10 +17,12 @@ sys.path.insert(0, str(ROOT / "tests"))
 import actions_tool_registry  # noqa: E402
 import app as crowley_app  # noqa: E402
 import context_orchestration  # noqa: E402
+import context_resolution  # noqa: E402
 import crowley  # noqa: E402
 import spark_sanitize  # noqa: E402
 import spark_graph  # noqa: E402
 import spark_retrieval  # noqa: E402
+import sparks  # noqa: E402
 from actions_helpers import actions_headers, boot_actions_session  # noqa: E402
 from db_helpers import IsolatedDbTestCase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -347,6 +349,45 @@ class CognitiveContextTests(IsolatedDbTestCase):
 
         self.assertEqual(res.status_code, 200, res.text)
         self.assertIn("core_sparks", res.json())
+
+    def test_cold_start_uses_confirmed_candidates_without_active_sparks(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            project_id = crowley._active_project_id(conn)
+            for index in range(8):
+                sparks.insert_spark(
+                    conn,
+                    {
+                        "content": f"Cold start confirmed candidate spark {index} for fallback exit.",
+                        "lane": "work",
+                        "why_keep": "Builds cold-start pool.",
+                        "worth_reason": "Confirms fallback policy.",
+                        "confidence": 0.8,
+                        "certainty": "confirmed",
+                        "sensitivity": "normal",
+                    },
+                    source_memory_item_id=1,
+                    project_id=project_id,
+                    trust_state="candidate",
+                )
+            conn.commit()
+            with mock.patch.object(
+                context_orchestration.spark_retrieval,
+                "retrieve_sparks",
+                return_value=[],
+            ):
+                payload = context_orchestration.build_cognitive_context(
+                    "cold start query",
+                    conn=conn,
+                    project_id=project_id,
+                )
+        finally:
+            conn.close()
+        trace = payload["trace"]
+        self.assertEqual(trace["active_spark_count"], 0)
+        self.assertEqual(trace["cold_start_spark_count"], 8)
+        self.assertFalse(trace["fallback_used"])
+        self.assertNotIn("memory_fallback", payload)
 
 
 if __name__ == "__main__":

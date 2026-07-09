@@ -4,6 +4,9 @@
     "lane": "operating_style",
     "why_keep": "Documents delivery discipline for builder workflow.",
     "worth_reason": "Reusable pattern for staged V4 implementation.",
-    "confidence": 0.8
+    "confidence": 0.8,
+    "spark_type": "fact",
+    "certainty": "confirmed",
+    "secondary_lanes": ["work"]
   }
 ]

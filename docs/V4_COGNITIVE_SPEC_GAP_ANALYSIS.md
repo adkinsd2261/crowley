@@ -89,22 +89,6 @@ Multi-spark extraction, context boundaries, document decomposition, ambiguity ta
 | Bitwise deterministic LLM output | **Reject** — use rules-first + temp=0 + idempotency cache (#356) |
 | store/ignore/temporary | **Adopt** (#352) |
 
-### Sequencing clarification
-
-V4.2 implementation should land schema before persistence-aware intent handling:
-
-1. V4.2 T2 (#353) adds `certainty`, `spark_type`, secondary lanes, and exposure
-   defaults.
-2. V4.2 T1 (#352) may expose the classifier independently, but ingest wiring
-   that tags low-confidence store paths as tentative depends on #353.
-3. V4.2 T3 (#354) uses a whole-document safety/noise gate only for obvious
-   ignore/secret cases, then chunks, then classifies each chunk. One temporary
-   chunk must not discard useful chunks from the same source receipt.
-
-`temporary` means no active spark and no normal retrieval result. Any retained
-record is receipt metadata/audit-only unless a later ticket explicitly adds an
-ephemeral store.
-
 ---
 
 ## Layer 2 — Domain system
@@ -131,7 +115,7 @@ finance, health, career, learning, general; primary + secondary domain; domain-a
 |------|---------|
 | Rename SPARK_LANES values | **Reject** — DB compatibility |
 | secondary_lanes_json | **Adopt** (#353) |
-| Auto lane from query | **Adopt** (#359), including multi-lane inference for genuine cross-domain queries |
+| Auto lane from query | **Adopt** (#359) |
 | Typed parsing (amount, metric) | **Defer post-V4.5** — optional JSON in tags, not V4.2 blocker |
 
 ---
@@ -219,8 +203,8 @@ Count-based depth limits, core/supporting/patterns split, sanitization, cold-sta
 
 | Item | Verdict |
 |------|---------|
-| Token budget packer | **Adopt** (#363), using caller-provided remaining budget |
-| Fixed four sections | **Adopt** (#364), additive to existing API fields |
+| Token budget packer | **Adopt** (#363) |
+| Fixed four sections | **Adopt** (#364) |
 | Chat wire | **Adopt** (#365) — see [V4_CHAT_WIRE_RFC.md](./V4_CHAT_WIRE_RFC.md) |
 | Replace canon/world prompt layers | **Reject** — cognitive sits below authority stack |
 
@@ -261,7 +245,7 @@ Write-time validation (T20), retrieval gates (T18), output sanitization (T19), `
 | Item | Verdict |
 |------|---------|
 | Redaction + sensitivity gates | **Keep** |
-| Field-level encryption | **Adopt** — V4.5 only (#372), with design doc before storage mutation |
+| Field-level encryption | **Adopt** — V4.5 only (#372) |
 | Encrypted backup | **Adopt** (#373) |
 | OAuth/public hosting | **Reject** — V4.1 baseline |
 
@@ -307,6 +291,43 @@ Portable writeback `corrections` field not applied to spark rows. Re-ingest/dedu
 
 ---
 
+## Explore activation (V4.6 — post–V4.5)
+
+**Status:** Architecture approved 2026-07-09 · **Do not mint** until #374  
+**RFC:** [V4.6_EXPLORE_ACTIVATION_RFC.md](./V4.6_EXPLORE_ACTIVATION_RFC.md)  
+**Packet:** `tickets/v4.6_explore_activation.json` (approved architecture; mint gated on #374)
+
+### Spec requires (ChatGPT V4+ extension)
+
+Activation-based retrieval (broad → weak signals → cluster → themes), concept identity, query expansion, clustering engine, synthesis, `precise|explore` modes, aggregation security.
+
+### Shipped / planned before V4.6
+
+- Precise hybrid top-K — `spark_retrieval.py`
+- Graph hop expansion — `spark_graph.py`
+- Pattern clustering (lifecycle) — `patterns.py`
+- Query intent / lane / profiles / 8–15 cap — V4.3 #358–#361
+- Sanitize + sensitivity — `spark_sanitize.py`, `spark_security.py` (+ V4.5)
+
+### Decision
+
+| Item | Verdict |
+|------|---------|
+| Parallel `mode=explore` activation path | **Adopt** — after #374 |
+| Ephemeral clusters (no Concept table) | **Adopt** |
+| Extractive themes; no LLM synthesis default | **Adopt** |
+| Lane-homogeneous + sensitivity max + sanitize-before-cluster | **Adopt** |
+| Wire cognitive context / spark_retrieval only | **Adopt** |
+| Hook `GET /api/retrieve` | **Reject** |
+| Persist Concept ontology in V4.6 | **Reject** — V5 candidate |
+| Replace precise top-K or `patterns.py` | **Reject** |
+| Synonym explosion query expansion | **Reject**; optional bounded rules-first alias expand only if needed |
+| Amend open V4.3–V4.5 tickets for this | **Reject** |
+
+Closes in: **V4.6** (mint after #374) — see RFC ticket slices T1–T6.
+
+---
+
 ## Spec out-of-scope clarifications
 
 | Spec says out of scope | Crowley reality | Resolution |
@@ -315,6 +336,7 @@ Portable writeback `corrections` field not applied to spark rows. Re-ingest/dedu
 | Pattern-based actions | V4.0 `patterns.py` clustering | Pattern **detection** stays; **automated actions** = V5 |
 | Deep truth arbitration | Deferred V4.1 | Pairwise spark truth in V4.5; deep arbitration V5 |
 | Automation / execution | — | V5 north star |
+| Concept persistence / Concept CRUD | Not in V4.0–V4.5 | Ephemeral explore clusters in V4.6; persistence = V5 candidate |
 
 ---
 
@@ -336,6 +358,7 @@ Until V4.4 ships, chat uses `retrieve_memories()` on `memory_items` while cognit
 | V4.3 Retrieval + Query | #358–#362 | 2 clean retrieval |
 | V4.4 Context + Chat Wire | #363–#367 | 3 context control |
 | V4.5 Truth + Security Lock | #369–#374 | 4 state evolution, 6 security + full suite |
+| V4.6 Explore Activation | mint after #374 | fragmented→themes; no cross-lane leak; precise default unchanged |
 
 Full matrix: [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md)
 
@@ -345,5 +368,6 @@ Full matrix: [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md)
 
 - [V4.2_SCHEMA_RFC.md](./V4.2_SCHEMA_RFC.md) — additive columns and migration policy
 - [V4_CHAT_WIRE_RFC.md](./V4_CHAT_WIRE_RFC.md) — prompt authority order
+- [V4.6_EXPLORE_ACTIVATION_RFC.md](./V4.6_EXPLORE_ACTIVATION_RFC.md) — post–V4.5 explore/activation (do not mint until #374)
 - [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md) — shipped baseline
 - [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md) — architecture + deferred debt

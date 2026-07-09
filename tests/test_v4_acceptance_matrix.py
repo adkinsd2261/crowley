@@ -36,6 +36,25 @@ class V4AcceptanceMatrixTests(unittest.TestCase):
         self.assertIn("Messy input handling", MATRIX_DOC.read_text())
         self.assertIn("Security validation", MATRIX_DOC.read_text())
 
+    def test_matrix_preserves_full_pass_criteria_contract(self) -> None:
+        """Guard against accidental weakening of the V4 acceptance matrix."""
+        text = MATRIX_DOC.read_text()
+        required = (
+            "each ladder doc-lock ticket must unskip and implement its own acceptance module",
+            "Temporary/noise sections do not cause useful sections from the same raw input",
+            "Cross-domain queries may infer multiple lanes; single-domain finance queries",
+            "`/api/cognitive/context` keeps compatibility fields while adding structured",
+            "Encryption design doc covers key loss, plaintext/embedding behavior, tamper",
+            "Messy input handling",
+            "Clean retrieval",
+            "Context control",
+            "State evolution",
+            "Noise resistance",
+            "Security validation",
+        )
+        for needle in required:
+            self.assertIn(needle, text, f"missing matrix contract text: {needle}")
+
 
 if __name__ == "__main__":
     unittest.main()

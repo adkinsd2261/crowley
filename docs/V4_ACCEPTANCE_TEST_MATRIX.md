@@ -12,11 +12,11 @@ Each acceptance test maps to a pytest module, JSON fixture(s), implementing tick
 
 | # | Spec name | Fixture(s) | Test module | Ticket gate | Status |
 |---|-----------|------------|-------------|-------------|--------|
-| 1 | Messy input handling | `messy_multi_domain_input.json` | `test_v4_acceptance_input.py` | V4.2 #357 | Pending |
+| 1 | Messy input handling | `messy_multi_domain_input.json` | `test_v4_acceptance_input.py` | V4.2 #357 | **Pass** (V4.2 lock) |
 | 2 | Clean retrieval | `retrieval_finance_query.json` | `test_v4_acceptance_retrieval.py` | V4.3 #362 | Pending |
 | 3 | Context control | `context_token_budget.json` | `test_v4_acceptance_context.py` | V4.4 #367 | Pending |
 | 4 | State evolution | `truth_state_evolution.json` | `test_v4_acceptance_truth.py` | V4.5 #374 | Pending |
-| 5 | Noise resistance | `noise_ignore_temporary.json` | `test_v4_acceptance_input.py` | V4.2 #357 | Pending |
+| 5 | Noise resistance | `noise_ignore_temporary.json` | `test_v4_acceptance_input.py` | V4.2 #357 | **Pass** (V4.2 lock) |
 | 6 | Security validation | `security_no_leak.json` | `test_v4_acceptance_security.py` | V4.5 #374 | Pending |
 
 Meta validation (always runs): `test_v4_acceptance_matrix.py` — fixture schema + matrix completeness.

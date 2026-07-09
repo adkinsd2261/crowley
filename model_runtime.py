@@ -720,6 +720,7 @@ def _call_openai(
     stream: bool,
     *,
     model: str | None = None,
+    temperature: float | None = None,
     get_active_model_name_func: Callable[[], str] = get_active_model_name,
     iter_openai_tokens: Callable[..., Iterator[str]] = _iter_openai_tokens,
 ) -> str:
@@ -729,7 +730,10 @@ def _call_openai(
     from openai import OpenAI
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    response = client.chat.completions.create(model=model_name, messages=messages)
+    kwargs: dict[str, object] = {"model": model_name, "messages": messages}
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    response = client.chat.completions.create(**kwargs)
     return (response.choices[0].message.content or "").strip()
 
 

@@ -75,8 +75,10 @@ def run_cognitive_maintenance(
             "dry_run": result.dry_run,
             "stale_candidates": result.stale_candidates,
             "rejected_candidates": result.rejected_candidates,
+            "promotion_candidates": result.promotion_candidates,
             "stale_applied": result.stale_applied,
             "rejected_applied": result.rejected_applied,
+            "promotions_applied": result.promotions_applied,
         }
     finally:
         conn.close()
@@ -120,18 +122,34 @@ def seed_manual_spark(
             trust_state=spark_lifecycle.SPARK_SEED_TRUST_STATE,
             lineage_json=lineage,
         )
+        promotion = spark_lifecycle.promote_spark_to_active(
+            conn,
+            int(upsert.spark_id),
+            dry_run=False,
+            manual=True,
+            promoted_by=source,
+            promotion_source="cognitive_seed",
+        )
         conn.commit()
     finally:
         conn.close()
+
+    final_trust_state = (
+        promotion.to_state if promotion.ok else spark_lifecycle.SPARK_SEED_TRUST_STATE
+    )
 
     return {
         "status": "ok",
         "project": project_slug,
         "project_id": project_id,
         "memory_item_id": int(memory_item_id),
-        "trust_state": spark_lifecycle.SPARK_SEED_TRUST_STATE,
+        "trust_state": final_trust_state,
         "action": upsert.action,
         "spark_id": upsert.spark_id,
         "keeper_id": upsert.keeper_id,
         "similarity": upsert.similarity,
+        "promotion": {
+            "ok": promotion.ok,
+            "reason": promotion.reason,
+        },
     }
