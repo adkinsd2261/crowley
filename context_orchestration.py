@@ -196,6 +196,7 @@ def _memory_fallback_items(
         str(query or ""),
         limit=limit,
         project_id=project_id,
+        conn=conn,
     )
     fallback: list[dict[str, Any]] = []
     for memory in memories:

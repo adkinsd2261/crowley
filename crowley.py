@@ -5894,6 +5894,7 @@ def retrieve_memories(
     query: str,
     limit: int = MEMORY_LIMIT,
     project_id: int | None = None,
+    conn: sqlite3.Connection | None = None,
 ) -> list[dict[str, object]]:
     """
     Hybrid retrieval over memory_items.
@@ -5903,7 +5904,8 @@ def retrieve_memories(
     """
     global _last_retrieval_mode
 
-    conn = connect_db()
+    owns_conn = conn is None
+    conn = conn or connect_db()
     try:
         _lazy_backfill_embeddings(conn)
         active_project_id = project_id
@@ -6104,7 +6106,8 @@ def retrieve_memories(
             conn.commit()
         return top
     finally:
-        conn.close()
+        if owns_conn:
+            conn.close()
 
 
 # --- local memory bus (V3.7) --------------------------------------------------

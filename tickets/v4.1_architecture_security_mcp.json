@@ -1,0 +1,168 @@
+{
+  "objective": "V4.1 Codex-Owned Architecture, Security, and MCP Readiness - decompose Crowley's main script, lock local-first security, and create a transport-neutral tool contract for future MCP without changing existing behavior.",
+  "context": "Crowley V4.0 Cognitive Memory is shipped. crowley.py has grown past 10k lines and now acts as several subsystems in one file. V4.1 is Codex-owned because the work needs sustained architectural context. Existing APIs, CLI commands, sync payloads, Actions tools, and DB schema must remain stable. ChatGPT Actions remain the compatibility contract for external tool access.",
+  "decisions": [
+    "Codex owns implementation, QA, and final lock for this update.",
+    "crowley.py remains import-compatible as a facade while behavior moves into modules.",
+    "Security hardening is local-first: no OAuth, no accounts, no public full API.",
+    "MCP is prepared through a shared tool contract, but no MCP server ships in V4.1.",
+    "No schema migrations unless separately justified."
+  ],
+  "non_goals": [
+    "Ship an MCP server",
+    "Add OAuth, user accounts, or public full-API hosting",
+    "Require auth for localhost UI/internal routes",
+    "Implement field-level encryption",
+    "Build cognitive review UX",
+    "Build voice/TTS, automation, devices, or truth arbitration",
+    "Change public API shapes, CLI commands, sync payloads, Actions tool names, or DB schema"
+  ],
+  "risks": [
+    "Circular dependencies hidden by crowley.py imports",
+    "Accidental behavior changes during refactor",
+    "Actions catalog drift while introducing a shared tool contract",
+    "Tests becoming too broad for each slice unless focused gates are preserved",
+    "Starting V4.1 from a dirty V4 audit-fix baseline"
+  ],
+  "qa_expectations": "Per ticket: git diff --check, py_compile for touched modules, and focused tests for moved subsystem. Final: full unittest discovery, preflight, API smoke, Actions catalog/read/write smoke, and MCP-readiness doc audit.",
+  "next_action": "Mint these tickets, then Codex starts V4.1 T0 by committing or otherwise closing the V4 audit fix and writing the deferral ledger.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "Approved in Codex thread after deciding Codex, not Cursor, owns the V4.1 architecture update."
+  },
+  "tickets": [
+    {
+      "title": "V4.1 T0: clean baseline and deferral ledger",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Close the current V4 audit-fix baseline before starting V4.1 architecture work. Commit or otherwise intentionally resolve the existing V4 audit changes in crowley.py, context_orchestration.py, and docs/V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md. Add a V4.1 planning/ledger doc covering included work, prepared-only work, and deferred work. Explicitly defer field encryption, cognitive review UX, truth arbitration, workflow determinism, voice/TTS, automation, and a full migration framework. Non-goals: no architecture extraction, no MCP contract, no new product surface in this ticket.",
+      "acceptance": [
+        "Working tree baseline is intentionally clean or the only remaining changes are the new V4.1 packet/docs",
+        "V4 audit fix is committed or otherwise documented as intentionally carried forward",
+        "V4.1 ledger doc lists included, prepared-only, and deferred work",
+        "Ledger states local-first security and MCP-readiness boundaries",
+        "git diff --check passes"
+      ]
+    },
+    {
+      "title": "V4.1 T1: architecture map and module boundary contract",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Create the V4.1 architecture map for crowley.py and adjacent surfaces. Document current domains, target modules, dependency direction, allowed imports, facade/re-export rule, and the rule that no new large domain logic should land in crowley.py. Map at least: core/runtime, memory store, retrieval, world/dashboard/activity, portable writeback, agent sync, conversation/prompting, CLI, Actions/tool contract, and security baseline. Non-goals: do not move code in this ticket except lightweight doc or test scaffolding if needed.",
+      "acceptance": [
+        "Architecture doc maps current crowley.py domains to target modules",
+        "Dependency direction and facade/re-export rules are explicit",
+        "app.py and actions_tool_registry.py are marked prepare-only/future split targets",
+        "Docs explain how MCP readiness depends on the tool contract, not a live MCP server",
+        "py_compile crowley.py app.py actions_tool_registry.py passes"
+      ]
+    },
+    {
+      "title": "V4.1 T2: local-first security baseline and tests",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Add docs/V4.1_SECURITY_BASELINE.md and focused regression coverage for expected security posture. Preserve localhost trust for full internal /api/*, bearer-only /api/actions/* for public tunnel use, no OAuth/accounts, and API-only tunnel boundary. Add or extend tests for Actions bearer missing/wrong/valid behavior, cloudflared config forwarding only ^/api/actions/.*, direct mutation invariant gates, Actions write permissions/rate limits, cognitive redaction, and secret-like spark rejection. Add a read-only secret hygiene audit/report helper for likely secrets in raw memory/log-adjacent text; report only, no deletion or rewriting.",
+      "acceptance": [
+        "V4.1 security baseline doc defines trust boundaries and non-goals",
+        "Actions auth tests cover missing key, missing bearer, wrong bearer, and valid bearer",
+        "Tunnel boundary test verifies only /api/actions/* is exposed by the named tunnel template",
+        "Mutation guardrail and write permission tests cover the expected write paths",
+        "Secret hygiene audit is read-only and covered by fixture tests",
+        "Cognitive redaction and spark secret rejection tests pass"
+      ]
+    },
+    {
+      "title": "V4.1 T3: MCP-ready transport-neutral tool contract",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Introduce a transport-neutral Crowley tool contract module, likely crowley_tools.py, without changing Actions behavior. The contract must represent tool name, kind/read-write classification, description, args_schema, handler, timeout metadata, workflow tier, permission tier or write policy, and MCP candidate classification. Add mapping helpers that can produce the existing Actions catalog shape. Non-goals: do not add an MCP server; do not remove Actions registry behavior; do not rename tools.",
+      "acceptance": [
+        "New tool contract module exists and can represent every current Actions tool",
+        "Contract includes metadata needed for future MCP classification",
+        "Existing Actions catalog payload remains equivalent for tool names, kinds, descriptions, arg schemas, examples, gateway, and timeouts",
+        "Tests prove read/write classification and permission/workflow metadata are preserved",
+        "No public route or OpenAPI shape changes"
+      ]
+    },
+    {
+      "title": "V4.1 T4: Actions registry adapter over shared tool contract",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Refactor actions_tool_registry.py so it consumes the shared tool contract while preserving all current behavior: /api/actions/catalog, /read, /write, legacy aliases, boot gate, workflow enforcement, permissions, timeouts, heavy-tool concurrency, and response shapes. Document which existing tools are future MCP-safe, Actions-only, local-only, or blocked from MCP. Non-goals: no app router split; no live MCP transport; no tool renames.",
+      "acceptance": [
+        "actions_tool_registry.py dispatch still passes existing Actions tests",
+        "Catalog before/after equivalence test passes for tool identity and schemas",
+        "Boot gate, domain retrieval gates, permissions, and timeouts still apply",
+        "MCP mapping doc classifies current tools by future exposure safety",
+        "Legacy Actions aliases continue delegating to the same handlers"
+      ]
+    },
+    {
+      "title": "V4.1 T5: core runtime extraction",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Extract core utilities, DB path/connect helpers, shared time/text helpers, brain/model runtime, provider selection, model calls, test-mode stubs, and runtime diagnostics into focused modules while keeping crowley.py as the import-compatible facade. Suggested modules: crowley_core.py and model_runtime.py, adjusted if dependency analysis says otherwise. Non-goals: do not move memory retrieval, world dashboard, portable writeback, agent sync, conversation prompt assembly, or CLI yet.",
+      "acceptance": [
+        "Existing callers can still import/use crowley.get_db_path, connect_db, call_model, iter_model_tokens, build_runtime_diagnostics, and brain config helpers",
+        "New modules own the extracted implementation rather than duplicating it",
+        "No DB schema or API behavior changes",
+        "Focused runtime/brain/chat/spark extraction tests pass",
+        "py_compile passes for crowley.py, app.py, spark_extraction.py, diagnostics.py, and new modules"
+      ]
+    },
+    {
+      "title": "V4.1 T6: memory store and retrieval extraction",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Extract memory item CRUD, metadata attachment, quality gate entrypoints, memory hygiene/consolidation helpers as appropriate, retrieval scoring, embedding helpers, retrieval explanations, ticket-aware boosts, and retrieve_memories() into focused memory modules while preserving crowley.py re-exports and compatibility call sites. Suggested modules: memory_items.py and memory_retrieval.py, adjusted if dependency analysis says otherwise. Non-goals: do not move V4 sparks modules; do not change scoring formulas; do not change retrieval response shapes.",
+      "acceptance": [
+        "crowley.retrieve_memories and memory item APIs remain compatibility entrypoints",
+        "Retrieval ordering, score breakdowns, inclusion reasons, and ticket-aware boosts are unchanged",
+        "Memory quality gate, hygiene, consolidation, and retrieval tests pass",
+        "Cognitive context fallback continues to work with shared connection reuse",
+        "py_compile passes for crowley.py, context_orchestration.py, memory_quality.py, memory_tiers.py, conflict_engine.py, sparks.py, and new modules"
+      ]
+    },
+    {
+      "title": "V4.1 T7: world sync and portable extraction",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Extract world/project state, decisions, open loops, tasks, metrics, activity pulses/wire, world dashboard/context bundle, agent sync bundle/finalization, portable context packet, terminal writeback parse/ingest, and writeback acceptance reporting into focused modules while preserving crowley.py facade exports. Suggested modules: world_state.py, agent_sync_bundle.py, and portable_context.py, adjusted if dependency analysis says otherwise. Non-goals: no route shape changes; no Actions tool changes; no UI changes.",
+      "acceptance": [
+        "/api/world, /api/context, /api/agent/sync, /api/portable/packet, and portable writeback response shapes remain stable",
+        "Agent sync, task frame, activity wire, portable packet/writeback/acceptance tests pass",
+        "Actions tools that call these surfaces continue to pass",
+        "No DB schema changes",
+        "py_compile passes for crowley.py, app.py, actions_tool_registry.py, scripts/agent_sync_lib.py, and new modules"
+      ]
+    },
+    {
+      "title": "V4.1 T8: conversation and CLI extraction",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Extract prompt assembly, response mode/depth, chat_turn, ask_crowley, CLI command parsing, debug commands, and main() delegation into focused modules while preserving python crowley.py behavior. Suggested modules: conversation_engine.py and crowley_cli.py. Non-goals: no prompt behavior changes except import location; no web UI changes; no slash command changes.",
+      "acceptance": [
+        "python crowley.py still launches the same CLI behavior through delegation",
+        "crowley.build_prompt, chat_turn, ask_crowley, and debug helpers remain import-compatible",
+        "Prompt/personality/conversation mode/response depth/chat API tests pass",
+        "CLI smoke compile and at least one non-interactive debug/help path passes if available",
+        "py_compile passes for crowley.py, crowley_cli.py, conversation_engine.py, app.py, and diagnostics.py"
+      ]
+    },
+    {
+      "title": "V4.1 T9: final architecture audit and release lock",
+      "assignee": "codex",
+      "priority": 1,
+      "description": "Run the final V4.1 architecture, security, and MCP-readiness audit. Update docs/version lock for V4.1, record line-count delta, final module map, security baseline status, MCP-readiness report, and remaining debt: app router split, Actions registry domain split, field encryption, MCP server, cognitive review UX, truth arbitration, workflow determinism, migration framework. Non-goals: do not broaden V4.1 after final QA.",
+      "acceptance": [
+        "Full unittest discovery passes under CROWLEY_TEST_MODE=1 and CROWLEY_EMBED_PROVIDER=off",
+        "scripts/preflight.py passes against live bus or any environment limitation is documented",
+        "API smoke covers /api/health, /api/world, /api/context, /api/cognitive/context, /api/agent/sync, and /api/portable/packet",
+        "Actions smoke covers catalog, read, write or representative safe write parse, and cognitive.context",
+        "Docs/version lock record V4.1 scope, QA results, line-count delta, MCP-readiness status, and remaining debt"
+      ]
+    }
+  ]
+}
