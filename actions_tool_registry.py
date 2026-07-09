@@ -2,25 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Callable, Literal
+from typing import Any, Callable
 
 import crowley
+import crowley_tools
 import github_read
 import tickets
 from actions_tool_runtime import invoke_tool_handler, tool_timeout_seconds
-
-ToolKind = Literal["read", "write"]
-ToolHandler = Callable[[dict[str, Any]], tuple[dict[str, Any], int | None]]
-
-
-@dataclass(frozen=True)
-class ToolDefinition:
-    name: str
-    kind: ToolKind
-    description: str
-    args_schema: dict[str, object]
-    handler: ToolHandler
+from crowley_tools import ToolDefinition, ToolKind
 
 
 _TOOLS: dict[str, ToolDefinition] = {}
@@ -30,7 +19,13 @@ _INITIALIZED = False
 def register_tool(defn: ToolDefinition) -> None:
     if defn.name in _TOOLS:
         raise ValueError(f"tool already registered: {defn.name}")
-    _TOOLS[defn.name] = defn
+    import workflow
+
+    _TOOLS[defn.name] = crowley_tools.complete_tool_metadata(
+        defn,
+        timeout_seconds=tool_timeout_seconds(defn.name),
+        workflow_tier=workflow.tool_tier(defn.name),
+    )
 
 
 def ensure_registry() -> None:
@@ -64,13 +59,10 @@ def catalog_payload() -> dict[str, object]:
         "release_label": crowley.CROWLEY_RELEASE_LABEL,
         "catalog_schema": "actions_tool_catalog_v1",
         "tools": [
-            {
-                "name": tool.name,
-                "kind": tool.kind,
-                "tier": workflow.tool_tier(tool.name),
-                "description": tool.description,
-                "args_schema": tool.args_schema,
-            }
+            crowley_tools.actions_catalog_entry(
+                tool,
+                tier=tool.workflow_tier or workflow.tool_tier(tool.name),
+            )
             for tool in list_tools()
         ],
         "gateway": {
@@ -120,7 +112,8 @@ def catalog_payload() -> dict[str, object]:
             },
         },
         "timeouts_seconds": {
-            tool.name: tool_timeout_seconds(tool.name) for tool in list_tools()
+            tool.name: int(tool.timeout_seconds or tool_timeout_seconds(tool.name))
+            for tool in list_tools()
         },
         "workflow": workflow.workflow_enforcement_payload(tool_names=tool_names),
     }
