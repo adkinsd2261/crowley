@@ -1,9 +1,9 @@
 # Crowley — Roadmap
 
 **Purpose:** Guide future development from documented current state.
-**As of:** V4.1.0 Architecture and MCP Readiness shipped · **2026-07-09**
-**Sources:** `VERSIONS.md`, code, [TICKETS.md](./TICKETS.md).
-Inferences marked **(inference)**.
+**As of:** V4.1.0 shipped · V4.2–V4.5 cognitive completion ladder minted · **2026-07-09**
+**Sources:** `VERSIONS.md`, [TICKETS.md](./TICKETS.md), [V4_COGNITIVE_SPEC_GAP_ANALYSIS.md](./V4_COGNITIVE_SPEC_GAP_ANALYSIS.md).
+Inferences marked **(inference)**. Post-V5 device themes are **directional** — release numbers not assigned yet.
 
 ---
 
@@ -17,88 +17,42 @@ Inferences marked **(inference)**.
 6. **Engine owns logic** — `app.py` is transport only; external tools use HTTP bus.
 7. **Portable continuity** — Crowley is the persistent context layer that follows D across reasoning surfaces.
 8. **Sparks over transcripts** — raw logs are receipts; sparks are future-useful memory units.
+9. **Complete the backbone before devices** — V4.2–V4.5 closes the cognitive loop (input → retrieval → chat context → truth → security) before V5 automation and physical surfaces.
+10. **Devices consume sparks, not reinvent memory** — speaker, glasses, and agents read the same spark graph Crowley already maintains.
 
 ---
 
 ## 2. Current position
 
 ```
-V1 ──► V2 Memory ──► V2.5 UX ──► V2.6 Brain
-                                      │
-                                      ▼
-                            V3.0 World Model (manual)
-                                      │
-                                      ▼
-                            V3.1 Diagnostics
-                                      │
-                                      ▼
-                            V3.2 Extraction
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    ▼                                   ▼
-            V3.5 Chat UI                      V3.6 Memory Backend
-                    │                                   │
-                    └─────────────────┬─────────────────┘
-                                      ▼
-                            V3.7 Context Bridge
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    ▼                                   ▼
-            V3.7.3 Consolidation              V3.8 Memory Trail
-            (merge, dedupe, stale)            (canon, multi-agent)
-                                      │
-                                      ▼
-                            V3.8.1 Agent Parity
-                                      │
-                                      ▼
-                            V3.9 Concurrent Ticketing
-                                      │
-                                      ▼
-                            V3.9.1 Repository & CI
-                                      │
-                                      ▼
-                    Pre-V4 ladder (V3.9.2–V3.9.4) ✅
-                                      │
-                                      ▼
-                    Pre-V4 quality V3.9.5 ✅
-                                      │
-                                      ▼
-                    Pre-V4 quality V3.9.6 ✅
-                                      │
-                                      ▼
-                    V3.9.7 Experience & Reliability ✅
-                                      │
-                                      ▼
-                    V3.9.8 Runtime Hardening ✅
-                                      │
-                                      ▼
-                    V3.9.9 Context That Feeds ✅
+… V3.9.x ladder (shipped) …
                               │
                               ▼
-                    V3.9.10 Task-Frame Context ✅
+                    V4.0 Cognitive Memory ✅ (#203–#226)
                               │
                               ▼
-                    V3.9.11 Live Wire ✅
-                           │
-                           ▼
-                    V3.9.12 Portable Context Terminal ✅
+                    V4.1 Architecture + MCP Readiness ✅ (#316–#325)
                               │
                               ▼
-                    V3.9.13 ChatGPT Actions API ✅
+              V4.2–V4.5 Cognitive Completion ◄── YOU ARE HERE
+              (input → retrieval → chat wire → truth → security)
+              Tickets #352–#374 · builder-owned · one ladder at a time
                               │
                               ▼
-                    V4.0 Cognitive Memory ✅ (T1–T24 shipped)
+                    V5 — automation, MCP transport, voice (planned, not minted)
                               │
-                              ▼
-                    V4.1 Architecture + MCP Readiness ✅
-                              │
-                              ▼
-                    V4.2 MCP transport / review UX (next packet)
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+    Physical speaker (Echo-class)    Brilliant Labs AI Frames
+    spark-aware voice surface        wearable Crowley terminal
+    (horizon — no release # yet)     (horizon — after voice + speaker)
 ```
 
-**Shipped through V3.9.19:** … memory quality (#152–#166); post-3.9.19 integrity hardening on `main`.
+**Shipped:** V4.0 cognitive memory (sparks, graph, context API, safeguards). V4.1 facade extraction + shared tool contract + security baseline.
 
-**Current initiative:** V4.1 Architecture and MCP Readiness — **shipped (#316–#325)**. Release lock: [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md). `CROWLEY_VERSION = "4.1.0"`.
+**Active:** V4.2–V4.5 completes the ChatGPT cognitive-memory spec — closes the gap where chat still uses legacy `memory_items` instead of ranked sparks. Planning: [V4_COGNITIVE_SPEC_GAP_ANALYSIS.md](./V4_COGNITIVE_SPEC_GAP_ANALYSIS.md). Tickets: [TICKETS.md](./TICKETS.md).
+
+**Not yet specified as versioned releases:** physical speaker hardware, frame integration, and intermediate milestones between V5 and those devices. The journey is intentionally multi-step; this roadmap names themes, not dates.
 
 ---
 
@@ -198,60 +152,69 @@ Plan: [V3.9.1_REPOSITORY_AND_CI.md](./V3.9.1_REPOSITORY_AND_CI.md)
 
 ## 7. Near-term backlog
 
-| Item | Rationale | Complexity | Status |
-|------|-----------|------------|--------|
-| Automated CI test suite | Regression risk grows | Medium | ✅ Shipped — GitHub Actions (**157** tests; core deps) |
-| V3.9.2 Memory Clarity | Make memory natural but auditable | Medium | ✅ Shipped on `main` (#9–#13) |
-| V3.9.3 Planning Workflow | Convert Codex planning into Cursor-ready ticket packets | Medium | ✅ Shipped on `main` (#14–#18) |
-| V3.9.4 Agent Visibility | Make agent/ticket activity visible before V4 | Medium | ✅ Shipped on `main` (#19–#23) |
-| V3.9.5 Conversation + Model Behavior | Make Crowley pleasant and mode-aware for daily project work | Medium | ✅ Shipped on `main` (#25–#30) |
-| V3.9.6 Workspace Polish | Make the browser workspace livable before V4 | Medium | ✅ Shipped on `main` (#31–#36) |
-| Pre-V4 QA hygiene | Repair stale project_state/open_loops before deeper work | Low | ✅ Shipped on `main` (#37) |
-| V3.9.7 Workspace Experience & Reliability | UI catches up to backend depth; boring boot | Medium | ✅ Shipped on `main` (#40–#49) |
-| V3.9.8 Runtime Hardening | No fragile startup — test mode, runtime health | Medium | Local (#50–#55) — not on `origin/main` |
-| V3.9.9 Context That Feeds | Quality gate, slim sync, handoff intelligence, UI | Medium | **Shipped on `main`** (#56–#63) |
-| V3.9.10 Task-Frame Context | Task frame before retrieval for agents | Medium | **Shipped on `main`** (#64–#69) |
-| V3.9.11 Live Wire | Compose activity wire + brain switcher | Medium | **Shipped on `main`** (#70–#75) |
-| V3.9.12 Portable Context Terminal | Local/manual Crowley packet + structured writeback | Medium | **Shipped on `main`** (#76–#80) |
-| V3.9.13 Secure ChatGPT Actions API | Bearer-auth `/api/actions/*` for Custom GPT | Medium | **Shipped on `main`** |
-| V4.0 Spark Lanes | Memory lanes, trust states, lane-aware retrieval | High | **Next** — planned |
-| External collectors | Optional future inputs into lanes | High | Deferred after V4 memory architecture |
-| First canon synthesis | Populate `canon` rows for prompts/sync | Low | ✅ Workflow + first run (V3.9.2) |
-| Agent feed UI tab | Surface cross-agent handoffs in browser | Medium | ✅ Shipped (#19) |
-| Ticket detail + handoff links | Live work board usability | Medium | ✅ Shipped (#20–#21) |
-| Tasks vs tickets vs loops | Clarify Intelligence drawer roles | Low | ✅ Shipped (#22) |
-| `propose_handoff_updates()` | Handoff-tuned extraction prompt | Low | Open |
-| Sparks UI → `memory_items` | Legacy panel | Low–Medium | ✅ Memory tab |
-| `/task done <id>` | Task hygiene | Low | ✅ Shipped |
-| `git init` baseline | Meaningful handoff file lists | Low | ✅ Shipped — [adkinsd2261/crowley](https://github.com/adkinsd2261/crowley) |
+| Item | Rationale | Status |
+|------|-----------|--------|
+| **V4.2 Input Intelligence** | Intent gate, schema extensions, chunking, promotion (#352–#357) | Minted · open |
+| **V4.3 Retrieval + Query** | Query interpreter, auto lane, cap 8–15 (#358–#362) | Minted · after V4.2 lock |
+| **V4.4 Context + Chat Wire** | Token budget, structured sections, `build_prompt` (#363–#367) | Minted · after V4.3 lock |
+| **V4.5 Truth + Security Lock** | Arbitration, correction API, encryption, acceptance suite (#369–#374) | Minted · after V4.4 lock |
+| V5 planning packet | Automation, MCP transport, voice — themes only until V4.5 locks | **Not minted** |
+
+Historical V3.9.x and V4.0/V4.1 items are shipped; see [VERSIONS.md](../VERSIONS.md) and [TICKETS.md](./TICKETS.md).
 
 ---
 
-## 8. Mid-term (V4 themes) **(inference)**
+## 8. Mid-term themes
 
-### 8.1 portable context terminal (V3.9.12) — shipped
+### 8.1 V4.2–V4.5 — cognitive completion (active)
 
-Export a compact Crowley packet into any AI/model surface and import structured writeback. Session recap is an episodic receipt; useful residue becomes staged spark candidates. See [V3.9.12_PORTABLE_CONTEXT_TERMINAL.md](./V3.9.12_PORTABLE_CONTEXT_TERMINAL.md).
+Finish the operational blueprint: messy input → structured sparks → bounded retrieval → live chat context → truth/correction → encryption. V4.1 prepared MCP **metadata**; V4.2–V4.5 completes the **memory backbone** that every future surface will read.
 
-### 8.2 Secure ChatGPT Actions API (V3.9.13) — shipped
+Packets: `tickets/v4.2_input_intelligence.json` through `v4.5_truth_security_lock.json`.
+Lock target: [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md) (six acceptance tests).
 
-Narrow bearer-authenticated `/api/actions/*` for Custom GPT over an operator tunnel. Reuses portable packet and writeback ingest; does not expose tickets, chat, or brain APIs. Bridge: `scripts/start_chatgpt_bridge.sh`, setup: [CHATGPT_SETUP.md](./CHATGPT_SETUP.md). See [V3.9.13_SECURE_CHATGPT_ACTIONS_API.md](./V3.9.13_SECURE_CHATGPT_ACTIONS_API.md).
+### 8.2 V5 — automation, MCP, and voice **(planned, not minted)**
 
-### 8.3 Spark lanes (V4.0)
+After V4.5 cognitive completion lock, V5 is the first release that intentionally adds **execution and new transports**:
 
-Primary lanes: learning, work, relationships, money, health, operating_style. Every spark gets one lane, optional domain/tags, why_keep, worth reason, confidence, sensitivity, and trust state.
+| Theme | Intent |
+|-------|--------|
+| **Automation** | Event triggers, proactive workflows, pattern-driven actions — the spec's V5 out-of-scope items |
+| **MCP tooling** | Ship MCP transport on top of `crowley_tools.py` (contract already exists from V4.1) |
+| **Voice** | TTS/STT integration, voice-friendly context packing, local voice session hooks |
 
-### 8.4 External collectors (opt-in)
+V5 assumes sparks are authoritative in chat and APIs. Automation must respect existing permission tiers and never bypass T18–T20 security gates.
 
-Git/calendar/filesystem collectors become later inputs into spark lanes, not the V4 core.
+**Not in V5 by default:** custom hardware, wearables, or field devices — those are separate horizons below.
 
-### 8.5 Multi-project support
+### 8.3 Physical speaker — spark-aware voice terminal **(horizon)**
+
+Direction: an Echo-class **local speaker** that is a Crowley terminal, not a generic assistant.
+
+- Voice in → cognitive ingest (same pipeline as chat)
+- Voice out → answers grounded in **located sparks** (lane, confidence, lineage), not opaque RAG
+- User can ask “what do you know about X?” and Crowley resolves to specific sparks in the system
+- Depends on: solid V4 cognitive loop, V5 voice stack, reliable on-device or low-latency STT/TTS
+
+Release number and hardware spec **not assigned** — likely multiple milestones (prototype firmware, wake word, bus bridge, spark UX on device).
+
+### 8.4 Brilliant Labs AI Frames — wearable Crowley **(horizon)**
+
+Direction: integrate Crowley into **Brilliant Labs AI Frames** as a wearable context surface once voice and a working physical speaker path exist.
+
+- Glasses as capture + glanceable recall, not the system of record
+- Crowley remains hub: frames consume `cognitive.context` / voice APIs; sparks stay in SQLite
+- Chat and ingest on frames feed the same receipt → spark pipeline
+
+**Sequencing (inference):** V4 cognitive complete → V5 voice/MCP/automation → speaker prototype proves spark locate + voice UX → frames integration. Exact ordering may shift; frames are not the next release after V5.
+
+### 8.5 External collectors (opt-in)
+
+Git/calendar/filesystem collectors become inputs into spark lanes — likely post-V5 or parallel to automation work.
+
+### 8.6 Multi-project support
 
 `/project list`, `/project switch <slug>` — schema ready; extraction must never auto-switch.
-
-### 8.6 MCP / deeper IDE integration
-
-Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
 ---
 
@@ -263,8 +226,13 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 | Auto-delete / auto-archive | Safety rule from V3.2 |
 | Auto project switching | Safety rule |
 | Auth on localhost API | Trust model for single user; `/api/actions/*` uses bearer when exposed via tunnel |
-| Live terminal automation | V3.9.12 packet + writeback; V3.9.13 Actions API for Custom GPT (tunnel operator setup) |
-| Full agent tool loop (shell execution) | Out of scope |
+| Live terminal automation | V3.9.12 packet + writeback; V3.9.13 Actions API for Custom GPT |
+| MCP server transport | Deferred to **V5**; tool contract prepared in V4.1 |
+| Voice / TTS / STT | Deferred to **V5**; frames and speaker are later horizons |
+| Proactive automation / event triggers | Deferred to **V5** |
+| Custom speaker hardware | Horizon — not a versioned release yet |
+| Brilliant Labs frames integration | Horizon — after voice + speaker path **(inference)** |
+| Full agent tool loop (unrestricted shell execution) | Out of scope — automation in V5 stays gated |
 | WebSocket live push | Polling sufficient for local single-user |
 
 **Shipped (no longer non-goals):** Web UI (V3.5), vector/hybrid retrieval (V3.6), external read/write API (V3.7), live UI dashboard (V3.7.2), memory consolidation (V3.7.3), Memory Trail + multi-agent sync (V3.8).
@@ -275,7 +243,7 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
 | Debt | Impact | Suggested fix |
 |------|--------|---------------|
-| Monolithic `crowley.py` (~5600 LOC) | Navigation at scale | Partial — `diagnostics.py` + `tickets.py` extracted (V3.9.7) |
+| Monolithic `crowley.py` (~6.1k LOC facade) | Navigation at scale | V4.1 extracted domains; new logic stays out of facade |
 | No migration version table | Schema changes risky | `schema_version` + incremental migrations |
 | Legacy `/api/sparks` | Confusing vs `memory_items` | Deprecate or redirect to summaries |
 | Silent extraction failures | Stale world model | Audit log or `/debug extract-log` |
@@ -284,29 +252,20 @@ Deferred from V3.7; HTTP bus + Cursor rule is the current integration surface.
 
 ---
 
-## 11. Suggested release sequencing
+## 11. Release sequencing
 
-| Release | Theme | Key deliverables |
-|---------|-------|------------------|
-| **V3.7.3** | Consolidation | ✅ V3.6 Phase 4 shipped |
-| **V3.8** | Memory Trail | ✅ Truthful memory UI, canon path, multi-agent sync |
-| **V3.8.1** | Agent Parity | ✅ Activity feed, stop hook, shared verify |
-| **V3.9** | Concurrent Ticketing | ✅ Unified ticket board; Codex mints, Cursor fills |
-| **V3.9.1** | Repository & CI | ✅ GitHub remote, Actions test gate, doc sweep |
-| **V3.9.2** | Memory Clarity | Canon workflow, retrieval explanations, hierarchy ([MEMORY_HIERARCHY.md](./MEMORY_HIERARCHY.md)), hygiene, test isolation |
-| **V3.9.3** | Planning Workflow | Planning packets, ticket validation, parent initiatives, cleanup |
-| **V3.9.4** | Agent Visibility | ✅ Agent feed, ticket detail/history, work-board clarity, V4 doc lock |
-| **V3.9.5** | Conversation + Model Behavior | ✅ Mode classifier, depth, co-founder voice, diagnostics separation, chat UX |
-| **V3.9.6** | Workspace Polish | ✅ Panel states, streaming, navigation, what-changed feed, livability, docs lock |
-| **V3.9.7** | Experience & Reliability | ✅ UI polish, embed fallback, CI slim deps, diagnostics/tickets modules, metrics, preflight |
-| **V3.9.8** | Runtime Hardening | ✅ test mode, model probe, runtime health, sqlite-vec fallback |
-| V3.9.9 | Context That Feeds | Shipped on `main` (#56–#63) |
-| V3.9.10 | Task-Frame Context | Shipped on `main` (#64–#69) |
-| V3.9.11 | Live Wire | Shipped on `main` (#70–#75) |
-| V3.9.13 | Secure ChatGPT Actions API | Shipped on `main` |
-| V3.9.12 | Portable Context Terminal | Shipped on `main` (#76–#80) |
-| **V4.0.0** | Cognitive Memory | **Shipped** — T1–T24 complete; release lock at #226 |
-| **V4.1.0** | Architecture and MCP Readiness | **Shipped** — #316–#325 complete; release lock at #325 |
+| Release | Theme | Status |
+|---------|-------|--------|
+| V3.9.x – V3.9.20 | Agent sync, Actions API, memory quality, ticket linkage | ✅ Shipped |
+| **V4.0** | Cognitive Memory — sparks, graph, context API | ✅ Shipped (#203–#226) |
+| **V4.1** | Architecture facade, security baseline, MCP-ready tool contract | ✅ Shipped (#316–#325) |
+| **V4.2** | Input intelligence — intent, schema, chunking | Minted (#352–#357) |
+| **V4.3** | Retrieval + query control | Minted (#358–#362) |
+| **V4.4** | Context orchestration + chat wire | Minted (#363–#367) |
+| **V4.5** | Truth, feedback, encryption, cognitive completion lock | Minted (#369–#374) |
+| **V5** | Automation, MCP transport, voice | **Planned** — mint after V4.5 lock |
+| *Horizon* | Physical speaker (spark-locate voice) | Direction only — no release # |
+| *Horizon* | Brilliant Labs AI Frames + Crowley | Direction only — after voice + speaker **(inference)** |
 
 ---
 
@@ -336,4 +295,8 @@ When shipping a version:
 - [V3.9.3_PLANNING_WORKFLOW.md](./V3.9.3_PLANNING_WORKFLOW.md)
 - [PRE_V4_RELEASE_PLAN.md](./PRE_V4_RELEASE_PLAN.md)
 - [PRE_V4_FUTURE_RELEASE_LADDER.md](./PRE_V4_FUTURE_RELEASE_LADDER.md)
+- [V4_COGNITIVE_SPEC_GAP_ANALYSIS.md](./V4_COGNITIVE_SPEC_GAP_ANALYSIS.md)
+- [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md)
+- [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
+- [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md)
 - [VERSIONS.md](../VERSIONS.md)

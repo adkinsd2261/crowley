@@ -1,0 +1,98 @@
+{
+  "objective": "V4.3 Retrieval and Query Control \u2014 interpret queries, infer lanes, tune scoring by query mode, and enforce bounded spark retrieval before context/chat work.",
+  "context": "V4.2 extends ingest and schema. spark_retrieval.py already provides deterministic hybrid scoring and optional lane filter, but callers must pass lane manually and depth limits allow 32+ sparks. V4.3 adds query intelligence without chat wiring.",
+  "decisions": [
+    "Cursor implements all V4.3 tickets.",
+    "Keep weighted hybrid scoring; add query-mode profiles instead of rigid global sort order.",
+    "Domain/lane filter runs before scoring when lanes are inferred or passed.",
+    "Retrieval remains deterministic code; LLM used only for optional lane hint with rule fallback.",
+    "Hard cap 15 sparks for default retrieval profile.",
+    "Lane inference may return multiple primary lanes for genuinely cross-domain queries; explicit lane param still overrides inference."
+  ],
+  "non_goals": [
+    "build_prompt or chat integration",
+    "Token budget packing",
+    "Truth arbitration or correction APIs",
+    "Encryption",
+    "Changing canonical score constants without query-mode wrapper"
+  ],
+  "risks": [
+    "Auto lane inference misroutes cross-domain queries",
+    "Over-tight cap hides relevant supporting context",
+    "Query-mode heuristics regress existing spark_retrieval tests"
+  ],
+  "qa_expectations": "Per ticket: focused tests in tests/test_cognitive_query.py and tests/test_spark_retrieval.py extensions. Full suite at T5.",
+  "next_action": "Do not claim until V4.2 T6 doc-locked.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "V4.3 second ladder per cognitive completion plan."
+  },
+  "tickets": [
+    {
+      "title": "V4.3 T1: cognitive query interpreter",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add cognitive_query.py classifying query intent: recall, decision, reflection, planning. Expose interpret_query(q) -> {mode, hints}. Use rules + keywords first; optional light model only when rules tie. Integrate into spark_retrieval entrypoint and GET /api/cognitive/context as optional auto mode. Files: cognitive_query.py, spark_retrieval.py, context_orchestration.py, tests/test_cognitive_query.py. Depends on V4.2 complete.",
+      "acceptance": [
+        "interpret_query returns one of recall|decision|reflection|planning",
+        "Rule fixtures classify without model call in CROWLEY_TEST_MODE",
+        "context orchestration records query mode in trace when debug=1",
+        "tests/test_cognitive_query.py covers all four modes with fixtures",
+        "interpret_query may include inferred_lanes as a list, not only one lane"
+      ]
+    },
+    {
+      "title": "V4.3 T2: auto lane inference and pre-score filtering",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Infer one or more primary lanes from query text using DOMAIN_ALIASES + keyword maps; apply lane filter before candidate pool scoring in spark_retrieval.py. Support explicit ?lane= override. Allow secondary_lanes_json matches as lower-weight inclusion, not filter bypass. Files: cognitive_query.py, spark_retrieval.py, sparks.py, tests/test_spark_retrieval.py. Depends on V4.3 T1.",
+      "acceptance": [
+        "Query mentioning only money/finance filters to money lane before scoring",
+        "Cross-domain query mentioning money and health keeps both inferred lanes instead of over-filtering to one",
+        "Explicit lane param overrides inference",
+        "Secondary lane match boosts score but does not bypass primary filter",
+        "Retrieval tests prove filter-before-score ordering",
+        "No regression on existing lane filter tests"
+      ]
+    },
+    {
+      "title": "V4.3 T3: query-mode scoring profiles",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add scoring profiles keyed by query mode that shift weights among semantic, confidence, recency, graph components and certainty/trust_state boosts (confirmed > tentative, active > inactive). Default profile preserves current 0.40/0.25/0.15/0.20 behavior for recall mode. Files: spark_retrieval.py, spark_lifecycle.py, tests/test_spark_retrieval.py. Depends on V4.3 T1.",
+      "acceptance": [
+        "recall profile matches legacy scores on fixed fixture set",
+        "planning profile boosts recency and decision spark_type when present",
+        "confirmed certainty ranks above tentative at equal semantic score",
+        "score_breakdown documents profile and boosts",
+        "Retrieval regression suite passes"
+      ]
+    },
+    {
+      "title": "V4.3 T4: enforce 8-15 spark retrieval cap",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Align context_resolution.py COGNITIVE_DEPTH_LIMITS and spark_retrieval default limits so default API/chat-oriented profile returns 8-15 sparks total (core+supporting), never silent overflow. Deep mode may request more only with explicit depth=deep. Update trace to report truncated_count. Files: context_resolution.py, spark_retrieval.py, context_orchestration.py, tests/test_cognitive_context.py. Depends on V4.3 T3.",
+      "acceptance": [
+        "Default medium depth returns <=15 sparks combined",
+        "Trace includes truncated_count when pool exceeds cap",
+        "deep depth allows higher limits with explicit param only",
+        "Existing cognitive context tests updated and pass"
+      ]
+    },
+    {
+      "title": "V4.3 T5: V4.3 doc lock and clean-retrieval acceptance tests",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.3_RETRIEVAL_QUERY_LOCK.md and tests/test_v4_acceptance_retrieval.py for spec acceptance test 2 (domain-specific answers without cross-domain noise). Full unittest discovery. Depends on V4.3 T1\u2013T4.",
+      "acceptance": [
+        "V4.3 lock doc records modules, caps, and profile behavior",
+        "Acceptance test 2: finance query does not return health-lane sparks",
+        "Full unittest discovery passes",
+        "docs/TICKETS.md updated for V4.3 shipped/in-progress state"
+      ]
+    }
+  ]
+}

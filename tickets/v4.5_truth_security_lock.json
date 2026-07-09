@@ -1,0 +1,108 @@
+{
+  "objective": "V4.5 Truth, Feedback, Security, and V4 Cognitive Completion Lock \u2014 spark-level truth arbitration, user correction APIs, field encryption, encrypted backup, and full acceptance suite before V5 automation.",
+  "context": "V4.4 wires cognitive memory into chat. V4.1 deferred truth arbitration, review UX, and field encryption. V4.5 completes the ChatGPT cognitive spec and doc-locks V4 before any V5 automation ladder.",
+  "decisions": [
+    "Cursor implements all V4.5 tickets.",
+    "Conflict handling downgrades older sparks; no automatic hard delete.",
+    "Encryption keys from env (CROWLEY_SPARK_KEY or documented equivalent); no cloud KMS in V4.5.",
+    "Correction APIs localhost + Actions write gates only.",
+    "V5 automation remains out of scope until V4.5 lock merges.",
+    "Field encryption requires a short design gate before code: key format, dependency choice, plaintext/embedding behavior, and recovery path must be documented in T4."
+  ],
+  "non_goals": [
+    "MCP server transport",
+    "Event triggers and proactive automation",
+    "Deep multi-hop truth arbitration beyond pairwise conflict",
+    "OAuth, accounts, public hosting"
+  ],
+  "risks": [
+    "Encryption key loss bricks sensitive sparks",
+    "Correction API abused without permission gates",
+    "Truth engine false positives downgrade valid history"
+  ],
+  "qa_expectations": "Per ticket: focused security and truth tests. T6 runs full acceptance suite and preflight.",
+  "next_action": "Do not claim until V4.4 T5 doc-locked.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "Final V4 cognitive ladder before V5 automation."
+  },
+  "tickets": [
+    {
+      "title": "V4.5 T1: spark truth arbitration module",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add spark_truth.py detecting pairwise contradictions on ingest and on demand (same lane, high semantic similarity, opposing fact/decision content). On conflict: mark older spark inactive or downgrade certainty/trust_state; never auto-delete. Expose maintenance hook. Files: spark_truth.py, cognitive_ingest.py, cognitive_maintenance.py, tests/test_spark_truth.py. Depends on V4.4 complete.",
+      "acceptance": [
+        "detect_conflicts returns conflicting spark id pairs with reason",
+        "apply_conflict_resolution downgrades older keeper per precedence: confirmed > tentative, recent > old",
+        "Ingest path runs conflict check after dedup",
+        "tests cover contradiction fixture and no-op on compatible sparks"
+      ]
+    },
+    {
+      "title": "V4.5 T2: spark correction API",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add POST /api/cognitive/sparks/{id}/correct supporting override, update, invalidate actions. Update spark row and append lineage_json event. Invalidate sets trust_state=rejected. Wire portable writeback corrections to same handler where schema matches. enforce_dispatch_invariants on write path. Files: app.py, sparks.py, portable_writeback_sparks_bridge.py, tests/test_spark_correction.py. Depends on V4.5 T1.",
+      "acceptance": [
+        "correct endpoint supports override, update, invalidate",
+        "lineage_json records actor, action, prior content hash",
+        "invalidate excludes spark from retrieval",
+        "Portable writeback correction fixture updates spark",
+        "Dispatch invariant and permission tests pass"
+      ]
+    },
+    {
+      "title": "V4.5 T3: minimal spark review Actions tools",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Register read/write Actions tools: cognitive.spark.list (filter by lane/trust), cognitive.spark.promote, cognitive.spark.reject using crowley_tools contract. Reuse correction handlers from T2. No full UI required. Files: actions_tool_registry.py, crowley_tools.py, tests/test_actions_cognitive_sparks.py. Depends on V4.5 T2.",
+      "acceptance": [
+        "cognitive.spark.list returns bounded spark summaries",
+        "promote and reject map to trust_state transitions",
+        "Tools appear in catalog with correct permission tiers",
+        "Actions tests cover auth and happy path"
+      ]
+    },
+    {
+      "title": "V4.5 T4: field-level encryption for sensitive sparks",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Design and implement spark_crypto.py encrypting content at rest for sensitivity=high and exposure_class=private on money/health lanes. First add docs/V4.5_SPARK_ENCRYPTION_DESIGN.md covering key format/env name, dependency choice, what happens to plaintext content, embedding behavior, migration/backfill stance, tamper detection, and recovery/key-loss risks. Use content_encrypted column; decrypt on authorized retrieval only. Key from env; fail closed if key missing when writing encrypted rows. Files: spark_crypto.py, sparks.py, memory_store.py hooks if needed, spark_security.py, docs/V4.5_SPARK_ENCRYPTION_DESIGN.md, tests/test_spark_encryption.py. Depends on V4.5 T2.",
+      "acceptance": [
+        "Encryption design doc is committed before storage behavior changes and covers key loss, plaintext/embedding behavior, migration/backfill, and dependency choice",
+        "High/private sparks stored encrypted in content_encrypted with no raw sensitive plaintext in content for encrypted rows",
+        "Retrieval decrypts transparently only for authorized paths",
+        "Missing key blocks encrypted write with clear error",
+        "Tests round-trip encrypt/decrypt and reject tampered blob"
+      ]
+    },
+    {
+      "title": "V4.5 T5: encrypted backup export script",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add scripts/export_encrypted_backup.py producing encrypted SQLite archive or tar.gz of DB + manifest using backup key from env. Document restore steps in docs/V4.5_SECURITY_BACKUP.md. Read-only export; no auto-upload. Files: scripts/export_encrypted_backup.py, docs/V4.5_SECURITY_BACKUP.md, tests/test_encrypted_backup.py. Depends on V4.5 T4.",
+      "acceptance": [
+        "Export script creates encrypted artifact from local crowley.db",
+        "Manifest lists schema version and export timestamp",
+        "Test verifies export decrypts with same key",
+        "Docs describe key rotation caution"
+      ]
+    },
+    {
+      "title": "V4.5 T6: V4 cognitive completion lock and acceptance suite",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4_COGNITIVE_COMPLETION_LOCK.md aggregating V4.2\u2013V4.5. Add tests/test_v4_acceptance_full.py covering all six spec acceptance tests (messy input, clean retrieval, context control, state evolution, noise resistance, security validation). Run full unittest, preflight, cognitive API smoke, Actions cognitive tools smoke. Update docs/TICKETS.md and VERSIONS.md only if version bump approved in ticket comment. Depends on V4.5 T1\u2013T5.",
+      "acceptance": [
+        "V4_COGNITIVE_COMPLETION_LOCK.md lists all layers and QA evidence",
+        "All six acceptance tests pass in one module or documented split",
+        "Full unittest discovery passes",
+        "preflight passes against live bus at current version",
+        "docs/TICKETS.md marks V4.2\u2013V4.5 cognitive ladder complete; V5 automation next"
+      ]
+    }
+  ]
+}

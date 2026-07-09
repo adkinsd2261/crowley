@@ -1,0 +1,97 @@
+{
+  "objective": "V4.4 Context Orchestration and Chat Wire \u2014 token-budget packing, structured cognitive sections, and integrate sparks into live chat via build_prompt.",
+  "context": "V4.0 build_cognitive_context serves API/Actions only. conversation_runtime._impl_build_prompt still calls retrieve_memories on legacy memory_items. V4.3 delivers bounded retrieval. V4.4 makes cognitive memory the primary chat context backbone with canon/docs authority preserved above it.",
+  "decisions": [
+    "Cursor implements all V4.4 tickets.",
+    "Cognitive block sits below filesystem canon and world truth in prompt order.",
+    "Legacy memory_items remain cold-start fallback only when active spark count below threshold.",
+    "Count limits become token-budget aware using conservative char/token estimates.",
+    "Output still passes spark_sanitize before model.",
+    "Structured sections are additive in /api/cognitive/context; preserve core_sparks/supporting_sparks until a later breaking-change release."
+  ],
+  "non_goals": [
+    "Truth arbitration or correction APIs",
+    "Encryption",
+    "Removing memory_items table or retrieve_memories API",
+    "UI redesign beyond optional debug confidence display"
+  ],
+  "risks": [
+    "Prompt token overflow if budget packer mis-estimates",
+    "Regression in chat quality when legacy path demoted",
+    "Double-counting context if both cognitive and legacy blocks appear"
+  ],
+  "qa_expectations": "Per ticket: tests/test_context_token_budget.py, tests/test_cognitive_context.py, tests/test_prompt_task_frame.py extensions. Chat API smoke at T5.",
+  "next_action": "Do not claim until V4.3 T5 doc-locked.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "V4.4 chat wire is the critical path to cognitive backbone."
+  },
+  "tickets": [
+    {
+      "title": "V4.4 T1: context token budget packer",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add context_token_budget.py estimating tokens/chars for spark rows and trimming ranked results to a configurable remaining-context budget (default chat allocation ~2000 tokens conservative). Trim lowest score first; pinned/high-confidence protected. Integrate at end of build_cognitive_context before sanitize. Files: context_token_budget.py, context_orchestration.py, tests/test_context_token_budget.py. Depends on V4.3 complete.",
+      "acceptance": [
+        "pack_sparks_to_budget(items, budget_tokens) returns trimmed list",
+        "Packer accepts an explicit remaining budget from the caller and reports the estimate used",
+        "Trace reports budget_tokens, used_estimate, dropped_count",
+        "Pinned sparks survive trimming unless over single-item cap",
+        "Budget tests cover overflow and edge single giant spark"
+      ]
+    },
+    {
+      "title": "V4.4 T2: structured cognitive context sections",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Restructure build_cognitive_context output into fixed sections: CurrentState, RelevantDecisions, RecentActivity, KeyConstraints. Map spark_type and lane into sections; attach patterns/constraints into KeyConstraints. Never return raw ranked list as the primary model payload; API sections are additive and existing core_sparks/supporting_sparks compatibility fields remain available. Files: context_orchestration.py, tests/test_cognitive_context.py. Depends on V4.4 T1.",
+      "acceptance": [
+        "API response includes structured sections object",
+        "Existing core_sparks/supporting_sparks response fields remain compatible for API/Actions callers",
+        "decision sparks land in RelevantDecisions",
+        "observation/fact sparks land in RecentActivity or CurrentState per rules documented in module",
+        "Sanitized output preserves section boundaries",
+        "Cognitive context tests assert section presence"
+      ]
+    },
+    {
+      "title": "V4.4 T3: wire cognitive context into build_prompt",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Update conversation_runtime._impl_build_prompt to call build_cognitive_context for active project query, format sections into a ## CognitiveMemory system block below canon/task frame/world context. Pass conversation depth/mode into context call. Files: conversation_runtime.py, context_orchestration.py, tests/test_prompt_task_frame.py, tests/test_chat_api.py. Depends on V4.4 T2.",
+      "acceptance": [
+        "build_prompt includes CognitiveMemory section when sparks exist",
+        "Prompt order documented: personality, mode, knowledge, tickets, world, task frame, canon, cognitive, legacy fallback, tasks",
+        "Chat turn integration test proves cognitive block present",
+        "No duplicate legacy memory block when cognitive path succeeds"
+      ]
+    },
+    {
+      "title": "V4.4 T4: legacy memory fallback tiering",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Demote retrieve_memories hybrid block to cold-start fallback only when active spark count below context_resolution threshold or cognitive context empty. Label legacy block clearly as fallback in prompt. Files: conversation_runtime.py, context_orchestration.py, context_resolution.py, tests/test_cognitive_context.py. Depends on V4.4 T3.",
+      "acceptance": [
+        "Legacy memory block omitted when cognitive context non-empty",
+        "Fallback activates under cold-start threshold with explicit label",
+        "Cold-start integration test covers both paths",
+        "retrieve_memories API unchanged for external agents"
+      ]
+    },
+    {
+      "title": "V4.4 T5: V4.4 doc lock and context-control acceptance tests",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.4_CONTEXT_CHAT_WIRE_LOCK.md and tests/test_v4_acceptance_context.py for spec acceptance test 3 (never exceeds token budget, no overload). Run chat API smoke and full unittest discovery. Depends on V4.4 T1\u2013T4.",
+      "acceptance": [
+        "V4.4 lock doc records prompt authority order and budget defaults",
+        "Acceptance test 3: prompt cognitive section under token budget",
+        "Chat API test passes with cognitive wire enabled",
+        "Full unittest discovery passes",
+        "docs/TICKETS.md updated"
+      ]
+    }
+  ]
+}

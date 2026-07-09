@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "description": "Manifest for V4 cognitive acceptance fixtures — validated by test_v4_acceptance_matrix.py",
+  "tests": [
+    {
+      "id": 1,
+      "name": "messy_multi_domain_input",
+      "fixture": "messy_multi_domain_input.json",
+      "module": "tests.test_v4_acceptance_input",
+      "ticket": "#357"
+    },
+    {
+      "id": 2,
+      "name": "clean_retrieval",
+      "fixture": "retrieval_finance_query.json",
+      "module": "tests.test_v4_acceptance_retrieval",
+      "ticket": "#362"
+    },
+    {
+      "id": 3,
+      "name": "context_token_budget",
+      "fixture": "context_token_budget.json",
+      "module": "tests.test_v4_acceptance_context",
+      "ticket": "#367"
+    },
+    {
+      "id": 4,
+      "name": "truth_state_evolution",
+      "fixture": "truth_state_evolution.json",
+      "module": "tests.test_v4_acceptance_truth",
+      "ticket": "#374"
+    },
+    {
+      "id": 5,
+      "name": "noise_ignore_temporary",
+      "fixture": "noise_ignore_temporary.json",
+      "module": "tests.test_v4_acceptance_input",
+      "ticket": "#357"
+    },
+    {
+      "id": 6,
+      "name": "security_no_leak",
+      "fixture": "security_no_leak.json",
+      "module": "tests.test_v4_acceptance_security",
+      "ticket": "#374"
+    }
+  ]
+}

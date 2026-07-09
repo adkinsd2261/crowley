@@ -1,0 +1,26 @@
+{
+  "test_id": 4,
+  "name": "truth_state_evolution",
+  "description": "Contradicting confirmed fact should downgrade older spark without delete.",
+  "initial_spark": {
+    "content": "Monthly rent is $2200.",
+    "lane": "money",
+    "spark_type": "fact",
+    "certainty": "tentative",
+    "confidence": 0.75,
+    "trust_state": "active"
+  },
+  "correcting_spark": {
+    "content": "Monthly rent is $2400 after lease renewal.",
+    "lane": "money",
+    "spark_type": "fact",
+    "certainty": "confirmed",
+    "confidence": 0.95,
+    "trust_state": "active"
+  },
+  "expect": {
+    "older_downgraded": true,
+    "no_hard_delete": true,
+    "newer_ranks_higher": true
+  }
+}

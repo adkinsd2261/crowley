@@ -1,0 +1,27 @@
+{
+  "test_id": 5,
+  "name": "noise_ignore_temporary",
+  "description": "Intent classifier should drop noise and not promote temporary notes to active retrieval.",
+  "inputs": [
+    {
+      "text": "hey",
+      "intent": "ignore",
+      "expect_spark_count": 0
+    },
+    {
+      "text": "lol ok",
+      "intent": "ignore",
+      "expect_spark_count": 0
+    },
+    {
+      "text": "remind me to check this later today only",
+      "intent": "temporary",
+      "expect_active_spark_count": 0
+    },
+    {
+      "text": "Decided to switch Crowley retrieval to spark-first architecture before V5.",
+      "intent": "store",
+      "expect_spark_count_min": 1
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "test_id": 2,
+  "name": "clean_retrieval",
+  "description": "Finance query must not return health-lane sparks.",
+  "finance_query": "What am I paying for insurance and subscriptions?",
+  "lane": "money",
+  "max_results": 15,
+  "seed_sparks": [
+    {
+      "content": "Car insurance $450/month via auto-pay.",
+      "lane": "money",
+      "spark_type": "fact",
+      "certainty": "confirmed",
+      "confidence": 0.9,
+      "trust_state": "active"
+    },
+    {
+      "content": "Physical therapy twice weekly for knee.",
+      "lane": "health",
+      "spark_type": "fact",
+      "certainty": "confirmed",
+      "confidence": 0.85,
+      "trust_state": "active"
+    },
+    {
+      "content": "Streaming bundle $45/month.",
+      "lane": "money",
+      "spark_type": "fact",
+      "certainty": "confirmed",
+      "confidence": 0.8,
+      "trust_state": "active"
+    }
+  ],
+  "forbidden_lanes_in_results": ["health"]
+}

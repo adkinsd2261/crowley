@@ -1,0 +1,16 @@
+{
+  "test_id": 6,
+  "name": "security_no_leak",
+  "description": "Secrets and high-sensitivity sparks must not leak via ingest or light context.",
+  "blocked_content": "Use sk-test12345678901234567890123456789012 and Bearer abcdefghijklmnopqrstuvwxyz123456 for admin.",
+  "high_sensitivity_seed": {
+    "content": "Account recovery codes stored in password manager.",
+    "lane": "money",
+    "sensitivity": "high",
+    "exposure_class": "private",
+    "certainty": "confirmed",
+    "trust_state": "active"
+  },
+  "context_depth": "light",
+  "forbidden_substrings_in_context": ["sk-test", "Bearer abc", "ignore previous"]
+}

@@ -1,0 +1,117 @@
+{
+  "objective": "V4.2 Input Intelligence \u2014 gate messy input, extend spark schema, chunk long documents, harden extraction determinism, and define promotion policy before retrieval/chat work.",
+  "context": "V4.0 cognitive memory and V4.1 architecture are shipped on main at 4.1.0. Sparks ingest via cognitive_ingest + spark_extraction but lack intent classification, certainty/type fields, document chunking, and a clear candidate\u2192active promotion path. Chat still uses legacy memory_items via build_prompt. Cursor owns implementation; keep slices small and test-gated.",
+  "decisions": [
+    "Cursor implements all V4.2 tickets; Codex reviews via architect_handoff only.",
+    "Additive schema only \u2014 extend sparks columns; do not break validate_spark consumers.",
+    "Keep SPARK_LANES stable; add DOMAIN_ALIASES for finance\u2192money, career\u2192work, etc.",
+    "V4.2 implementation order is schema first, then intent: T2 must land before T1 writes or persists certainty-aware decisions. Rules-first intent gate before LLM extraction; LLM never decides store/ignore alone.",
+    "Do not wire cognitive context into chat in V4.2 \u2014 that is V4.4.",
+    "Preserve T18\u2013T20 security gates; new input layers must not weaken them."
+  ],
+  "non_goals": [
+    "Chat prompt integration or token budget work",
+    "Query interpretation or auto lane inference",
+    "Truth arbitration or user correction APIs",
+    "Field-level encryption or encrypted backup",
+    "MCP server or automation triggers",
+    "Rename or remove SPARK_LANES values"
+  ],
+  "risks": [
+    "Over-ingest if intent gate is too permissive",
+    "Schema drift without focused validation tests",
+    "Chunking splits mid-thought and corrupts extraction",
+    "Promotion policy promotes noise into active retrieval"
+  ],
+  "qa_expectations": "Per ticket: py_compile touched modules, focused unittest file, no full-suite requirement until T6. CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off.",
+  "next_action": "Reopen/remint V4.2 T1 if it was closed by planning only; implement V4.2 T2 before T1 persistence wiring, then proceed T1/T3/T4/T5/T6.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-09",
+    "note": "Approved V4 cognitive completion plan; V4.2 is first builder ladder."
+  },
+  "tickets": [
+    {
+      "title": "V4.2 T1: cognitive intent gate before extraction",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add cognitive_intent.py with a hybrid rules + light-model classifier for memory intent: store, ignore, temporary. Depends on V4.2 T2 for certainty-aware persistence; before T2 lands, T1 may expose pure classification only. Classify before spark_extraction runs in cognitive_ingest.py. Rules must handle obvious noise, slash commands, and secret-like payloads; low-confidence paths default to store with tentative intent metadata downstream, never silent discard. temporary means no active spark and no normal retrieval; retain only receipt metadata/audit unless a later ticket explicitly adds an ephemeral store. Wire into POST /api/cognitive/ingest and sync path. Files: cognitive_intent.py, cognitive_ingest.py, tests/test_cognitive_intent.py. Non-goals: no chat wiring.",
+      "acceptance": [
+        "cognitive_intent.py exposes classify_memory_intent(text) -> {intent, confidence, reason} where intent is store|ignore|temporary",
+        "ignore skips extraction and does not create active sparks",
+        "temporary creates no active spark and no normal retrieval result; any retained receipt metadata is clearly marked non-retrieval/audit-only",
+        "store proceeds to existing extraction pipeline; low-confidence store is tagged for tentative certainty once T2 schema is available",
+        "Secret-like and instruction-like input rejected or forced ignore without weakening T20 validators",
+        "tests/test_cognitive_intent.py covers store, ignore, temporary, secret/instruction input, and low-confidence tentative path"
+      ]
+    },
+    {
+      "title": "V4.2 T2: spark schema extensions for type and certainty",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Extend sparks schema and validate_spark() with additive columns: spark_type (fact|decision|intent|observation), certainty (tentative|exploratory|confirmed), secondary_lanes_json (optional JSON array), exposure_class (public|private, default public). Add DOMAIN_ALIASES map for ingest/query normalization (finance\u2192money, career\u2192work). Update spark_extraction prompt to populate type and certainty when present; defaults for legacy rows. Files: sparks.py, spark_extraction.py, tests/test_spark_schema.py, tests/test_spark_validation.py. Non-goals: no lane enum rename migration. Must be implemented before T1 persists certainty-aware ingest behavior.",
+      "acceptance": [
+        "setup_spark_tables() adds new columns with safe defaults for existing rows",
+        "validate_spark() enforces new enums when provided",
+        "DOMAIN_ALIASES normalizes external domain names to SPARK_LANES",
+        "Extraction prompt requests spark_type and certainty in JSON output",
+        "Schema and validation tests pass without breaking existing spark fixtures",
+        "V4.2 T1 can consume the certainty/exposure defaults without schema-order ambiguity"
+      ]
+    },
+    {
+      "title": "V4.2 T3: document chunking for long cognitive ingest",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add cognitive_chunking.py to split long ingest text into bounded sections before extraction: detect headings, paragraph boundaries, and mixed-topic breaks. Order: run a whole-document safety/noise gate only for obvious ignore/secret cases, then chunk, then classify each chunk with cognitive_intent before extraction. Each accepted chunk runs extraction independently; merge lineage back to one receipt. Cap chunk count and size to prevent runaway ingest. Wire from cognitive_ingest.py after whole-document safety gate. Files: cognitive_chunking.py, cognitive_ingest.py, tests/test_cognitive_chunking.py. Depends on V4.2 T1/T2. Non-goals: no new HTTP routes.",
+      "acceptance": [
+        "Long input (>4KB or configurable) decomposes into multiple chunks",
+        "Whole-document gate cannot discard mixed useful input merely because one chunk is temporary/noise",
+        "Each chunk produces sparks with shared source receipt lineage",
+        "Mixed-topic fixture splits into separate lane-appropriate candidates",
+        "Chunk cap enforced with clear error or truncate policy",
+        "tests/test_cognitive_chunking.py passes with multi-section fixtures"
+      ]
+    },
+    {
+      "title": "V4.2 T4: spark promotion policy and cold-start alignment",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Define and implement promotion rules in spark_lifecycle.py: tentative/exploratory sparks stay candidate; confirmed sparks may promote to active when confidence and validation pass. Add optional manual promote helper for maintenance/seed paths. Tune cold-start threshold in context_resolution.py so active+candidate policy reduces legacy memory_items fallback over time. Document precedence: confirmed > tentative in retrieval weighting hook (read-time only, no ranking rewrite). Files: spark_lifecycle.py, context_resolution.py, cognitive_maintenance.py, tests/test_spark_lifecycle.py. Depends on V4.2 T2.",
+      "acceptance": [
+        "Promotion function moves eligible candidate sparks to active trust_state",
+        "Confirmed certainty required for auto-promotion unless manual seed",
+        "context_resolution active spark count reflects promotion policy",
+        "Maintenance dry-run reports promotion candidates",
+        "Lifecycle tests cover promote, skip-tentative, and stale/rejected unchanged"
+      ]
+    },
+    {
+      "title": "V4.2 T5: extraction determinism hardening",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Harden spark_extraction.py for repeatable structure: temperature=0 on live calls, canonical JSON key ordering in parser, and a concrete receipt-hash idempotency table/cache so identical receipt text re-ingest returns the same validated structure in tests and production. Prefer a small SQLite table keyed by receipt hash and extraction schema version; use in-memory only inside tests where DB isolation requires it. Keep 1-retry-then-discard behavior. Files: spark_extraction.py, tests/test_spark_extraction.py. Depends on V4.2 T2. Non-goals: bitwise-identical LLM output guarantee across providers.",
+      "acceptance": [
+        "Live extraction uses temperature=0 when provider supports it",
+        "Identical receipt re-ingest hits receipt-hash idempotency path in tests and does not create duplicate active sparks",
+        "Invalid JSON still retry-then-discard entire batch",
+        "Fixture mode unchanged for CROWLEY_TEST_MODE",
+        "tests/test_spark_extraction.py covers idempotency and retry behavior"
+      ]
+    },
+    {
+      "title": "V4.2 T6: V4.2 doc lock and messy-input acceptance tests",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.2_INPUT_INTELLIGENCE_LOCK.md and tests/test_v4_acceptance_input.py covering spec acceptance tests 1 (messy multi-domain input splits correctly) and 5 (noise/temporary input resisted). Update docs/TICKETS.md initiative pointer to V4.2 in progress. Run focused V4.2 slice then full unittest discovery. Files: docs/V4.2_INPUT_INTELLIGENCE_LOCK.md, tests/test_v4_acceptance_input.py, docs/TICKETS.md. Depends on V4.2 T1\u2013T5.",
+      "acceptance": [
+        "V4.2 lock doc lists shipped modules and QA evidence",
+        "Acceptance test 1: multi-domain fixture yields multiple lane-tagged sparks",
+        "Acceptance test 5: ignore/temporary inputs do not pollute active retrieval set",
+        "Full unittest discovery passes under CROWLEY_TEST_MODE=1 CROWLEY_EMBED_PROVIDER=off",
+        "docs/TICKETS.md references v4.2_input_intelligence.json packet"
+      ]
+    }
+  ]
+}

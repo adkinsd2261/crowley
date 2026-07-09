@@ -1,0 +1,37 @@
+{
+  "test_id": 1,
+  "name": "messy_multi_domain_input",
+  "description": "Finance, health, and career facts in one paste should yield multiple lane-tagged sparks.",
+  "raw_text": "Paid $450 for car insurance this month (money). Started physical therapy twice a week for my knee (health). Accepted the senior engineer role starting August — need to give notice at current job (work).",
+  "expected_min_sparks": 2,
+  "expected_lanes": ["money", "health", "work"],
+  "extraction_fixture_per_lane": {
+    "money": {
+      "content": "Paid $450 for car insurance this month.",
+      "lane": "money",
+      "spark_type": "fact",
+      "certainty": "confirmed",
+      "why_keep": "Tracks recurring finance obligation.",
+      "worth_reason": "Budget and insurance planning.",
+      "confidence": 0.85
+    },
+    "health": {
+      "content": "Started physical therapy twice a week for knee recovery.",
+      "lane": "health",
+      "spark_type": "fact",
+      "certainty": "confirmed",
+      "why_keep": "Active health treatment schedule.",
+      "worth_reason": "Care coordination and progress tracking.",
+      "confidence": 0.8
+    },
+    "work": {
+      "content": "Accepted senior engineer role starting August; need to give notice.",
+      "lane": "work",
+      "spark_type": "decision",
+      "certainty": "confirmed",
+      "why_keep": "Major career transition in progress.",
+      "worth_reason": "Drives notice timeline and onboarding prep.",
+      "confidence": 0.9
+    }
+  }
+}

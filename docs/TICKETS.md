@@ -5,11 +5,22 @@
 
 ---
 
-## Locked initiative — V4.1 Architecture and MCP Readiness
+## Active initiative — V4.2–V4.5 Cognitive Completion (builder-owned)
 
-**Current:** V4.1 Architecture and MCP Readiness shipped (#316–#325). V4.1 is release-locked; new work should be minted as V4.2 MCP/review UX tickets.
+**Current:** V4.1 Architecture and MCP Readiness shipped (#316–#325). **Active:** V4.2 Input Intelligence (#352–#357) — Cursor claims one ticket at a time when directed. Do not start V4.3+ until prior ladder doc-locked.
 
-**Packet:** `tickets/v4.1_architecture_security_mcp.json`
+**Plan:** Complete ChatGPT cognitive-memory spec across V4.2–V4.5 before V5 automation.
+
+**Planning docs:** [V4_COGNITIVE_SPEC_GAP_ANALYSIS.md](./V4_COGNITIVE_SPEC_GAP_ANALYSIS.md) · [V4.2_SCHEMA_RFC.md](./V4.2_SCHEMA_RFC.md) · [V4_CHAT_WIRE_RFC.md](./V4_CHAT_WIRE_RFC.md) · [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md)
+
+| Ladder | Tickets | Packet | Status |
+|--------|---------|--------|--------|
+| V4.2 Input Intelligence | #352–#357 | `tickets/v4.2_input_intelligence.json` | **Minted** · open |
+| V4.3 Retrieval + Query | #358–#362 | `tickets/v4.3_retrieval_query.json` | **Minted** · blocked on V4.2 lock |
+| V4.4 Context + Chat Wire | #363–#367 | `tickets/v4.4_context_chat_wire.json` | **Minted** · blocked on V4.3 lock |
+| V4.5 Truth + Security Lock | #369–#374 | `tickets/v4.5_truth_security_lock.json` | **Minted** · blocked on V4.4 lock |
+
+**Prior V4.1 packet:** `tickets/v4.1_architecture_security_mcp.json`
 **Prior V4.0 release lock:** [V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md](./V4.0_COGNITIVE_MEMORY_RELEASE_LOCK.md)
 **V4.1 release lock:** [V4.1_FINAL_ARCHITECTURE_AUDIT.md](./V4.1_FINAL_ARCHITECTURE_AUDIT.md)
 **Mid-lock doc:** [V4.0_COGNITIVE_MEMORY_MID_LOCK.md](./V4.0_COGNITIVE_MEMORY_MID_LOCK.md)

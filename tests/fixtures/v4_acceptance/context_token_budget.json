@@ -1,0 +1,17 @@
+{
+  "test_id": 3,
+  "name": "context_token_budget",
+  "description": "Prompt cognitive section must trim when many sparks seeded.",
+  "query": "summarize everything important about money",
+  "max_prompt_chars": 8000,
+  "default_budget_tokens": 2000,
+  "seed_count": 25,
+  "seed_lane": "money",
+  "seed_template": {
+    "spark_type": "fact",
+    "certainty": "confirmed",
+    "confidence": 0.7,
+    "trust_state": "active"
+  },
+  "expect_trace_fields": ["dropped_count", "budget_tokens"]
+}
