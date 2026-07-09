@@ -16,6 +16,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import crowley_core
+import memory_embeddings
+import memory_retrieval
+import memory_store
 import model_runtime
 import ollama
 
@@ -1161,31 +1164,14 @@ def list_recent_summary_sparks(limit: int = DIAGNOSTICS_SPARKS_LIMIT) -> list[sq
 
 def list_recent_memory_items(limit: int = 10) -> list[sqlite3.Row]:
     """Return recent active memory_items for UI and read-only APIs."""
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM memory_items
-            WHERE status = 'active'
-            ORDER BY id DESC LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
+    return memory_store.list_recent_memory_items(sys.modules[__name__], limit)
+
 
 
 def count_memory_items_by_status() -> dict[str, int]:
     """Return memory_items counts grouped by status."""
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            "SELECT status, COUNT(*) AS n FROM memory_items GROUP BY status"
-        ).fetchall()
-        return {str(row["status"]): int(row["n"]) for row in rows}
-    finally:
-        conn.close()
+    return memory_store.count_memory_items_by_status(sys.modules[__name__])
+
 
 
 def list_memory_items(
@@ -1200,71 +1186,24 @@ def list_memory_items(
     offset: int = 0,
 ) -> tuple[list[sqlite3.Row], int]:
     """Return filtered memory_items plus total count before pagination."""
-    limit = max(1, min(int(limit), 50))
-    offset = max(0, int(offset))
+    return memory_store.list_memory_items(
+        sys.modules[__name__],
+        q=q,
+        source=source,
+        agent_id=agent_id,
+        memory_tier=memory_tier,
+        memory_type=memory_type,
+        status=status,
+        limit=limit,
+        offset=offset,
+    )
 
-    clauses: list[str] = []
-    params: list[object] = []
-    if status and status != "all":
-        clauses.append("status = ?")
-        params.append(status)
-    if source:
-        clauses.append("LOWER(source) = LOWER(?)")
-        params.append(source)
-    if agent_id and str(agent_id).strip():
-        clauses.append(
-            "LOWER(json_extract(metadata_json, '$.write_attribution.agent_id')) = LOWER(?)"
-        )
-        params.append(str(agent_id).strip())
-    if memory_tier and str(memory_tier).strip():
-        clauses.append(
-            "LOWER(json_extract(metadata_json, '$.memory_tier')) = LOWER(?)"
-        )
-        params.append(str(memory_tier).strip())
-    if memory_type:
-        clauses.append("LOWER(memory_type) = LOWER(?)")
-        params.append(memory_type)
-    if q and q.strip():
-        needle = f"%{q.strip().lower()}%"
-        clauses.append("(LOWER(content) LIKE ? OR LOWER(COALESCE(summary, '')) LIKE ?)")
-        params.extend([needle, needle])
-
-    where = "WHERE " + " AND ".join(clauses) if clauses else ""
-    conn = connect_db()
-    try:
-        total = int(
-            conn.execute(
-                f"SELECT COUNT(*) AS n FROM memory_items {where}",
-                params,
-            ).fetchone()["n"]
-        )
-        rows = conn.execute(
-            f"""
-            SELECT * FROM memory_items
-            {where}
-            ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ? OFFSET ?
-            """,
-            [*params, limit, offset],
-        ).fetchall()
-        return list(rows), total
-    finally:
-        conn.close()
 
 
 def get_memory_item_api_by_id(memory_id: int) -> dict[str, object] | None:
     """Return one memory item for read APIs (any status)."""
-    conn = connect_db()
-    try:
-        row = conn.execute(
-            "SELECT * FROM memory_items WHERE id = ?",
-            (int(memory_id),),
-        ).fetchone()
-    finally:
-        conn.close()
-    if row is None:
-        return None
-    return _memory_item_api_dict(row)
+    return memory_store.get_memory_item_api_by_id(sys.modules[__name__], memory_id)
+
 
 
 def get_portable_session_api(session_receipt_id: int) -> dict[str, object] | None:
@@ -1291,78 +1230,22 @@ def get_portable_session_api(session_receipt_id: int) -> dict[str, object] | Non
 
 def list_recent_memory_updates(*, limit: int = 20) -> list[dict[str, object]]:
     """Recent memory_items ordered by updated_at for inspect.recent_updates."""
-    limit = max(1, min(int(limit), 50))
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM memory_items
-            ORDER BY datetime(updated_at) DESC, id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-        return [_memory_item_api_dict(row) for row in rows]
-    finally:
-        conn.close()
+    return memory_store.list_recent_memory_updates(sys.modules[__name__], limit=limit)
+
 
 
 def build_memory_lineage(memory_id: int) -> dict[str, object] | None:
     """Lineage for a memory item: merged_into, metadata promotion fields."""
-    item = get_memory_item_api_by_id(memory_id)
-    if item is None:
-        return None
-    lineage: dict[str, object] = {"memory": item}
-    merged_into = item.get("merged_into_id")
-    if merged_into is not None:
-        parent = get_memory_item_api_by_id(int(merged_into))
-        if parent is not None:
-            lineage["merged_into"] = parent
-    meta_raw = item.get("metadata_json")
-    if isinstance(meta_raw, str) and meta_raw.strip():
-        try:
-            meta = json.loads(meta_raw)
-            if isinstance(meta, dict):
-                lineage["metadata"] = meta
-                session_id = meta.get("session_receipt_id")
-                if session_id is not None:
-                    session = get_portable_session_api(int(session_id))
-                    if session is not None:
-                        lineage["source_session"] = session
-        except json.JSONDecodeError:
-            pass
-    return lineage
+    return memory_store.build_memory_lineage(sys.modules[__name__], memory_id)
+
 
 
 def explain_memory_in_retrieval(
     memory_id: int, *, q: str | None = None
 ) -> dict[str, object] | None:
     """Explain why a memory appears in retrieval for a query."""
-    item = get_memory_item_api_by_id(memory_id)
-    if item is None:
-        return None
-    query = (q or CONTEXT_DEFAULT_QUERY).strip()
-    payload = retrieve_memories_api(q=query, limit=50)
-    results = payload.get("results") if isinstance(payload, dict) else None
-    if isinstance(results, list):
-        for entry in results:
-            if not isinstance(entry, dict):
-                continue
-            entry_id = entry.get("id")
-            if entry_id is not None and int(entry_id) == int(memory_id):
-                return {
-                    "memory_id": int(memory_id),
-                    "query": query,
-                    "in_retrieval": True,
-                    "explanation": entry,
-                }
-    return {
-        "memory_id": int(memory_id),
-        "query": query,
-        "in_retrieval": False,
-        "memory": item,
-        "message": "Memory exists but was not in top retrieval results for this query.",
-    }
+    return memory_store.explain_memory_in_retrieval(sys.modules[__name__], memory_id, q=q)
+
 
 
 def build_writeback_inspect_result(session_receipt_id: int) -> dict[str, object] | None:
@@ -3477,97 +3360,35 @@ def _ticket_anchor_memories(
 
 
 def _memory_embed_provider() -> str:
-    if is_test_mode():
-        return "off"
-    if MEMORY_EMBED_PROVIDER == "off":
-        return "off"
-    if MEMORY_EMBED_PROVIDER == "local":
-        return "local"
-    if MEMORY_EMBED_PROVIDER == "openai":
-        return "openai" if _has_openai_key() else "off"
-    if _has_openai_key():
-        return "openai"
-    return "local"
+    return memory_embeddings.memory_embed_provider(sys.modules[__name__])
+
 
 
 def _try_load_sqlite_vec(conn: sqlite3.Connection) -> bool:
-    global _sqlite_vec_ready, _sqlite_vec_failure_reason, _sqlite_vec_failure_logged
-    conn_id = id(conn)
-    if conn_id in _sqlite_vec_loaded_conns:
-        return True
-    if _sqlite_vec_ready is False:
-        return False
-    if not hasattr(conn, "enable_load_extension"):
-        _sqlite_vec_ready = False
-        _sqlite_vec_failure_reason = "SQLite connection cannot load extensions"
-        if not _sqlite_vec_failure_logged:
-            _sqlite_vec_failure_logged = True
-            print(
-                f"Crowley: sqlite-vec unavailable — {_sqlite_vec_failure_reason}",
-                file=sys.stderr,
-            )
-        return False
-    try:
-        import sqlite_vec
+    return memory_embeddings.try_load_sqlite_vec(sys.modules[__name__], conn)
 
-        conn.enable_load_extension(True)
-        sqlite_vec.load(conn)
-        conn.enable_load_extension(False)
-        _sqlite_vec_loaded_conns.add(conn_id)
-        _sqlite_vec_ready = True
-    except Exception as exc:
-        _sqlite_vec_ready = False
-        _sqlite_vec_failure_reason = f"{type(exc).__name__}: {exc}"
-        if not _sqlite_vec_failure_logged:
-            _sqlite_vec_failure_logged = True
-            print(
-                f"Crowley: sqlite-vec unavailable — {_sqlite_vec_failure_reason}",
-                file=sys.stderr,
-            )
-    return _sqlite_vec_ready
 
 
 def get_sqlite_vec_failure_reason() -> str | None:
     """Return the last sqlite-vec load failure reason, if any."""
-    return _sqlite_vec_failure_reason
+    return memory_embeddings.get_sqlite_vec_failure_reason(sys.modules[__name__])
+
 
 
 def _pack_embedding(vector: list[float]) -> bytes:
-    return struct.pack(f"{len(vector)}f", *vector)
+    return memory_embeddings.pack_embedding(vector)
+
 
 
 def _vec_bind(vector: list[float]) -> bytes:
     """Packed float bytes for sqlite-vec INSERT and MATCH bindings."""
-    return _pack_embedding(vector)
+    return memory_embeddings.vec_bind(vector)
+
 
 
 def _ensure_memory_vec_table(conn: sqlite3.Connection) -> bool:
-    if not _try_load_sqlite_vec(conn):
-        return False
-    row = conn.execute(
-        """
-        SELECT name FROM sqlite_master
-        WHERE type = 'table' AND name = 'memory_vec'
-        """
-    ).fetchone()
-    if row:
-        try:
-            conn.execute("SELECT 1 FROM memory_vec LIMIT 0")
-        except Exception:
-            return False
-        return True
-    try:
-        conn.execute(
-            f"""
-            CREATE VIRTUAL TABLE memory_vec USING vec0(
-                memory_id INTEGER PRIMARY KEY,
-                embedding float[{EMBED_DIM}]
-            )
-            """
-        )
-    except Exception:
-        return False
-    return True
+    return memory_embeddings.ensure_memory_vec_table(sys.modules[__name__], conn)
+
 
 
 def _map_legacy_memory_row(
@@ -3654,98 +3475,29 @@ def migrate_memories_to_memory_items(conn: sqlite3.Connection) -> int:
 
 
 def _get_local_embed_model():
-    global _embed_model
-    if _embed_model is not None:
-        return _embed_model
-    with _embed_model_lock:
-        if _embed_model is None:
-            from sentence_transformers import SentenceTransformer
+    return memory_embeddings.get_local_embed_model(sys.modules[__name__])
 
-            _embed_model = SentenceTransformer(EMBED_MODEL_LOCAL)
-    return _embed_model
 
 
 def embed_text(text: str) -> list[float] | None:
     """Return an embedding vector for memory_items content, or None if unavailable."""
-    content = _normalize_text(text)
-    if not content:
-        return None
-    provider = _memory_embed_provider()
-    if provider == "off":
-        return None
-    try:
-        if provider == "openai":
-            from openai import OpenAI
+    return memory_embeddings.embed_text(sys.modules[__name__], text)
 
-            client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-            response = client.embeddings.create(
-                model="text-embedding-3-small",
-                input=content,
-                dimensions=EMBED_DIM,
-            )
-            return list(response.data[0].embedding)
-        model = _get_local_embed_model()
-        vector = model.encode(content, normalize_embeddings=True)
-        return [float(x) for x in vector.tolist()]
-    except Exception:
-        return None
 
 
 def index_memory_embedding(
     conn: sqlite3.Connection, memory_id: int, embedding: list[float], model_name: str
 ) -> None:
-    blob = _pack_embedding(embedding)
-    conn.execute(
-        """
-        UPDATE memory_items
-        SET embed_model = ?, embed_dim = ?, embedding_blob = ?, updated_at = ?
-        WHERE id = ?
-        """,
-        (model_name, EMBED_DIM, blob, _now_iso(), memory_id),
+    return memory_embeddings.index_memory_embedding(
+        sys.modules[__name__], conn, memory_id, embedding, model_name
     )
-    if not _ensure_memory_vec_table(conn):
-        return
-    try:
-        conn.execute(
-            "DELETE FROM memory_vec WHERE memory_id = ?",
-            (memory_id,),
-        )
-        conn.execute(
-            "INSERT INTO memory_vec(memory_id, embedding) VALUES (?, ?)",
-            (memory_id, _vec_bind(embedding)),
-        )
-    except Exception:
-        # embedding_blob is already stored; vec index is optional acceleration.
-        return
+
 
 
 def backfill_memory_item_embeddings(conn: sqlite3.Connection, limit: int = 200) -> int:
     """Embed memory_items that lack an embedding. Returns count embedded."""
-    provider = _memory_embed_provider()
-    if provider == "off":
-        return 0
-    _ensure_memory_vec_table(conn)
-    model_name = (
-        "text-embedding-3-small" if provider == "openai" else EMBED_MODEL_LOCAL
-    )
-    rows = conn.execute(
-        """
-        SELECT id, content
-        FROM memory_items
-        WHERE status = 'active' AND embedding_blob IS NULL
-        ORDER BY id ASC
-        LIMIT ?
-        """,
-        (limit,),
-    ).fetchall()
-    embedded = 0
-    for row in rows:
-        vector = embed_text(str(row["content"]))
-        if not vector or len(vector) != EMBED_DIM:
-            continue
-        index_memory_embedding(conn, int(row["id"]), vector, model_name)
-        embedded += 1
-    return embedded
+    return memory_embeddings.backfill_memory_item_embeddings(sys.modules[__name__], conn, limit)
+
 
 
 def _ensure_memory_backend(conn: sqlite3.Connection) -> None:
@@ -3756,16 +3508,8 @@ def _ensure_memory_backend(conn: sqlite3.Connection) -> None:
 
 def _lazy_backfill_embeddings(conn: sqlite3.Connection, *, limit: int = 50) -> None:
     """Optional embedding backfill — never required for startup or tests."""
-    global _embed_backfill_attempted
-    if _embed_backfill_attempted or _memory_embed_provider() == "off":
-        return
-    _embed_backfill_attempted = True
-    try:
-        embedded = backfill_memory_item_embeddings(conn, limit=limit)
-        if embedded:
-            conn.commit()
-    except Exception:
-        pass
+    memory_embeddings.lazy_backfill_embeddings(sys.modules[__name__], conn, limit=limit)
+
 
 
 def _ensure_consolidation_table(conn: sqlite3.Connection) -> None:
@@ -3810,10 +3554,8 @@ def _normalize_memory_dedupe_key(content: str) -> str:
 
 
 def _active_project_id(conn: sqlite3.Connection) -> int | None:
-    project = conn.execute(
-        "SELECT id FROM projects WHERE status = 'active' ORDER BY id ASC LIMIT 1"
-    ).fetchone()
-    return int(project["id"]) if project else None
+    return memory_store.active_project_id(conn)
+
 
 
 def _resolve_memory_item_fields(
@@ -3824,30 +3566,15 @@ def _resolve_memory_item_fields(
     pinned: bool | None,
     confidence: float | None,
 ) -> tuple[str, str, bool, float]:
-    if legacy_type == "spark":
-        item_type = (
-            "summary" if importance >= SPARK_IMPORTANCE_SUMMARY else "event"
-        )
-        resolved_source = source or (
-            "session_summary"
-            if importance >= SPARK_IMPORTANCE_SUMMARY
-            else "implicit"
-        )
-        resolved_pinned = False if pinned is None else pinned
-        if confidence is not None:
-            resolved_confidence = confidence
-        elif resolved_source == "session_summary":
-            resolved_confidence = 0.85
-        else:
-            resolved_confidence = 0.75
-    else:
-        item_type = (
-            legacy_type if legacy_type in ALLOWED_MEMORY_ITEM_TYPES else "event"
-        )
-        resolved_source = source or "manual"
-        resolved_pinned = True if pinned is None else pinned
-        resolved_confidence = 1.0 if confidence is None else confidence
-    return item_type, resolved_source, resolved_pinned, resolved_confidence
+    return memory_store.resolve_memory_item_fields(
+        sys.modules[__name__],
+        legacy_type,
+        importance,
+        source=source,
+        pinned=pinned,
+        confidence=confidence,
+    )
+
 
 
 def _find_recent_duplicate_memory_item(
@@ -3856,119 +3583,46 @@ def _find_recent_duplicate_memory_item(
     content: str,
     project_id: int | None,
 ) -> int | None:
-    cutoff = (
-        datetime.now(timezone.utc) - timedelta(hours=MEMORY_ITEM_DEDUPE_HOURS)
-    ).isoformat()
-    norm = _normalize_memory_dedupe_key(content)
-    if project_id is None:
-        rows = conn.execute(
-            """
-            SELECT id, content FROM memory_items
-            WHERE memory_type = ? AND status = 'active' AND created_at >= ?
-              AND project_id IS NULL
-            """,
-            (memory_type, cutoff),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            """
-            SELECT id, content FROM memory_items
-            WHERE memory_type = ? AND status = 'active' AND created_at >= ?
-              AND project_id = ?
-            """,
-            (memory_type, cutoff, project_id),
-        ).fetchall()
-    for row in rows:
-        if _normalize_memory_dedupe_key(str(row["content"])) == norm:
-            return int(row["id"])
-    return None
+    return memory_store.find_recent_duplicate_memory_item(
+        sys.modules[__name__], conn, memory_type, content, project_id
+    )
 
 
-@dataclass(frozen=True)
-class MemoryGateOutcome:
-    allowed: bool
-    memory_type: str
-    content: str
-    summary: str | None
-    importance: int
-    confidence: float
-    reason: str
+
+MemoryGateOutcome = memory_store.MemoryGateOutcome
+
 
 
 def _clamp_memory_importance(importance: int) -> int:
-    try:
-        value = int(importance)
-    except (TypeError, ValueError):
-        return 3
-    return max(1, min(5, value))
+    return memory_store.clamp_memory_importance(importance)
+
 
 
 def _clamp_memory_confidence(confidence: float) -> float:
-    try:
-        value = float(confidence)
-    except (TypeError, ValueError):
-        return 1.0
-    return max(0.0, min(1.0, value))
+    return memory_store.clamp_memory_confidence(confidence)
+
 
 
 def _memory_gate_section_text(content: str, heading: str) -> str | None:
-    bullets = _parse_handoff_section_bullets(content, heading)
-    if not bullets:
-        return None
-    return _truncate(" | ".join(bullets[:3]), 240)
+    return memory_store.memory_gate_section_text(sys.modules[__name__], content, heading)
+
 
 
 def _parse_handoff_section_bullets(content: str, heading: str) -> list[str]:
-    pattern = re.compile(
-        rf"^##\s*{re.escape(heading)}\s*$",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    match = pattern.search(content)
-    if match is None:
-        return []
-    section = content[match.end() :]
-    next_hdr = re.search(r"\n##\s+", section)
-    if next_hdr:
-        section = section[: next_hdr.start()]
-    bullets: list[str] = []
-    for line in section.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("- "):
-            text = stripped[2:].strip()
-            if text:
-                bullets.append(text)
-        elif stripped and not stripped.startswith("#"):
-            bullets.append(stripped)
-    return bullets
+    return memory_store.parse_handoff_section_bullets(content, heading)
+
 
 
 def _extract_why_it_matters(content: str, summary: str | None = None) -> str | None:
-    if summary and len(_normalize_text(summary)) >= MEMORY_GATE_WHY_MIN_LEN:
-        return _truncate(summary.strip(), 240)
-    for heading in ("Summary", "QA Result", "QA", "Decisions", "Constraints", "Lessons"):
-        section = _memory_gate_section_text(content, heading)
-        if section and len(_normalize_text(section)) >= MEMORY_GATE_WHY_MIN_LEN:
-            return section
-    trimmed = _normalize_text(content)
-    if MEMORY_GATE_WHY_MIN_LEN <= len(trimmed) <= 280:
-        return _truncate(trimmed, 240)
-    return None
+    return memory_store.extract_why_it_matters(sys.modules[__name__], content, summary)
+
 
 
 def _is_noisy_memory_content(content: str, *, memory_type: str) -> bool:
-    trimmed = _normalize_text(content)
-    if not trimmed:
-        return True
-    if memory_type != "event":
-        return False
-    if len(trimmed) < MEMORY_GATE_WHY_MIN_LEN:
-        return True
-    if _normalize_dedupe_key(trimmed) in _GENERIC_EXTRACT_VALUES:
-        return True
-    lower = trimmed.lower()
-    if len(trimmed) < 120 and not any(kw in lower for kw in _SIGNAL_KEYWORDS):
-        return True
-    return False
+    return memory_store.is_noisy_memory_content(
+        sys.modules[__name__], content, memory_type=memory_type
+    )
+
 
 
 def evaluate_memory_quality_gate(
@@ -3982,144 +3636,17 @@ def evaluate_memory_quality_gate(
     project_id: int | None = None,
 ) -> MemoryGateOutcome:
     """Return gate decision for a memory_items save (V3.9.9 quality gate)."""
-    resolved_type = (
-        memory_type if memory_type in ALLOWED_MEMORY_ITEM_TYPES else "event"
+    return memory_store.evaluate_memory_quality_gate(
+        sys.modules[__name__],
+        memory_type,
+        content,
+        summary=summary,
+        source=source,
+        importance=importance,
+        confidence=confidence,
+        project_id=project_id,
     )
-    resolved_content = content.strip()
-    resolved_importance = _clamp_memory_importance(importance)
-    resolved_confidence = _clamp_memory_confidence(confidence)
 
-    if source in MEMORY_GATE_BYPASS_SOURCES or resolved_type in MEMORY_GATE_BYPASS_TYPES:
-        return MemoryGateOutcome(
-            allowed=True,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=summary,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="gate bypass",
-        )
-
-    if resolved_type == "event" and source == "implicit":
-        return MemoryGateOutcome(
-            allowed=False,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=summary,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="implicit event noise rejected",
-        )
-
-    if resolved_type == "event" and source in INGEST_SOURCES:
-        why = _extract_why_it_matters(resolved_content, summary)
-        if not why or _is_generic_extract_value(why):
-            return MemoryGateOutcome(
-                allowed=False,
-                memory_type=resolved_type,
-                content=resolved_content,
-                summary=summary,
-                importance=resolved_importance,
-                confidence=resolved_confidence,
-                reason="handoff event rejected: missing why_it_matters",
-            )
-        promoted_type = "lesson"
-        return MemoryGateOutcome(
-            allowed=True,
-            memory_type=promoted_type,
-            content=why,
-            summary=why,
-            importance=max(2, resolved_importance),
-            confidence=resolved_confidence,
-            reason="handoff event promoted to lesson",
-        )
-
-    if resolved_type == "event":
-        if _is_noisy_memory_content(resolved_content, memory_type=resolved_type):
-            return MemoryGateOutcome(
-                allowed=False,
-                memory_type=resolved_type,
-                content=resolved_content,
-                summary=summary,
-                importance=resolved_importance,
-                confidence=resolved_confidence,
-                reason="noisy event rejected",
-            )
-        why = _extract_why_it_matters(resolved_content, summary)
-        if not why:
-            return MemoryGateOutcome(
-                allowed=False,
-                memory_type=resolved_type,
-                content=resolved_content,
-                summary=summary,
-                importance=resolved_importance,
-                confidence=resolved_confidence,
-                reason="event missing why_it_matters",
-            )
-        return MemoryGateOutcome(
-            allowed=True,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=why,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="event allowed with why_it_matters",
-        )
-
-    if resolved_type not in MEMORY_GATE_PROMOTED_TYPES:
-        return MemoryGateOutcome(
-            allowed=False,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=summary,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason=f"type not promoted: {resolved_type}",
-        )
-
-    why = _extract_why_it_matters(resolved_content, summary)
-    if not why or _is_generic_extract_value(why):
-        return MemoryGateOutcome(
-            allowed=False,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=summary,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="promoted type missing why_it_matters",
-        )
-
-    if resolved_confidence < MEMORY_GATE_CONFIDENCE_MIN:
-        return MemoryGateOutcome(
-            allowed=False,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=why,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="confidence below gate minimum",
-        )
-
-    if project_id is None:
-        return MemoryGateOutcome(
-            allowed=False,
-            memory_type=resolved_type,
-            content=resolved_content,
-            summary=why,
-            importance=resolved_importance,
-            confidence=resolved_confidence,
-            reason="promoted memory missing project scope",
-        )
-
-    return MemoryGateOutcome(
-        allowed=True,
-        memory_type=resolved_type,
-        content=resolved_content,
-        summary=why,
-        importance=resolved_importance,
-        confidence=resolved_confidence,
-        reason="promoted memory accepted",
-    )
 
 
 def save_memory_item(
@@ -4141,163 +3668,27 @@ def save_memory_item(
     conn: sqlite3.Connection | None = None,
     legacy_memory_id: int | None = None,
 ) -> int | None:
-    """
-    Insert into memory_items and attempt embedding/indexing.
-    Returns memory_items.id, an existing deduped id, or None on failure/rejection.
-    """
-    own_conn = conn is None
-    if own_conn:
-        conn = connect_db()
-    try:
-        if project_id is None:
-            project_id = _active_project_id(conn)
+    """Insert into memory_items and attempt embedding/indexing."""
+    return memory_store.save_memory_item(
+        sys.modules[__name__],
+        memory_type,
+        content,
+        summary=summary,
+        source=source,
+        project_id=project_id,
+        message_id=message_id,
+        decision_id=decision_id,
+        importance=importance,
+        confidence=confidence,
+        pinned=pinned,
+        status=status,
+        metadata=metadata,
+        agent_id=agent_id,
+        write_action=write_action,
+        conn=conn,
+        legacy_memory_id=legacy_memory_id,
+    )
 
-        gate = evaluate_memory_quality_gate(
-            memory_type,
-            content,
-            summary=summary,
-            source=source,
-            importance=importance,
-            confidence=confidence,
-            project_id=project_id,
-        )
-        if not gate.allowed:
-            return None
-
-        memory_type = gate.memory_type
-        content = gate.content
-        summary = gate.summary
-        importance = gate.importance
-        confidence = gate.confidence
-
-        import memory_quality
-
-        semantic_dup, _reason = memory_quality.find_ingest_duplicate(
-            conn, memory_type, content, project_id
-        )
-        if semantic_dup is not None:
-            return semantic_dup
-
-        if pinned:
-            import agent_identity
-
-            resolved_agent = agent_identity.normalize_agent_id(
-                agent_id, fallback_source=source
-            )
-            allowed, message = agent_identity.check_domain_permission(
-                resolved_agent, "memory.pin"
-            )
-            if not allowed:
-                return None
-
-        now = _now_iso()
-        import agent_identity
-
-        resolved_agent = agent_identity.normalize_agent_id(agent_id, fallback_source=source)
-        attribution = agent_identity.build_write_attribution(
-            resolved_agent,
-            source,
-            timestamp=now,
-            action=write_action,
-            content_hint=content,
-        )
-        merged_metadata = agent_identity.merge_attribution_into_metadata(
-            metadata, attribution
-        )
-        import memory_tiers
-
-        tier = memory_tiers.infer_tier(
-            memory_type=memory_type,
-            pinned=pinned,
-            source=source,
-            write_action=write_action,
-        )
-        merged_metadata = memory_tiers.apply_tier_to_metadata(merged_metadata, tier)
-        import claim_validation
-
-        merged_metadata, claim_status = claim_validation.enrich_claim_write(
-            conn,
-            memory_type,
-            content,
-            merged_metadata,
-            project_id=project_id,
-        )
-        if claim_status == "contested" and status == "active":
-            merged_metadata["claim_status"] = "contested"
-        metadata_json = json.dumps(
-            merged_metadata, sort_keys=True, ensure_ascii=False
-        )
-        cur = conn.execute(
-            """
-            INSERT INTO memory_items (
-                created_at, updated_at, project_id, memory_type, content, summary,
-                importance, source, message_id, decision_id, pinned, status,
-                confidence, legacy_memory_id, metadata_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                now,
-                now,
-                project_id,
-                memory_type,
-                content,
-                summary,
-                importance,
-                source,
-                message_id,
-                decision_id,
-                1 if pinned else 0,
-                status,
-                confidence,
-                legacy_memory_id,
-                metadata_json,
-            ),
-        )
-        item_id = int(cur.lastrowid)
-
-        try:
-            vector = embed_text(content)
-            if vector and len(vector) == EMBED_DIM:
-                provider = _memory_embed_provider()
-                model_name = (
-                    "text-embedding-3-small"
-                    if provider == "openai"
-                    else EMBED_MODEL_LOCAL
-                )
-                index_memory_embedding(conn, item_id, vector, model_name)
-        except Exception:
-            pass
-
-        saved_row = conn.execute(
-            "SELECT * FROM memory_items WHERE id = ?",
-            (item_id,),
-        ).fetchone()
-        if saved_row is not None:
-            import write_audit
-
-            audit_entity = (
-                "handoff"
-                if write_action and str(write_action).startswith("handoff.")
-                else "memory_item"
-            )
-            write_audit.record_write_audit(
-                agent_id=resolved_agent,
-                action=str(write_action or "memory.save"),
-                entity_type=audit_entity,
-                entity_id=item_id,
-                before=None,
-                after=write_audit.memory_row_snapshot(saved_row),
-                conn=conn,
-            )
-
-        if own_conn:
-            conn.commit()
-        return item_id
-    except Exception:
-        return None
-    finally:
-        if own_conn and conn is not None:
-            conn.close()
 
 
 def attach_memory_item_metadata(
@@ -4307,38 +3698,10 @@ def attach_memory_item_metadata(
     conn: sqlite3.Connection | None = None,
 ) -> bool:
     """Merge metadata onto an existing memory_items row."""
-    if not metadata:
-        return False
-    own_conn = conn is None
-    if own_conn:
-        conn = connect_db()
-    try:
-        row = conn.execute(
-            "SELECT metadata_json FROM memory_items WHERE id = ?",
-            (memory_item_id,),
-        ).fetchone()
-        if row is None:
-            return False
-        existing = _memory_item_metadata(row) if row else {}
-        merged = {**existing, **metadata}
-        conn.execute(
-            """
-            UPDATE memory_items
-            SET metadata_json = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (
-                json.dumps(merged, sort_keys=True, ensure_ascii=False),
-                _now_iso(),
-                memory_item_id,
-            ),
-        )
-        if own_conn:
-            conn.commit()
-        return True
-    finally:
-        if own_conn and conn is not None:
-            conn.close()
+    return memory_store.attach_memory_item_metadata(
+        sys.modules[__name__], memory_item_id, metadata, conn=conn
+    )
+
 
 
 # --- memory retrieval (V3.6 Phase 2) ----------------------------------------
@@ -4346,21 +3709,18 @@ def attach_memory_item_metadata(
 
 def get_last_retrieval_mode() -> str:
     """Return mode used by the most recent retrieve_memories() call."""
-    return _last_retrieval_mode
+    return memory_retrieval.get_last_retrieval_mode(sys.modules[__name__])
+
 
 
 def _unpack_embedding(blob: bytes | None) -> list[float] | None:
-    if not blob or len(blob) % 4 != 0:
-        return None
-    count = len(blob) // 4
-    return list(struct.unpack(f"{count}f", blob))
+    return memory_retrieval.unpack_embedding(blob)
+
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
-    if len(a) != len(b) or not a:
-        return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
-    return max(0.0, min(1.0, dot))
+    return memory_retrieval.cosine_similarity(a, b)
+
 
 
 # --- memory consolidation (V3.6 Phase 4) ------------------------------------
@@ -4991,77 +4351,40 @@ def memory_hygiene_report_api() -> dict[str, object]:
 
 
 def _parse_memory_timestamp(value: str) -> datetime | None:
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
+    return memory_retrieval.parse_memory_timestamp(value)
+
 
 
 def _recency_score(created_at: str) -> float:
-    ts = _parse_memory_timestamp(created_at)
-    if ts is None:
-        return 0.5
-    age_days = (datetime.now(timezone.utc) - ts).total_seconds() / 86400
-    if age_days <= MEMORY_RECENCY_HIGH_DAYS:
-        return 1.0
-    if age_days >= MEMORY_RECENCY_LOW_DAYS:
-        return 0.15
-    span = MEMORY_RECENCY_LOW_DAYS - MEMORY_RECENCY_HIGH_DAYS
-    decay = (age_days - MEMORY_RECENCY_HIGH_DAYS) / span
-    return max(0.15, 1.0 - 0.85 * decay)
+    return memory_retrieval.recency_score(sys.modules[__name__], created_at)
+
 
 
 def _importance_score(importance: int) -> float:
-    return max(0.0, min(1.0, (int(importance) - 1) / 4))
+    return memory_retrieval.importance_score(importance)
+
 
 
 def _project_match_score(item_project_id: int | None, active_project_id: int | None) -> float:
-    if active_project_id is None:
-        return 0.5 if item_project_id is None else 0.0
-    if item_project_id == active_project_id:
-        return 1.0
-    if item_project_id is None:
-        return 0.5
-    return 0.0
+    return memory_retrieval.project_match_score(item_project_id, active_project_id)
+
 
 
 def _infer_query_memory_types(query: str) -> set[str]:
-    lower = query.lower()
-    types: set[str] = set()
-    if any(w in lower for w in ("decision", "decided", "approved", "why did we", "why we")):
-        types.add("decision")
-    if any(w in lower for w in ("bug", "error", "broke", "broken", "fail", "failed", "failure")):
-        types.add("bug")
-    if any(w in lower for w in ("qa", "test", "passed", "pass", "regression")):
-        types.add("qa_result")
-    if any(w in lower for w in ("prefer", "preference", "like", "always", "never")):
-        types.add("preference")
-    if any(w in lower for w in ("risk", "constraint", "must", "cannot", "can't", "required")):
-        types.add("constraint")
-    if any(
-        w in lower
-        for w in ("what happened", "recently", "recent", "session", "last time", "summary")
-    ):
-        types.update({"summary", "event", "project_update"})
-    if any(w in lower for w in ("lesson", "learned", "takeaway")):
-        types.add("lesson")
-    return types
+    return memory_retrieval.infer_query_memory_types(query)
+
 
 
 def _type_match_score(memory_type: str, inferred_types: set[str]) -> float:
-    if not inferred_types:
-        return 0.0
-    return 1.0 if memory_type in inferred_types else 0.0
+    return memory_retrieval.type_match_score(memory_type, inferred_types)
+
 
 
 def _keyword_score_for_item(
     tokens: list[str], content: str, summary: str | None
 ) -> float:
-    if not tokens:
-        return 0.0
-    haystack = f"{content} {summary or ''}".lower()
-    hits = sum(1 for token in tokens if token in haystack)
-    return hits / len(tokens)
+    return memory_retrieval.keyword_score_for_item(tokens, content, summary)
+
 
 
 def _memory_display_text(row: sqlite3.Row) -> str:
@@ -5074,94 +4397,37 @@ def _memory_display_text(row: sqlite3.Row) -> str:
 def _semantic_candidate_scores(
     conn: sqlite3.Connection, query_embedding: list[float] | None, limit: int
 ) -> dict[int, float]:
-    if not query_embedding:
-        return {}
+    return memory_retrieval.semantic_candidate_scores(
+        sys.modules[__name__], conn, query_embedding, limit
+    )
 
-    if _ensure_memory_vec_table(conn):
-        try:
-            rows = conn.execute(
-                """
-                SELECT memory_id, distance
-                FROM memory_vec
-                WHERE embedding MATCH ?
-                ORDER BY distance
-                LIMIT ?
-                """,
-                (_vec_bind(query_embedding), limit),
-            ).fetchall()
-            if rows:
-                return {
-                    int(row["memory_id"]): max(
-                        0.0, min(1.0, 1.0 - float(row["distance"]))
-                    )
-                    for row in rows
-                }
-        except Exception:
-            pass
-
-    rows = conn.execute(
-        """
-        SELECT id, embedding_blob
-        FROM memory_items
-        WHERE status = 'active' AND embedding_blob IS NOT NULL
-        """
-    ).fetchall()
-    scored: list[tuple[int, float]] = []
-    for row in rows:
-        vector = _unpack_embedding(row["embedding_blob"])
-        if not vector:
-            continue
-        scored.append((int(row["id"]), _cosine_similarity(query_embedding, vector)))
-    scored.sort(key=lambda item: item[1], reverse=True)
-    return dict(scored[:limit])
 
 
 def _keyword_candidate_scores(
     conn: sqlite3.Connection, query: str, limit: int
 ) -> dict[int, float]:
-    tokens = _tokenize(query)
-    rows = conn.execute(
-        "SELECT * FROM memory_items WHERE status = 'active'"
-    ).fetchall()
-    scored: list[tuple[int, float, int, str]] = []
-    for row in rows:
-        kw = _keyword_score_for_item(
-            tokens, str(row["content"]), row["summary"]
-        )
-        scored.append(
-            (int(row["id"]), kw, int(row["importance"]), str(row["created_at"]))
-        )
-    scored.sort(key=lambda item: (item[1], item[2], item[3]), reverse=True)
-    return {item[0]: item[1] for item in scored[:limit]}
+    return memory_retrieval.keyword_candidate_scores(sys.modules[__name__], conn, query, limit)
+
 
 
 def _load_active_memory_item(conn: sqlite3.Connection, memory_id: int) -> sqlite3.Row | None:
-    return conn.execute(
-        "SELECT * FROM memory_items WHERE id = ? AND status = 'active'",
-        (memory_id,),
-    ).fetchone()
+    return memory_retrieval.load_active_memory_item(conn, memory_id)
+
 
 
 def _is_canon_memory_row(row: sqlite3.Row) -> bool:
-    return (
-        str(row["status"]) == "active"
-        and str(row["source"]) == "crowley"
-        and int(row["pinned"]) == 1
-        and str(row["memory_type"]) == "summary"
-        and str(row["content"]).startswith("Canon:")
-    )
+    return memory_retrieval.is_canon_memory_row(row)
+
 
 
 def _memory_provenance_ids(row: sqlite3.Row) -> dict[str, int | None]:
-    provenance: dict[str, int | None] = {"memory_item_id": int(row["id"])}
-    for key in ("message_id", "decision_id", "merged_into_id", "legacy_memory_id"):
-        raw = row[key] if key in row.keys() else None
-        provenance[key] = int(raw) if raw is not None else None
-    return provenance
+    return memory_retrieval.memory_provenance_ids(row)
+
 
 
 def _available_provenance_ids(provenance: dict[str, int | None]) -> dict[str, int]:
-    return {key: value for key, value in provenance.items() if value is not None}
+    return memory_retrieval.available_provenance_ids(provenance)
+
 
 
 _MEMORY_TYPE_INCLUSION_LABELS = {
@@ -5178,59 +4444,19 @@ _MEMORY_TYPE_INCLUSION_LABELS = {
 
 
 def _extract_ticket_refs_from_query(query: str) -> set[int]:
-    refs: set[int] = set()
-    for match in re.finditer(r"#(\d+)", query):
-        refs.add(int(match.group(1)))
-    for match in re.finditer(r"\bticket\s+(\d+)\b", query, re.IGNORECASE):
-        refs.add(int(match.group(1)))
-    return refs
+    return memory_retrieval.extract_ticket_refs_from_query(query)
+
 
 
 def _query_relates_to_ticket(query: str, ticket_row: sqlite3.Row) -> bool:
-    ticket_id = int(ticket_row["id"])
-    if ticket_id in _extract_ticket_refs_from_query(query):
-        return True
-    title = str(ticket_row["title"])
-    query_tokens = set(_tokenize(query))
-    title_tokens = set(_tokenize(title))
-    if not query_tokens:
-        return False
-    overlap = query_tokens & title_tokens
-    if len(overlap) >= 2:
-        return True
-    return bool(overlap) and len(overlap) / len(query_tokens) >= 0.34
+    return memory_retrieval.query_relates_to_ticket(sys.modules[__name__], query, ticket_row)
+
 
 
 def _memory_relates_to_ticket(row: sqlite3.Row, ticket_row: sqlite3.Row) -> bool:
     """True when memory content references a ticket (not just the retrieval query)."""
-    ticket_id = int(ticket_row["id"])
-    summary = row["summary"] if "summary" in row.keys() else None
-    content = f"{row['content']} {summary or ''}"
-    lower = content.lower()
-    if re.search(rf"#\s*{ticket_id}\b", content):
-        return True
-    if f"ticket #{ticket_id}" in lower:
-        return True
-    title = str(ticket_row["title"])
-    stop = {
-        "and",
-        "or",
-        "the",
-        "for",
-        "to",
-        "a",
-        "v3",
-        "9",
-        "context",
-        "cursor",
-        "codex",
-    }
-    content_tokens = set(_tokenize(content)) - stop
-    title_tokens = set(_tokenize(title)) - stop
-    overlap = content_tokens & title_tokens
-    if len(overlap) >= 3:
-        return True
-    return len(overlap) >= 2 and len(title_tokens) >= 4
+    return memory_retrieval.memory_relates_to_ticket(sys.modules[__name__], row, ticket_row)
+
 
 
 def _build_inclusion_reason(
@@ -5242,68 +4468,15 @@ def _build_inclusion_reason(
     open_tickets_by_id: dict[int, sqlite3.Row],
 ) -> str:
     """Human-readable reason this memory was included in retrieval (V3.9.9)."""
-    factors: list[str] = []
-    memory_type = str(row["memory_type"])
-    source = str(row["source"])
+    return memory_retrieval.build_inclusion_reason(
+        sys.modules[__name__],
+        row,
+        query=query,
+        score_breakdown=score_breakdown,
+        linked_ticket_ids=linked_ticket_ids,
+        open_tickets_by_id=open_tickets_by_id,
+    )
 
-    for ticket_id in linked_ticket_ids:
-        ticket = open_tickets_by_id.get(ticket_id)
-        if ticket is None:
-            factors.append(f"linked to ticket #{ticket_id}")
-            continue
-        if ticket_id in open_tickets_by_id:
-            factors.append(f"linked to open ticket #{ticket_id}")
-        else:
-            factors.append(f"linked to ticket #{ticket_id}")
-
-    if not any("ticket #" in factor for factor in factors):
-        for ticket_id, ticket in open_tickets_by_id.items():
-            if _memory_relates_to_ticket(row, ticket):
-                factors.append(f"matches open ticket #{ticket_id}")
-                break
-
-    if source in INGEST_SOURCES:
-        if linked_ticket_ids:
-            factors.append("handoff link")
-        else:
-            factors.append("agent handoff")
-
-    type_score = float(score_breakdown.get("type_match", 0.0))
-    type_label = _MEMORY_TYPE_INCLUSION_LABELS.get(memory_type, f"{memory_type} memory")
-    if type_score >= 1.0 or memory_type in {
-        "constraint",
-        "decision",
-        "lesson",
-        "qa_result",
-        "preference",
-    }:
-        factors.append(type_label)
-
-    if float(score_breakdown.get("recency", 0.0)) >= 0.85:
-        factors.append("recent")
-
-    keyword = float(score_breakdown.get("keyword", 0.0))
-    semantic = float(score_breakdown.get("semantic", 0.0))
-    if keyword >= 0.25:
-        factors.append("keyword match")
-    elif semantic >= 0.25:
-        factors.append("semantic match")
-
-    if int(row["pinned"]):
-        factors.append("pinned")
-
-    if _is_canon_memory_row(row):
-        factors.append("canon memory")
-
-    deduped: list[str] = []
-    for factor in factors:
-        if factor not in deduped:
-            deduped.append(factor)
-
-    if not deduped:
-        deduped.append("hybrid score rank")
-
-    return "Pulled because: " + " + ".join(deduped[:4])
 
 
 def _build_retrieval_explanation(
@@ -5316,49 +4489,22 @@ def _build_retrieval_explanation(
     linked_ticket_ids: list[int] | None = None,
     open_tickets_by_id: dict[int, sqlite3.Row] | None = None,
 ) -> dict[str, object]:
-    provenance = _memory_provenance_ids(row)
-    linked = list(linked_ticket_ids or [])
-    open_map = open_tickets_by_id or {}
-    inclusion_reason = _build_inclusion_reason(
+    return memory_retrieval.build_retrieval_explanation(
+        sys.modules[__name__],
         row,
-        query=query,
+        score=score,
         score_breakdown=score_breakdown,
-        linked_ticket_ids=linked,
-        open_tickets_by_id=open_map,
+        retrieval_mode=retrieval_mode,
+        query=query,
+        linked_ticket_ids=linked_ticket_ids,
+        open_tickets_by_id=open_tickets_by_id,
     )
-    return {
-        "source": str(row["source"]),
-        "memory_type": str(row["memory_type"]),
-        "status": str(row["status"]),
-        "pinned": bool(int(row["pinned"])),
-        "is_canon": _is_canon_memory_row(row),
-        "score": score,
-        "score_breakdown": score_breakdown,
-        "retrieval_mode": retrieval_mode,
-        "provenance": provenance,
-        "provenance_available": _available_provenance_ids(provenance),
-        "inclusion_reason": inclusion_reason,
-        "attribution": _memory_item_attribution(row),
-    }
+
 
 
 def _memory_item_attribution(row: sqlite3.Row) -> dict[str, object] | None:
-    import agent_identity
+    return memory_store.memory_item_attribution(sys.modules[__name__], row)
 
-    meta_raw = row["metadata_json"] if "metadata_json" in row.keys() else None
-    attr = agent_identity.attribution_for_memory_row(
-        str(meta_raw) if meta_raw is not None else None
-    )
-    if attr is not None:
-        return attr
-    return {
-        "agent_id": agent_identity.normalize_agent_id(
-            None, fallback_source=str(row["source"])
-        ),
-        "source": str(row["source"]),
-        "timestamp": str(row["created_at"]),
-        "inferred": True,
-    }
 
 
 
@@ -5370,41 +4516,15 @@ def _score_memory_item(
     active_project_id: int | None,
     inferred_types: set[str],
 ) -> tuple[float, dict[str, float]]:
-    recency = _recency_score(str(row["created_at"]))
-    importance = _importance_score(int(row["importance"]))
-    type_match = _type_match_score(str(row["memory_type"]), inferred_types)
-    project_match = _project_match_score(
-        int(row["project_id"]) if row["project_id"] is not None else None,
-        active_project_id,
+    return memory_retrieval.score_memory_item(
+        sys.modules[__name__],
+        row,
+        semantic=semantic,
+        keyword=keyword,
+        active_project_id=active_project_id,
+        inferred_types=inferred_types,
     )
-    pinned_bonus = W_SCORE_PINNED_BONUS if int(row["pinned"]) else 0.0
-    import memory_tiers
 
-    tier_bonus = memory_tiers.retrieval_tier_boost(
-        str(row["metadata_json"]) if row["metadata_json"] else None,
-        pinned=bool(int(row["pinned"])),
-    )
-    breakdown = {
-        "semantic": round(semantic, 4),
-        "keyword": round(keyword, 4),
-        "recency": round(recency, 4),
-        "importance": round(importance, 4),
-        "type_match": round(type_match, 4),
-        "project_match": round(project_match, 4),
-        "pinned_bonus": round(pinned_bonus, 4),
-        "tier_bonus": round(tier_bonus, 4),
-    }
-    score = (
-        W_SCORE_SEMANTIC * semantic
-        + W_SCORE_KEYWORD * keyword
-        + W_SCORE_RECENCY * recency
-        + W_SCORE_IMPORTANCE * importance
-        + W_SCORE_TYPE * type_match
-        + W_SCORE_PROJECT * project_match
-        + pinned_bonus
-        + tier_bonus
-    )
-    return round(score, 4), breakdown
 
 
 def retrieve_memories(
@@ -5413,218 +4533,11 @@ def retrieve_memories(
     project_id: int | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> list[dict[str, object]]:
-    """
-    Hybrid retrieval over memory_items.
-    Returns scored dicts with id, type, content, score, score_breakdown,
-    inclusion_reason, status, is_canon, provenance, and read-only explanation metadata.
-    Ranking behavior is unchanged; explanation fields are diagnostic only.
-    """
-    global _last_retrieval_mode
+    """Hybrid retrieval over memory_items."""
+    return memory_retrieval.retrieve_memories(
+        sys.modules[__name__], query, limit, project_id=project_id, conn=conn
+    )
 
-    owns_conn = conn is None
-    conn = conn or connect_db()
-    try:
-        _lazy_backfill_embeddings(conn)
-        active_project_id = project_id
-        if active_project_id is None:
-            project = conn.execute(
-                "SELECT id FROM projects WHERE status = 'active' ORDER BY id ASC LIMIT 1"
-            ).fetchone()
-            active_project_id = int(project["id"]) if project else None
-
-        query_embedding = embed_text(query)
-        semantic_scores = _semantic_candidate_scores(
-            conn, query_embedding, MEMORY_RETRIEVE_VECTOR_CANDIDATES
-        )
-        keyword_scores = _keyword_candidate_scores(
-            conn, query, MEMORY_RETRIEVE_KEYWORD_CANDIDATES
-        )
-
-        candidate_ids: set[int] = set(semantic_scores) | set(keyword_scores)
-
-        pinned_rows = conn.execute(
-            "SELECT id FROM memory_items WHERE status = 'active' AND pinned = 1"
-        ).fetchall()
-        for row in pinned_rows:
-            candidate_ids.add(int(row["id"]))
-
-        summary_rows = conn.execute(
-            """
-            SELECT id FROM memory_items
-            WHERE status = 'active' AND memory_type = 'summary'
-            ORDER BY created_at DESC
-            LIMIT ?
-            """,
-            (MEMORY_RETRIEVE_SUMMARY_CANDIDATES,),
-        ).fetchall()
-        for row in summary_rows:
-            candidate_ids.add(int(row["id"]))
-
-        inferred_types = _infer_query_memory_types(query)
-        open_tickets_by_id: dict[int, sqlite3.Row] = {}
-        if active_project_id is not None:
-            for ticket_row in list_tickets(
-                project_id=active_project_id, open_only=True, limit=50
-            ):
-                open_tickets_by_id[int(ticket_row["id"])] = ticket_row
-        open_ticket_ids = set(open_tickets_by_id.keys())
-        linked_by_mem = _tickets_by_linked_memory_ids(list(candidate_ids))
-        import memory_ticket_linkage
-
-        max_ticket_id = memory_ticket_linkage.max_ticket_id(conn)
-        query_ticket_ids: set[int] = set()
-        import handoff_ticket_bridge
-
-        for ticket_id in handoff_ticket_bridge.extract_referenced_ticket_ids(query):
-            if 1 <= ticket_id <= max_ticket_id:
-                query_ticket_ids.add(ticket_id)
-        query_ticket_rows: dict[int, sqlite3.Row] = {}
-        for ticket_id in query_ticket_ids:
-            ticket_row = conn.execute(
-                "SELECT * FROM tickets WHERE id = ?",
-                (ticket_id,),
-            ).fetchone()
-            if ticket_row is not None:
-                query_ticket_rows[ticket_id] = ticket_row
-        results: list[dict[str, object]] = []
-        semantic_used = bool(query_embedding and semantic_scores)
-
-        for memory_id in candidate_ids:
-            row = _load_active_memory_item(conn, memory_id)
-            if row is None:
-                continue
-            score, breakdown = _score_memory_item(
-                row,
-                semantic=semantic_scores.get(memory_id, 0.0),
-                keyword=keyword_scores.get(memory_id, 0.0),
-                active_project_id=active_project_id,
-                inferred_types=inferred_types,
-            )
-            linked_ticket_ids = linked_by_mem.get(memory_id, [])
-            ticket_boost = 0.0
-            if query_ticket_ids and any(
-                ticket_id in query_ticket_ids for ticket_id in linked_ticket_ids
-            ):
-                ticket_boost = W_SCORE_OPEN_TICKET_BOOST
-            elif open_ticket_ids and any(
-                ticket_id in open_ticket_ids for ticket_id in linked_ticket_ids
-            ):
-                ticket_boost = W_SCORE_OPEN_TICKET_BOOST
-            elif query_ticket_rows:
-                for ticket_row in query_ticket_rows.values():
-                    if _memory_relates_to_ticket(row, ticket_row):
-                        ticket_boost = W_SCORE_OPEN_TICKET_BOOST * 0.85
-                        break
-            elif open_ticket_ids:
-                for ticket_id in open_ticket_ids:
-                    ticket_row = open_tickets_by_id[ticket_id]
-                    if _memory_relates_to_ticket(row, ticket_row):
-                        ticket_boost = W_SCORE_OPEN_TICKET_BOOST * 0.75
-                        break
-            if ticket_boost:
-                score = round(float(score) + ticket_boost, 4)
-                breakdown = dict(breakdown)
-                breakdown["open_ticket_boost"] = round(ticket_boost, 4)
-            display = _memory_display_text(row)
-            row_summary = str(row["summary"]) if row["summary"] else ""
-            source_text = f"{row['content']} {row_summary}".strip()
-            row_confidence = row["confidence"] if "confidence" in row.keys() else 1.0
-            results.append(
-                {
-                    "id": memory_id,
-                    "memory_type": str(row["memory_type"]),
-                    "content": display,
-                    "source_text": source_text,
-                    "importance": int(row["importance"]),
-                    "confidence": round(float(row_confidence), 4),
-                    "source": str(row["source"]),
-                    "created_at": str(row["created_at"]),
-                    "project_id": int(row["project_id"])
-                    if row["project_id"] is not None
-                    else None,
-                    "pinned": bool(int(row["pinned"])),
-                    "score": score,
-                    "score_breakdown": breakdown,
-                    "_row": row,
-                }
-            )
-
-        results.sort(
-            key=lambda item: (
-                float(item["score"]),
-                int(item["importance"]),
-                str(item["created_at"]),
-            ),
-            reverse=True,
-        )
-
-        if semantic_used:
-            _last_retrieval_mode = "vector+keyword"
-        else:
-            _last_retrieval_mode = "keyword-only fallback"
-
-        record_system_metric(
-            "retrieval",
-            label=_last_retrieval_mode,
-            payload={"count": len(results[:limit])},
-        )
-
-        mode = _last_retrieval_mode
-        memory_ids = [int(item["id"]) for item in results]
-        linked_map = _tickets_by_linked_memory_ids(memory_ids)
-        if not open_tickets_by_id and active_project_id is not None:
-            for ticket_row in list_tickets(
-                project_id=active_project_id, open_only=True, limit=50
-            ):
-                open_tickets_by_id[int(ticket_row["id"])] = ticket_row
-
-        finalized: list[dict[str, object]] = []
-        for item in results:
-            row = item.pop("_row")  # type: ignore[misc]
-            assert isinstance(row, sqlite3.Row)
-            memory_id = int(item["id"])
-            explanation = _build_retrieval_explanation(
-                row,
-                score=float(item["score"]),
-                score_breakdown=dict(item["score_breakdown"]),  # type: ignore[arg-type]
-                retrieval_mode=mode,
-                query=query,
-                linked_ticket_ids=linked_map.get(memory_id, []),
-                open_tickets_by_id=open_tickets_by_id,
-            )
-            item["status"] = explanation["status"]
-            item["is_canon"] = explanation["is_canon"]
-            item["provenance"] = explanation["provenance"]
-            item["provenance_available"] = explanation["provenance_available"]
-            item["inclusion_reason"] = explanation["inclusion_reason"]
-            item["explanation"] = explanation
-            import memory_tiers
-
-            item["memory_tier"] = memory_tiers.tier_from_metadata_json(
-                str(row["metadata_json"]) if row["metadata_json"] else None
-            )
-            if int(row["pinned"]):
-                item["memory_tier"] = "canonical"
-            finalized.append(item)
-        results = finalized
-
-        top = results[:limit]
-        if top:
-            now = _now_iso()
-            for item in top:
-                conn.execute(
-                    """
-                    UPDATE memory_items
-                    SET access_count = access_count + 1, last_accessed_at = ?
-                    WHERE id = ?
-                    """,
-                    (now, int(item["id"])),
-                )
-            conn.commit()
-        return top
-    finally:
-        if owns_conn:
-            conn.close()
 
 
 # --- local memory bus (V3.7) --------------------------------------------------
@@ -5686,41 +4599,13 @@ def parse_phase_progress(phase: str | None) -> dict[str, object] | None:
 
 
 def _memory_item_layer(row: sqlite3.Row) -> str:
-    if _is_canon_memory_row(row):
-        return "canon"
-    if int(row["pinned"]) == 1:
-        return "pinned"
-    return "memory"
+    return memory_store.memory_item_layer(sys.modules[__name__], row)
+
 
 
 def _memory_item_api_dict(row: sqlite3.Row) -> dict[str, object]:
-    import agent_identity
+    return memory_store.memory_item_api_dict(sys.modules[__name__], row)
 
-    item = row_to_dict(row)
-    item.pop("embedding_blob", None)
-    item["display"] = _memory_display_text(row)
-    item["is_canon"] = _is_canon_memory_row(row)
-    item["is_pinned"] = bool(int(row["pinned"]))
-    item["memory_layer"] = _memory_item_layer(row)
-    meta_raw = row["metadata_json"] if "metadata_json" in row.keys() else None
-    attr = agent_identity.attribution_for_memory_row(
-        str(meta_raw) if meta_raw is not None else None
-    )
-    if attr is not None:
-        item["attribution"] = attr
-        item["agent_id"] = attr.get("agent_id")
-    else:
-        item["agent_id"] = agent_identity.normalize_agent_id(
-            None, fallback_source=str(row["source"])
-        )
-    import memory_tiers
-
-    item["memory_tier"] = memory_tiers.tier_from_metadata_json(
-        str(meta_raw) if meta_raw is not None else None
-    )
-    if int(row["pinned"]):
-        item["memory_tier"] = "canonical"
-    return item
 
 
 def _memory_counts_payload(displayed: int) -> dict[str, object]:
@@ -7390,14 +6275,8 @@ def parse_terminal_writeback(raw: str | dict[str, object]) -> TerminalWritebackP
 
 
 def _memory_item_metadata(row: sqlite3.Row) -> dict[str, object]:
-    raw = row["metadata_json"] if "metadata_json" in row.keys() else None
-    if not raw:
-        return {}
-    try:
-        parsed = json.loads(str(raw))
-    except (json.JSONDecodeError, TypeError):
-        return {}
-    return parsed if isinstance(parsed, dict) else {}
+    return memory_store.memory_item_metadata(row)
+
 
 
 def _portable_session_receipt_metadata(
