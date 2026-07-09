@@ -73,7 +73,7 @@ def vec_bind(vector: list[float]) -> bytes:
 
 
 def ensure_memory_vec_table(rt: Any, conn: Any) -> bool:
-    if not try_load_sqlite_vec(rt, conn):
+    if not rt._try_load_sqlite_vec(conn):
         return False
     row = conn.execute(
         """

@@ -16,11 +16,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import crowley_core
+import agent_sync_bundle
 import memory_embeddings
 import memory_retrieval
 import memory_store
 import model_runtime
 import ollama
+import portable_context
+import world_state
 
 try:
     import pysqlite3 as sqlite3
@@ -937,157 +940,49 @@ def _seed_default_project(conn: sqlite3.Connection) -> None:
 # --- world model (V3) ---------------------------------------------------------
 
 
-def get_active_project() -> sqlite3.Row | None:
-    """Return the active project row, if any."""
-    conn = connect_db()
-    try:
-        return conn.execute(
-            "SELECT * FROM projects WHERE status = 'active' ORDER BY id ASC LIMIT 1"
-        ).fetchone()
-    finally:
-        conn.close()
+def get_active_project(*args, **kwargs) -> sqlite3.Row | None:
+    return world_state.get_active_project(sys.modules[__name__], *args, **kwargs)
 
 
-def get_project_by_slug(slug: str) -> sqlite3.Row | None:
-    """Return a project row by slug (case-insensitive), if any."""
-    normalized = slug.strip()
-    if not normalized:
-        return None
-    conn = connect_db()
-    try:
-        return conn.execute(
-            "SELECT * FROM projects WHERE LOWER(slug) = LOWER(?) LIMIT 1",
-            (normalized,),
-        ).fetchone()
-    finally:
-        conn.close()
+
+def get_project_by_slug(*args, **kwargs) -> sqlite3.Row | None:
+    return world_state.get_project_by_slug(sys.modules[__name__], *args, **kwargs)
 
 
-def get_project_state(project_id: int) -> sqlite3.Row | None:
-    """Return current state for a project."""
-    conn = connect_db()
-    try:
-        return conn.execute(
-            "SELECT * FROM project_state WHERE project_id = ?",
-            (project_id,),
-        ).fetchone()
-    finally:
-        conn.close()
+
+def get_project_state(*args, **kwargs) -> sqlite3.Row | None:
+    return world_state.get_project_state(sys.modules[__name__], *args, **kwargs)
 
 
-def update_project_state_field(
-    project_id: int, field: str, value: str, updated_by: str = "user"
-) -> None:
-    """Update one project_state column."""
-    if field not in STATE_FIELDS:
-        raise ValueError(f"invalid state field: {field}")
-    now = _now_iso()
-    conn = connect_db()
-    try:
-        conn.execute(
-            f"UPDATE project_state SET {field} = ?, updated_at = ?, updated_by = ? WHERE project_id = ?",
-            (value, now, updated_by, project_id),
-        )
-        conn.execute(
-            "UPDATE projects SET updated_at = ? WHERE id = ?",
-            (now, project_id),
-        )
-        conn.commit()
-    finally:
-        conn.close()
+
+def update_project_state_field(*args, **kwargs) -> None:
+    return world_state.update_project_state_field(sys.modules[__name__], *args, **kwargs)
 
 
-def save_decision(
-    project_id: int,
-    summary: str,
-    detail: str | None = None,
-    source: str = "command",
-    message_id: int | None = None,
-) -> int:
-    """Append a decision and return its id."""
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            """
-            INSERT INTO decisions (project_id, timestamp, summary, detail, source, message_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (project_id, _now_iso(), summary, detail, source, message_id),
-        )
-        conn.commit()
-        return int(cur.lastrowid)
-    finally:
-        conn.close()
+
+def save_decision(*args, **kwargs) -> int:
+    return world_state.save_decision(sys.modules[__name__], *args, **kwargs)
 
 
-def list_decisions(project_id: int, limit: int = DECISIONS_LIMIT) -> list[sqlite3.Row]:
-    """Return recent decisions for a project."""
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM decisions WHERE project_id = ?
-            ORDER BY id DESC LIMIT ?
-            """,
-            (project_id, limit),
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
+
+def list_decisions(*args, **kwargs) -> list[sqlite3.Row]:
+    return world_state.list_decisions(sys.modules[__name__], *args, **kwargs)
 
 
-def save_open_loop(
-    project_id: int,
-    description: str,
-    priority: int = 3,
-    source: str = "command",
-) -> int:
-    """Create an open loop and return its id."""
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            """
-            INSERT INTO open_loops (project_id, timestamp, description, status, priority, source)
-            VALUES (?, ?, ?, 'open', ?, ?)
-            """,
-            (project_id, _now_iso(), description, priority, source),
-        )
-        conn.commit()
-        return int(cur.lastrowid)
-    finally:
-        conn.close()
+
+def save_open_loop(*args, **kwargs) -> int:
+    return world_state.save_open_loop(sys.modules[__name__], *args, **kwargs)
 
 
-def list_open_loops(
-    project_id: int, status: str = "open", limit: int = LOOPS_LIMIT
-) -> list[sqlite3.Row]:
-    """Return open loops for a project."""
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM open_loops WHERE project_id = ? AND status = ?
-            ORDER BY priority DESC, id ASC LIMIT ?
-            """,
-            (project_id, status, limit),
-        ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
+
+def list_open_loops(*args, **kwargs) -> list[sqlite3.Row]:
+    return world_state.list_open_loops(sys.modules[__name__], *args, **kwargs)
 
 
-def close_open_loop(loop_id: int) -> bool:
-    """Mark an open loop closed. Returns False if not found."""
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            "UPDATE open_loops SET status = 'closed' WHERE id = ? AND status = 'open'",
-            (loop_id,),
-        )
-        conn.commit()
-        return cur.rowcount > 0
-    finally:
-        conn.close()
+
+def close_open_loop(*args, **kwargs) -> bool:
+    return world_state.close_open_loop(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _state_display(value: str | None) -> str:
@@ -1096,19 +991,9 @@ def _state_display(value: str | None) -> str:
     return value
 
 
-def get_active_world_context() -> dict[str, object] | None:
-    """Structured active project context for prompts and display."""
-    project = get_active_project()
-    if project is None:
-        return None
-    state = get_project_state(int(project["id"]))
-    pid = int(project["id"])
-    return {
-        "project": project,
-        "state": state,
-        "decisions": list_decisions(pid, limit=WORLD_DECISIONS_IN_PROMPT),
-        "open_loops": list_open_loops(pid, status="open", limit=WORLD_LOOPS_IN_PROMPT),
-    }
+def get_active_world_context(*args, **kwargs) -> dict[str, object] | None:
+    return world_state.get_active_world_context(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _format_world_context_section(ctx: dict[str, object]) -> str:
@@ -2869,22 +2754,9 @@ def save_task(
         conn.close()
 
 
-def list_tasks(status: str | None = None) -> list[sqlite3.Row]:
-    """Return tasks ordered by due date (nulls last), then id."""
-    conn = connect_db()
-    try:
-        if status is None:
-            rows = conn.execute(
-                "SELECT * FROM tasks ORDER BY (due_date IS NULL), due_date ASC, id ASC"
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM tasks WHERE status = ? ORDER BY (due_date IS NULL), due_date ASC, id ASC",
-                (status,),
-            ).fetchall()
-        return list(rows)
-    finally:
-        conn.close()
+def list_tasks(*args, **kwargs) -> list[sqlite3.Row]:
+    return world_state.list_tasks(sys.modules[__name__], *args, **kwargs)
+
 
 
 def get_task_by_id(task_id: int) -> sqlite3.Row | None:
@@ -3068,50 +2940,9 @@ def _rank_supporting_memories(memories: list[dict[str, object]]) -> list[dict[st
     return sorted(memories, key=_supporting_memory_rank_key, reverse=True)
 
 
-def retrieve_work_context_memories(
-    project_id: int | None,
-    agent: str | None = None,
-    *,
-    limit: int = SUPPORTING_MEMORIES_CAP,
-) -> dict[str, object]:
-    """Ticket-narrative supporting retrieval for dashboard and agent sync (V3.9.10 #65)."""
-    query, tickets = build_ticket_aware_retrieval_query(project_id, agent)
-    effective_limit = min(max(1, int(limit)), SUPPORTING_MEMORIES_CAP)
-    handoff_ids = _recent_handoff_memory_ids(project_id)
-    fetch_limit = max(effective_limit * 4, 16)
-    memories = retrieve_memories(query, limit=fetch_limit, project_id=project_id)
-    memories = [
-        item for item in memories if int(item["id"]) not in handoff_ids
-    ]
-    memories = _rank_supporting_memories(memories)
-    anchors = _ticket_anchor_memories(project_id, tickets)
-    if anchors:
-        merged: list[dict[str, object]] = []
-        seen: set[int] = set()
-        for item in anchors + memories:
-            memory_id = int(item["id"])
-            if memory_id in seen or memory_id in handoff_ids:
-                continue
-            seen.add(memory_id)
-            merged.append(item)
-            if len(merged) >= effective_limit:
-                break
-        memories = merged[:effective_limit]
-    else:
-        memories = memories[:effective_limit]
-    return {
-        "query": query,
-        "tickets": [
-            {
-                "id": int(ticket["id"]),
-                "title": str(ticket.get("title") or ""),
-                "status": str(ticket.get("status") or "open"),
-                "assignee": str(ticket.get("assignee") or ""),
-            }
-            for ticket in tickets
-        ],
-        "memories": memories,
-    }
+def retrieve_work_context_memories(*args, **kwargs) -> dict[str, object]:
+    return world_state.retrieve_work_context_memories(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _task_frame_ticket_payload(ticket: dict[str, object]) -> dict[str, object]:
@@ -3140,126 +2971,9 @@ def _task_frame_ticket_payload(ticket: dict[str, object]) -> dict[str, object]:
     return payload
 
 
-def build_task_frame_context(
-    project_id: int | None,
-    agent: str | None = None,
-    *,
-    sync_limit: int | None = None,
-) -> dict[str, object]:
-    """Structured task brief: working tickets, handoff, guardrails (V3.9.10 #64)."""
-    import agent_sync_envelope
+def build_task_frame_context(*args, **kwargs) -> dict[str, object]:
+    return world_state.build_task_frame_context(sys.modules[__name__], *args, **kwargs)
 
-    normalized_agent = (
-        agent.strip().lower() if isinstance(agent, str) and agent.strip() else None
-    )
-    role = get_agent_role(normalized_agent) if normalized_agent else None
-    section_caps = (
-        agent_sync_envelope.section_caps(sync_limit)
-        if sync_limit is not None
-        else {
-            "task_frame_working": TASK_FRAME_WORKING_ON_CAP,
-            "decisions": AGENT_SYNC_DECISIONS_CAP,
-            "constraints": AGENT_SYNC_CONSTRAINTS_CAP,
-            "tickets_open": 50,
-        }
-    )
-    empty_guardrails = {"recent_decisions": [], "constraint_memories": []}
-    caps = {
-        "working_on": section_caps["task_frame_working"],
-        "recent_decisions": section_caps["decisions"],
-        "constraint_memories": section_caps["constraints"],
-    }
-    if project_id is None:
-        return {
-            "agent": normalized_agent,
-            "role": role,
-            "working_on": [],
-            "blockers": [],
-            "last_handoff": None,
-            "guardrails": empty_guardrails,
-            "caps": caps,
-        }
-
-    summary = build_tickets_summary(
-        project_id,
-        normalized_agent,
-        open_limit=section_caps["tickets_open"],
-        closed_limit=min(5, section_caps["tickets_open"]),
-    )
-    working_on: list[dict[str, object]] = []
-    seen_work_ids: set[int] = set()
-
-    def add_work(ticket: object) -> None:
-        if not isinstance(ticket, dict) or ticket.get("id") is None:
-            return
-        ticket_id = int(ticket["id"])
-        if ticket_id in seen_work_ids:
-            return
-        status = str(ticket.get("status") or "")
-        if status not in {"in_progress", "open", "claimed"}:
-            return
-        seen_work_ids.add(ticket_id)
-        working_on.append(_task_frame_ticket_payload(ticket))
-
-    if normalized_agent:
-        assigned = summary.get("assigned_to_agent") or []
-        if isinstance(assigned, list):
-            for ticket in sorted(
-                assigned,
-                key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
-            ):
-                add_work(ticket)
-    else:
-        open_rows = summary.get("open") or []
-        if isinstance(open_rows, list):
-            for ticket in sorted(
-                [
-                    row
-                    for row in open_rows
-                    if isinstance(row, dict) and str(row.get("status")) == "in_progress"
-                ],
-                key=lambda row: (int(row.get("priority", 4)), int(row.get("id", 0))),
-            ):
-                add_work(ticket)
-
-    blockers: list[dict[str, object]] = []
-    blocked_rows = summary.get("blocked") or []
-    if isinstance(blocked_rows, list):
-        for ticket in blocked_rows:
-            if not isinstance(ticket, dict):
-                continue
-            if normalized_agent and str(ticket.get("assignee", "")).lower() != normalized_agent:
-                continue
-            blockers.append(_task_frame_ticket_payload(ticket))
-
-    activity = _agent_activity_summary(project_id)
-    last_by_source = activity.get("last_by_source")
-    last_handoff: dict[str, object] | None = None
-    if normalized_agent and isinstance(last_by_source, dict):
-        entry = last_by_source.get(normalized_agent)
-        if isinstance(entry, dict):
-            last_handoff = dict(entry)
-
-    recent_decisions = [
-        row_to_dict(row)
-        for row in list_decisions(project_id, limit=section_caps["decisions"])
-    ]
-    constraint_memories = _list_constraint_memories(
-        project_id, limit=section_caps["constraints"]
-    )
-
-    return {
-        "agent": normalized_agent,
-        "role": role,
-        "working_on": working_on[: section_caps["task_frame_working"]],
-        "blockers": blockers[: section_caps["task_frame_working"]],
-        "last_handoff": last_handoff,
-        "guardrails": {
-            "recent_decisions": recent_decisions,
-            "constraint_memories": constraint_memories,
-        },
-        "caps": caps,
-    }
 
 
 def _cursor_in_progress_task_frame_tickets(
@@ -4558,18 +4272,9 @@ def _database_status() -> str:
         return "error"
 
 
-def _state_payload_for_api(state: sqlite3.Row | None) -> dict[str, object] | None:
-    if state is None:
-        return None
-    return {
-        "phase": _state_display(state["phase"]),
-        "focus": _state_display(state["focus"]),
-        "current_risk": _state_display(state["current_risk"]),
-        "next_action": _state_display(state["next_action"]),
-        "what_changed": _state_display(state["what_changed"]),
-        "updated_at": state["updated_at"],
-        "updated_by": state["updated_by"],
-    }
+def _state_payload_for_api(*args, **kwargs) -> dict[str, object] | None:
+    return world_state._state_payload_for_api(sys.modules[__name__], *args, **kwargs)
+
 
 
 _PHASE_PROGRESS_RE = re.compile(
@@ -4578,24 +4283,9 @@ _PHASE_PROGRESS_RE = re.compile(
 )
 
 
-def parse_phase_progress(phase: str | None) -> dict[str, object] | None:
-    """Parse 'Phase 1/6' or 'Phase 2 of 6' from project_state.phase text."""
-    if not phase or not str(phase).strip():
-        return None
-    text = str(phase).strip()
-    match = _PHASE_PROGRESS_RE.search(text)
-    if not match:
-        return None
-    current = int(match.group(1))
-    total = int(match.group(2))
-    if total < 1 or current < 1 or current > total:
-        return None
-    return {
-        "current": current,
-        "total": total,
-        "fraction": round(current / total, 3),
-        "label": text,
-    }
+def parse_phase_progress(*args, **kwargs) -> dict[str, object] | None:
+    return world_state.parse_phase_progress(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _memory_item_layer(row: sqlite3.Row) -> str:
@@ -4608,21 +4298,14 @@ def _memory_item_api_dict(row: sqlite3.Row) -> dict[str, object]:
 
 
 
-def _memory_counts_payload(displayed: int) -> dict[str, object]:
-    by_status = count_memory_items_by_status()
-    active = int(by_status.get("active", 0))
-    total = sum(int(value) for value in by_status.values())
-    return {
-        "memory": active,
-        "memory_active": active,
-        "memory_total": total,
-        "memory_displayed": displayed,
-        "memory_by_status": by_status,
-    }
+def _memory_counts_payload(*args, **kwargs) -> dict[str, object]:
+    return world_state._memory_counts_payload(sys.modules[__name__], *args, **kwargs)
 
 
-def _canon_api_items(project_id: int | None = None) -> list[dict[str, object]]:
-    return [_memory_item_api_dict(row) for row in list_canon_memory_items(project_id)]
+
+def _canon_api_items(*args, **kwargs) -> list[dict[str, object]]:
+    return world_state._canon_api_items(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _agent_sync_memory_limit(limit: int) -> int:
@@ -4632,301 +4315,44 @@ def _agent_sync_memory_limit(limit: int) -> int:
     return caps["memories"]
 
 
-def _list_constraint_memories(
-    project_id: int | None,
-    *,
-    limit: int = AGENT_SYNC_CONSTRAINTS_CAP,
-) -> list[dict[str, object]]:
-    if project_id is None:
-        return []
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM memory_items
-            WHERE status = 'active' AND memory_type = 'constraint'
-              AND project_id = ?
-            ORDER BY importance DESC, created_at DESC
-            LIMIT ?
-            """,
-            (project_id, limit),
-        ).fetchall()
-        return [_memory_item_api_dict(row) for row in rows]
-    finally:
-        conn.close()
+def _list_constraint_memories(*args, **kwargs) -> list[dict[str, object]]:
+    return world_state._list_constraint_memories(sys.modules[__name__], *args, **kwargs)
 
 
-def _agent_sync_event_dict(event: dict[str, object]) -> dict[str, object]:
-    content = event.get("content") or event.get("display") or ""
-    return {
-        **event,
-        "summary": _handoff_summary_line(str(content)),
-    }
+
+def _agent_sync_event_dict(*args, **kwargs) -> dict[str, object]:
+    return world_state._agent_sync_event_dict(sys.modules[__name__], *args, **kwargs)
 
 
-def _format_canon_prompt_section(canon_rows: list[sqlite3.Row]) -> str:
-    lines = [
-        "Canonical memory trail:",
-        (
-            "Always-on continuity — not top authority. Filesystem truth, tickets, "
-            "agent activity, and live DB state outrank canon; canon outranks hybrid "
-            "retrieval and recent chat."
-        ),
-    ]
-    if not canon_rows:
-        lines.append("(no canon rows stored)")
-        return "\n".join(lines)
-    for row in canon_rows:
-        content = _memory_display_text(row)
-        if len(content) > MEMORY_LINE_MAX * 2:
-            content = content[: MEMORY_LINE_MAX * 2 - 3] + "..."
-        lines.append(f"[canon:{row['id']} | importance {row['importance']}] {content}")
-    return "\n".join(lines)
+
+def _format_canon_prompt_section(*args, **kwargs) -> str:
+    return world_state._format_canon_prompt_section(sys.modules[__name__], *args, **kwargs)
 
 
-def build_world_dashboard() -> dict[str, object]:
-    """Single read-only snapshot for live UI sync (project + intelligence panels)."""
-    project = get_active_project()
-    if project is None:
-        return {
-            "project": None,
-            "state": None,
-            "phase_progress": None,
-            "version": CROWLEY_VERSION,
-            "release_label": CROWLEY_RELEASE_LABEL,
-            "counts": {
-                "tasks_open": 0,
-                "loops_open": 0,
-                "decisions": 0,
-                "tickets_open": 0,
-                "tickets_in_progress": 0,
-                "tickets_blocked": 0,
-                "agent_feed": 0,
-                "recent_changes": 0,
-                **_memory_counts_payload(0),
-            },
-            "tasks": [],
-            "tickets": [],
-            "ticket_groups": [],
-            "loops": [],
-            "decisions": [],
-            "memory_items": [],
-            "recent_changes": [],
-            "agent_activity": {"last_by_source": {}, "latest_contact": None, "recent": []},
-            "activity_wire": {
-                "pinned_focus": None,
-                "active_agents": [],
-                "items": [],
-                "cap": ACTIVITY_WIRE_WORLD_CAP,
-            },
-            "task_frame": build_task_frame_context(None),
-            "operator_metrics": get_metrics_summary_24h(),
-            "synced_at": _now_iso(),
-        }
 
-    project_id = int(project["id"])
-    state = get_project_state(project_id)
-    state_payload = _state_payload_for_api(state)
-    phase_progress = None
-    if state_payload and state_payload.get("phase"):
-        phase_progress = parse_phase_progress(str(state_payload["phase"]))
-
-    tasks = list_tasks(status="open")
-    ticket_summary = build_tickets_summary(project_id)
-    loops = list_open_loops(project_id, status="open", limit=50)
-    loops_sorted = sorted(loops, key=lambda row: (int(row["priority"]), int(row["id"])))
-    decisions = list_decisions(project_id, limit=10)
-    memory_rows = list_recent_memory_items(10)
-    memory_counts = _memory_counts_payload(len(memory_rows))
-    agent_activity = _agent_activity_summary(project_id)
-    recent_activity = agent_activity.get("recent") or []
-    recent_changes = build_recent_changes_feed(project_id)
-    recent_change_items = recent_changes.get("items") or []
-    retrieval_context = retrieve_work_context_memories(project_id, agent=None)
-    task_frame = build_task_frame_context(project_id, agent=None)
-    activity_wire_full = build_activity_wire(project_id, limit=ACTIVITY_WIRE_WORLD_CAP)
-    activity_wire = {
-        "pinned_focus": activity_wire_full.get("pinned_focus"),
-        "active_agents": activity_wire_full.get("active_agents") or [],
-        "items": (activity_wire_full.get("items") or [])[:ACTIVITY_WIRE_WORLD_CAP],
-        "cap": ACTIVITY_WIRE_WORLD_CAP,
-    }
-
-    return {
-        "project": row_to_dict(project),
-        "state": state_payload,
-        "phase_progress": phase_progress,
-        "version": CROWLEY_VERSION,
-        "release_label": CROWLEY_RELEASE_LABEL,
-        "counts": {
-            "tasks_open": len(tasks),
-            "loops_open": len(loops_sorted),
-            "decisions": len(decisions),
-            "tickets_open": int((ticket_summary.get("counts") or {}).get("open", 0)),
-            "tickets_in_progress": int(
-                (ticket_summary.get("counts") or {}).get("in_progress", 0)
-            ),
-            "tickets_blocked": int((ticket_summary.get("counts") or {}).get("blocked", 0)),
-            "tickets_open_total": int(
-                (ticket_summary.get("counts") or {}).get("open_total", 0)
-            ),
-            "agent_feed": len(recent_activity),
-            "recent_changes": len(recent_change_items),
-            **memory_counts,
-        },
-        "tasks": [row_to_dict(row) for row in tasks],
-        "tickets": ticket_summary.get("open", []),
-        "ticket_groups": ticket_summary.get("grouped_open", []),
-        "loops": [row_to_dict(row) for row in loops_sorted],
-        "decisions": [row_to_dict(row) for row in decisions],
-        "memory_items": [_memory_item_api_dict(row) for row in memory_rows],
-        "recent_changes": recent_change_items,
-        "filesystem": build_filesystem_dashboard(),
-        "project_files": get_project_files_context(),
-        "agent_activity": agent_activity,
-        "activity_wire": activity_wire,
-        "task_frame": task_frame,
-        "relevant_memories": retrieval_context["memories"],
-        "relevant_memories_query": retrieval_context["query"],
-        "relevant_memories_tickets": retrieval_context["tickets"],
-        "operator_metrics": get_metrics_summary_24h(),
-        "synced_at": _now_iso(),
-    }
+def build_world_dashboard(*args, **kwargs) -> dict[str, object]:
+    return world_state.build_world_dashboard(sys.modules[__name__], *args, **kwargs)
 
 
-def update_task_status(task_id: int, status: str) -> bool:
-    """Update task status (e.g. open → done). Returns True if a row changed."""
-    if status not in ("open", "done"):
-        raise ValueError(f"invalid task status: {status}")
-    conn = connect_db()
-    try:
-        cur = conn.execute(
-            "UPDATE tasks SET status = ? WHERE id = ? AND status != ?",
-            (status, task_id, status),
-        )
-        conn.commit()
-        return cur.rowcount > 0
-    finally:
-        conn.close()
+
+def update_task_status(*args, **kwargs) -> bool:
+    return world_state.update_task_status(sys.modules[__name__], *args, **kwargs)
 
 
-def record_system_metric(
-    metric_type: str,
-    *,
-    value: float = 1.0,
-    label: str | None = None,
-    payload: dict[str, object] | None = None,
-) -> None:
-    """Append one operator metric row. Never raises."""
-    try:
-        conn = connect_db()
-        try:
-            conn.execute(
-                """
-                INSERT INTO system_metrics (
-                    recorded_at, metric_type, value, label, payload
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    _now_iso(),
-                    metric_type.strip().lower(),
-                    float(value),
-                    label,
-                    json.dumps(payload or {}),
-                ),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-    except Exception:
-        pass
+
+def record_system_metric(*args, **kwargs) -> None:
+    return world_state.record_system_metric(sys.modules[__name__], *args, **kwargs)
 
 
-def record_activity_pulse(
-    agent: str,
-    verb: str,
-    *,
-    project_id: int | None = None,
-    ticket_id: int | None = None,
-    summary: str | None = None,
-) -> dict[str, object] | None:
-    """Append one live-wire pulse row. Never raises (V3.9.11 #70)."""
-    try:
-        agent_norm = str(agent).strip().lower()
-        verb_norm = str(verb).strip().lower()
-        if agent_norm not in ACTIVITY_PULSE_AGENTS or verb_norm not in ACTIVITY_PULSE_VERBS:
-            return None
-        pid = project_id
-        if pid is None:
-            project = get_active_project()
-            if project is None:
-                return None
-            pid = int(project["id"])
-        summary_text = str(summary).strip() if summary is not None else None
-        if summary_text == "":
-            summary_text = None
-        now = _now_iso()
-        conn = connect_db()
-        try:
-            cur = conn.execute(
-                """
-                INSERT INTO activity_pulses (
-                    project_id, agent, verb, ticket_id, summary, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (pid, agent_norm, verb_norm, ticket_id, summary_text, now),
-            )
-            conn.commit()
-            pulse_id = int(cur.lastrowid)
-        finally:
-            conn.close()
-        return {
-            "id": pulse_id,
-            "project_id": pid,
-            "agent": agent_norm,
-            "verb": verb_norm,
-            "ticket_id": ticket_id,
-            "summary": summary_text,
-            "created_at": now,
-        }
-    except Exception:
-        return None
+
+def record_activity_pulse(*args, **kwargs) -> dict[str, object] | None:
+    return world_state.record_activity_pulse(sys.modules[__name__], *args, **kwargs)
 
 
-def list_activity_pulses(
-    project_id: int,
-    *,
-    window_minutes: int = ACTIVITY_PULSE_WINDOW_MINUTES,
-    limit: int = 100,
-) -> list[dict[str, object]]:
-    """Recent activity pulses within window for live wire (V3.9.11 #70)."""
-    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT id, project_id, agent, verb, ticket_id, summary, created_at
-            FROM activity_pulses
-            WHERE project_id = ? AND datetime(created_at) >= datetime(?)
-            ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ?
-            """,
-            (project_id, since, limit),
-        ).fetchall()
-        return [
-            {
-                "id": int(row["id"]),
-                "project_id": int(row["project_id"]),
-                "agent": str(row["agent"]),
-                "verb": str(row["verb"]),
-                "ticket_id": int(row["ticket_id"]) if row["ticket_id"] is not None else None,
-                "summary": row["summary"],
-                "created_at": str(row["created_at"]),
-            }
-            for row in rows
-        ]
-    finally:
-        conn.close()
+
+def list_activity_pulses(*args, **kwargs) -> list[dict[str, object]]:
+    return world_state.list_activity_pulses(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _parse_iso_datetime(value: str) -> datetime:
@@ -5213,62 +4639,9 @@ def _wire_needs_ambient(real_items: list[dict[str, object]]) -> bool:
     return age > timedelta(minutes=ACTIVITY_WIRE_STALE_MINUTES)
 
 
-def build_activity_wire(
-    project_id: int | None,
-    *,
-    limit: int = 30,
-    window_minutes: int = ACTIVITY_PULSE_WINDOW_MINUTES,
-) -> dict[str, object]:
-    """Compose live activity wire from pulses, changes feed, and ambient fallbacks (#72)."""
-    if project_id is None:
-        return {"items": [], "pinned_focus": None, "active_agents": []}
+def build_activity_wire(*args, **kwargs) -> dict[str, object]:
+    return world_state.build_activity_wire(sys.modules[__name__], *args, **kwargs)
 
-    limit = max(1, min(int(limit), 50))
-    real_items: list[dict[str, object]] = []
-
-    for pulse in list_activity_pulses(project_id, window_minutes=window_minutes, limit=limit):
-        real_items.append(_pulse_to_wire_item(pulse))
-
-    changes = build_recent_changes_feed(project_id, limit=limit)
-    for raw in changes.get("items") or []:
-        if isinstance(raw, dict):
-            real_items.append(_changes_item_to_wire_item(raw))
-
-    real_items.sort(
-        key=lambda row: (str(row.get("created_at") or ""), str(row.get("id") or "")),
-        reverse=True,
-    )
-    real_items = _dedupe_activity_wire_items(real_items)
-
-    items = list(real_items)
-    if _wire_needs_ambient(real_items):
-        items.extend(_ambient_activity_wire_items(project_id))
-        items.sort(
-            key=lambda row: (
-                0 if row.get("is_ambient") else 1,
-                str(row.get("created_at") or ""),
-                str(row.get("id") or ""),
-            ),
-            reverse=True,
-        )
-
-    active_agents = sorted(
-        {
-            str(row["agent"])
-            for row in real_items
-            if not row.get("is_ambient") and str(row.get("agent") or "")
-        }
-    )
-    pinned_focus = None
-    state = get_project_state(project_id)
-    if state is not None and state["focus"]:
-        pinned_focus = str(state["focus"])
-
-    return {
-        "items": items[:limit],
-        "pinned_focus": pinned_focus,
-        "active_agents": active_agents,
-    }
 
 
 def _slim_activity_wire_for_agent(
@@ -5305,49 +4678,9 @@ def _slim_activity_wire_for_agent(
     }
 
 
-def get_metrics_summary_24h() -> dict[str, object]:
-    """Return 24h rollups for operator surfaces — no PII."""
-    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-    conn = connect_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT metric_type, COUNT(*) AS n
-            FROM system_metrics
-            WHERE datetime(recorded_at) >= datetime(?)
-            GROUP BY metric_type
-            ORDER BY metric_type ASC
-            """,
-            (since,),
-        ).fetchall()
-        by_type = {str(row["metric_type"]): int(row["n"]) for row in rows}
-        retrieval_rows = conn.execute(
-            """
-            SELECT label, COUNT(*) AS n
-            FROM system_metrics
-            WHERE metric_type = 'retrieval'
-              AND datetime(recorded_at) >= datetime(?)
-            GROUP BY label
-            """,
-            (since,),
-        ).fetchall()
-        retrieval_modes = {
-            str(row["label"] or "unknown"): int(row["n"]) for row in retrieval_rows
-        }
-    finally:
-        conn.close()
-    return {
-        "window_hours": 24,
-        "since": since,
-        "counts": by_type,
-        "retrieval_modes": retrieval_modes,
-        "chat_errors": int(by_type.get("chat_error", 0)),
-        "ingest_ok": int(by_type.get("ingest_ok", 0)),
-        "ingest_error": int(by_type.get("ingest_error", 0)),
-        "ticket_events": int(by_type.get("ticket_created", 0))
-        + int(by_type.get("ticket_closed", 0))
-        + int(by_type.get("ticket_cancelled", 0)),
-    }
+def get_metrics_summary_24h(*args, **kwargs) -> dict[str, object]:
+    return world_state.get_metrics_summary_24h(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _context_system_health() -> dict[str, object]:
@@ -5369,107 +4702,9 @@ def _context_system_health() -> dict[str, object]:
     }
 
 
-def build_context_bundle(
-    q: str = CONTEXT_DEFAULT_QUERY,
-    limit: int = MEMORY_LIMIT,
-    project_slug: str | None = None,
-    depth: str | None = None,
-    debug: bool = False,
-) -> dict[str, object]:
-    """
-    Read-only working context for external agents (V3.7 memory bus).
-    No writes.
-    """
-    import context_resolution
+def build_context_bundle(*args, **kwargs) -> dict[str, object]:
+    return world_state.build_context_bundle(sys.modules[__name__], *args, **kwargs)
 
-    if project_slug is not None:
-        project = get_project_by_slug(project_slug)
-        if project is None:
-            raise ValueError(f"project not found: {project_slug}")
-    else:
-        project = get_active_project()
-
-    project_id: int | None = int(project["id"]) if project is not None else None
-    state = get_project_state(project_id) if project_id is not None else None
-    state_payload = _state_payload_for_api(state)
-
-    recent_decisions: list[dict[str, object]] = []
-    open_loops: list[dict[str, object]] = []
-    if project_id is not None:
-        recent_decisions = [
-            row_to_dict(row)
-            for row in list_decisions(project_id, limit=DIAGNOSTICS_DECISIONS_LIMIT)
-        ]
-        open_loops = [
-            row_to_dict(row)
-            for row in list_open_loops(project_id, status="open", limit=LOOPS_LIMIT)
-        ]
-
-    open_tasks = [
-        row_to_dict(row) for row in list_tasks(status="open")[:DIAGNOSTICS_TASKS_LIMIT]
-    ]
-    canon = _canon_api_items(project_id)
-    resolved_depth = context_resolution.normalize_depth(depth)
-    fetch_limit = max(limit * 3, 16) if resolved_depth else limit
-    relevant_memories = retrieve_memories(q, limit=fetch_limit, project_id=project_id)
-    matched_tickets: list[dict[str, object]] = []
-    trace: dict[str, object] = {}
-    if resolved_depth is not None:
-        tickets_summary = build_tickets_summary(project_id)
-        open_tickets = tickets_summary.get("open")
-        candidate_tickets = (
-            [dict(item) for item in open_tickets]
-            if isinstance(open_tickets, list)
-            else []
-        )
-        resolved, matched_tickets, trace = context_resolution.cross_source_resolve(
-            [dict(item) for item in relevant_memories],
-            matched_tickets=candidate_tickets,
-            query=q,
-            depth=resolved_depth,
-            debug=debug,
-        )
-        relevant_memories = resolved[:limit]
-        conn = connect_db()
-        try:
-            active_spark_count = context_resolution.count_active_sparks(
-                conn,
-                project_id=project_id,
-            )
-        finally:
-            conn.close()
-        trace = context_resolution.apply_memory_fallback_trace(
-            trace,
-            active_spark_count=active_spark_count,
-            fallback_used=active_spark_count
-            < context_resolution.COLD_START_ACTIVE_SPARK_THRESHOLD,
-        )
-
-    if state is not None and state["next_action"]:
-        recommended = _state_display(state["next_action"])
-    else:
-        recommended = "(unset)"
-
-    bundle: dict[str, object] = {
-        "project": row_to_dict(project) if project is not None else None,
-        "state": state_payload,
-        "recent_decisions": recent_decisions,
-        "open_loops": open_loops,
-        "open_tasks": open_tasks,
-        "canon": canon,
-        "relevant_memories": relevant_memories,
-        "agent_activity": _agent_activity_summary(project_id),
-        "tickets": build_tickets_summary(project_id),
-        "system_health": _context_system_health(),
-        "project_files": get_project_files_context(),
-        "knowledge_files": load_knowledge_files_context(q),
-        "recommended_next_action": recommended,
-    }
-    if resolved_depth is not None:
-        bundle["depth"] = resolved_depth
-        bundle["matched_tickets"] = matched_tickets
-        bundle["trace"] = trace
-    return bundle
 
 
 def retrieve_memories_api(
@@ -5795,285 +5030,14 @@ def _portable_memory_rows(
     return rows
 
 
-def build_portable_context_packet(
-    surface: str = "chatgpt",
-    *,
-    project_slug: str | None = None,
-) -> dict[str, object]:
-    """Medium Crowley packet for manual paste into any AI surface (V3.9.12 #76)."""
-    normalized_surface = (surface or "chatgpt").strip().lower() or "chatgpt"
-    setup_db()
-    project = (
-        get_project_by_slug(project_slug)
-        if project_slug
-        else get_active_project()
-    )
-    project_id = int(project["id"]) if project is not None else None
-    state = get_project_state(project_id) if project_id is not None else None
-    state_payload = _state_payload_for_api(state)
-
-    task_frame = build_task_frame_context(project_id, agent=None)
-    working_on = task_frame.get("working_on")
-    if isinstance(working_on, list):
-        working_on = working_on[:PORTABLE_PACKET_WORKING_CAP]
-    else:
-        working_on = []
-
-    tickets = build_tickets_summary(project_id, agent=None) if project_id else {}
-    retrieval = retrieve_work_context_memories(
-        project_id,
-        agent=None,
-        limit=PORTABLE_PACKET_MEMORY_CAP,
-    )
-    memories = _portable_memory_rows(
-        retrieval["memories"] if isinstance(retrieval.get("memories"), list) else []
-    )
-
-    guardrails = task_frame.get("guardrails")
-    recent_decisions: list[dict[str, object]] = []
-    constraint_memories: list[dict[str, object]] = []
-    if isinstance(guardrails, dict):
-        for row in guardrails.get("recent_decisions") or []:
-            if isinstance(row, dict):
-                recent_decisions.append(
-                    {
-                        "summary": _portable_clip(row.get("summary"), 180),
-                        "detail": _portable_clip(row.get("detail"), 180),
-                    }
-                )
-        for row in guardrails.get("constraint_memories") or []:
-            if isinstance(row, dict):
-                constraint_memories.append(
-                    {
-                        "summary": _portable_clip(
-                            row.get("summary") or row.get("content"), 200
-                        ),
-                        "memory_type": row.get("memory_type"),
-                    }
-                )
-    recent_decisions = recent_decisions[:PORTABLE_PACKET_DECISIONS_CAP]
-    constraint_memories = constraint_memories[:PORTABLE_PACKET_CONSTRAINTS_CAP]
-
-    activity = _agent_activity_summary(project_id) if project_id else {}
-    latest_contact = activity.get("latest_contact") if isinstance(activity, dict) else None
-    wire = build_activity_wire(project_id, limit=PORTABLE_PACKET_WIRE_CAP)
-    wire_lines: list[str] = []
-    for item in wire.get("items") or []:
-        if isinstance(item, dict) and item.get("line"):
-            wire_lines.append(_portable_clip(item.get("line"), 160))
-
-    open_initiatives: list[str] = []
-    open_rows = tickets.get("open") if isinstance(tickets, dict) else []
-    if isinstance(open_rows, list):
-        for ticket in open_rows[:8]:
-            if not isinstance(ticket, dict):
-                continue
-            open_initiatives.append(
-                f"#{ticket.get('id')} [{ticket.get('status')}] "
-                f"{_portable_clip(ticket.get('title'), 120)}"
-            )
-
-    return {
-        "packet_version": PORTABLE_PACKET_VERSION,
-        "crowley_version": CROWLEY_VERSION,
-        "release_label": CROWLEY_RELEASE_LABEL,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "surface": normalized_surface,
-        "identity": {
-            "crowley_role": (
-                f"Crowley is the persistent context layer for {USER_NAME}. "
-                "It holds memory, tickets, project truth, and agent handoffs."
-            ),
-            "terminal_role": (
-                f"You are a temporary reasoning surface ({normalized_surface}). "
-                "You are not Crowley. Use this packet for context; end with structured "
-                "writeback JSON — never invent project facts beyond what is included."
-            ),
-            "authority_order": (
-                "filesystem docs → tickets → agent activity → project_state → "
-                "canon → supporting memories in this packet"
-            ),
-        },
-        "world": {
-            "project": row_to_dict(project) if project is not None else None,
-            "state": state_payload,
-            "brain": get_brain_snapshot() if not is_test_mode() else None,
-        },
-        "work": {
-            "focus": state_payload.get("focus") if state_payload else None,
-            "phase": state_payload.get("phase") if state_payload else None,
-            "next_action": state_payload.get("next_action") if state_payload else None,
-            "working_on": working_on,
-            "open_initiatives": open_initiatives,
-            "latest_agent_contact": latest_contact,
-            "in_the_air": wire_lines,
-        },
-        "guardrails": {
-            "recent_decisions": recent_decisions,
-            "constraints": constraint_memories,
-        },
-        "memories": memories,
-        "retrieval_query": _portable_clip(retrieval.get("query"), 300),
-        "writeback_contract": portable_writeback_contract(),
-        "context_pull_guidance": (
-            "If you needed context Crowley did not include, list concrete pull "
-            "candidates in context_pull_candidates (file paths, ticket ids, handoff "
-            "topics). Do not paste secrets. Put sensitive personal content only in "
-            "sparks with appropriate lane and sensitivity — it stays candidate until reviewed."
-        ),
-        "caps": {
-            "max_chars": PORTABLE_PACKET_MAX_CHARS,
-            "memories": PORTABLE_PACKET_MEMORY_CAP,
-            "working_on": PORTABLE_PACKET_WORKING_CAP,
-        },
-    }
+def build_portable_context_packet(*args, **kwargs) -> dict[str, object]:
+    return portable_context.build_portable_context_packet(sys.modules[__name__], *args, **kwargs)
 
 
-def render_portable_context_packet_markdown(packet: dict[str, object]) -> str:
-    """Paste-ready markdown rendering of a portable context packet."""
-    sections: list[str] = []
 
-    def add(title: str, body: str) -> None:
-        body = body.strip()
-        if body:
-            sections.append(f"## {title}\n\n{body}")
+def render_portable_context_packet_markdown(*args, **kwargs) -> str:
+    return portable_context.render_portable_context_packet_markdown(sys.modules[__name__], *args, **kwargs)
 
-    identity = packet.get("identity")
-    if isinstance(identity, dict):
-        add(
-            "Crowley identity",
-            "\n".join(
-                line
-                for line in (
-                    str(identity.get("crowley_role") or ""),
-                    str(identity.get("terminal_role") or ""),
-                    f"Authority: {identity.get('authority_order')}",
-                )
-                if line
-            ),
-        )
-
-    world = packet.get("world")
-    if isinstance(world, dict):
-        state = world.get("state")
-        lines: list[str] = []
-        project = world.get("project")
-        if isinstance(project, dict):
-            lines.append(
-                f"Project: {project.get('name')} ({project.get('slug')}) — "
-                f"{project.get('status')}"
-            )
-        if isinstance(state, dict):
-            for key, label in (
-                ("phase", "Phase"),
-                ("focus", "Focus"),
-                ("current_risk", "Risk"),
-                ("next_action", "Next action"),
-                ("what_changed", "What changed"),
-            ):
-                value = state.get(key)
-                if value:
-                    lines.append(f"{label}: {value}")
-        add("Current world", "\n".join(lines))
-
-    work = packet.get("work")
-    if isinstance(work, dict):
-        lines = []
-        contact = work.get("latest_agent_contact")
-        if isinstance(contact, dict):
-            lines.append(
-                f"Latest agent contact: {contact.get('source')} "
-                f"#{contact.get('memory_id')} — "
-                f"{_portable_clip(contact.get('summary'), 140)}"
-            )
-        for ticket in work.get("working_on") or []:
-            if not isinstance(ticket, dict):
-                continue
-            acceptance = ticket.get("acceptance") or []
-            acc = ""
-            if isinstance(acceptance, list) and acceptance:
-                acc = f" · acceptance: {_portable_clip(acceptance[0], 100)}"
-            lines.append(
-                f"- #{ticket.get('id')} [{ticket.get('status')}] "
-                f"{ticket.get('title')}{acc}"
-            )
-        for line in work.get("open_initiatives") or []:
-            lines.append(f"- {line}")
-        for line in work.get("in_the_air") or []:
-            lines.append(f"- In the air: {line}")
-        add("Active work", "\n".join(lines))
-
-    guardrails = packet.get("guardrails")
-    if isinstance(guardrails, dict):
-        lines = []
-        for decision in guardrails.get("recent_decisions") or []:
-            if isinstance(decision, dict) and decision.get("summary"):
-                detail = decision.get("detail")
-                suffix = f" — {detail}" if detail else ""
-                lines.append(f"- Decision: {decision['summary']}{suffix}")
-        for constraint in guardrails.get("constraints") or []:
-            if isinstance(constraint, dict) and constraint.get("summary"):
-                lines.append(f"- Constraint: {constraint['summary']}")
-        add("Guardrails", "\n".join(lines))
-
-    memories = packet.get("memories")
-    if isinstance(memories, list) and memories:
-        lines = []
-        for mem in memories:
-            if not isinstance(mem, dict):
-                continue
-            reason = mem.get("inclusion_reason")
-            suffix = f" ({reason})" if reason else ""
-            lines.append(
-                f"- [{mem.get('memory_type')}] {mem.get('text')}{suffix}"
-            )
-        query = packet.get("retrieval_query")
-        if query:
-            lines.insert(0, f"_Retrieval query: {query}_\n")
-        add("Supporting memories", "\n".join(lines))
-
-    contract = packet.get("writeback_contract")
-    if isinstance(contract, dict):
-        example = contract.get("example")
-        example_json = json.dumps(example, indent=2) if example else "{}"
-        add(
-            "Writeback contract",
-            "\n".join(
-                [
-                    str(contract.get("description") or ""),
-                    "",
-                    "Reply with a single fenced JSON block:",
-                    "",
-                    "```json",
-                    example_json,
-                    "```",
-                ]
-            ),
-        )
-
-    guidance = packet.get("context_pull_guidance")
-    if guidance:
-        add("Context pull guidance", str(guidance))
-
-    header = (
-        f"# Crowley portable context packet\n\n"
-        f"_v{packet.get('packet_version')} · Crowley {packet.get('crowley_version')} · "
-        f"surface: {packet.get('surface')} · generated: {packet.get('generated_at')}_\n"
-    )
-    markdown = header + "\n\n".join(sections) + "\n"
-    max_chars = int(
-        (packet.get("caps") or {}).get("max_chars") or PORTABLE_PACKET_MAX_CHARS
-    )
-    trimmed = False
-    if len(markdown) > max_chars:
-        markdown = (
-            markdown[: max_chars - 64].rstrip()
-            + "\n\n… _[packet trimmed to char budget]_\n"
-        )
-        trimmed = True
-    packet["rendered_chars"] = len(markdown)
-    packet["trimmed"] = trimmed
-    return markdown
 
 
 @dataclass
@@ -6189,89 +5153,9 @@ def _normalize_terminal_spark(
     }
 
 
-def parse_terminal_writeback(raw: str | dict[str, object]) -> TerminalWritebackParseResult:
-    """
-    Validate structured terminal writeback without mutating memory (V3.9.12 #77).
-    do_not_save entries are parsed but flagged for discard — never persisted here.
-    """
-    errors: list[str] = []
-    try:
-        payload = (
-            extract_terminal_writeback_json(raw)
-            if isinstance(raw, str)
-            else raw
-        )
-    except (json.JSONDecodeError, ValueError) as exc:
-        return TerminalWritebackParseResult(ok=False, errors=[str(exc)])
+def parse_terminal_writeback(*args, **kwargs) -> TerminalWritebackParseResult:
+    return portable_context.parse_terminal_writeback(sys.modules[__name__], *args, **kwargs)
 
-    if not isinstance(payload, dict):
-        return TerminalWritebackParseResult(
-            ok=False, errors=["writeback payload must be a JSON object"]
-        )
-
-    session_raw = payload.get("session")
-    if not isinstance(session_raw, dict):
-        errors.append("session is required and must be an object")
-        session: dict[str, object] = {}
-    else:
-        session = session_raw
-
-    summary = str(session.get("summary") or "").strip()
-    if not summary:
-        errors.append("session.summary is required")
-
-    surface = str(session.get("surface") or "").strip().lower()
-    model = str(session.get("model") or "").strip() or None
-    provider = str(session.get("provider") or "").strip().lower() or None
-
-    sparks_raw = payload.get("sparks")
-    sparks: list[dict[str, object]] = []
-    if sparks_raw is None:
-        sparks_raw = []
-    if not isinstance(sparks_raw, list):
-        errors.append("sparks must be an array when present")
-    else:
-        for index, entry in enumerate(sparks_raw):
-            normalized = _normalize_terminal_spark(entry, index, errors)
-            if normalized is not None:
-                sparks.append(normalized)
-
-    decisions = _writeback_string_items(payload.get("decisions"), "decisions", errors)
-    lessons = _writeback_string_items(payload.get("lessons"), "lessons", errors)
-    open_loops = _writeback_string_items(payload.get("open_loops"), "open_loops", errors)
-    corrections = _writeback_string_items(
-        payload.get("corrections"), "corrections", errors
-    )
-    context_pull_candidates = _writeback_string_items(
-        payload.get("context_pull_candidates"),
-        "context_pull_candidates",
-        errors,
-    )
-    do_not_save = _writeback_string_items(
-        payload.get("do_not_save"), "do_not_save", errors
-    )
-
-    if errors:
-        return TerminalWritebackParseResult(ok=False, errors=errors)
-
-    normalized: dict[str, object] = {
-        "format": PORTABLE_WRITEBACK_FORMAT,
-        "session": {
-            "summary": summary,
-            "surface": surface or None,
-            "model": model,
-            "provider": provider,
-        },
-        "sparks": sparks,
-        "decisions": decisions,
-        "lessons": lessons,
-        "open_loops": open_loops,
-        "corrections": corrections,
-        "context_pull_candidates": context_pull_candidates,
-        "do_not_save": do_not_save,
-        "do_not_save_persist": False,
-    }
-    return TerminalWritebackParseResult(ok=True, errors=[], writeback=normalized)
 
 
 def _memory_item_metadata(row: sqlite3.Row) -> dict[str, object]:
@@ -6318,146 +5202,9 @@ def _portable_spark_metadata(
     }
 
 
-def ingest_terminal_writeback(
-    raw: str | dict[str, object],
-    *,
-    project: str = DEFAULT_PROJECT_SLUG,
-) -> dict[str, object]:
-    """
-    Persist validated portable terminal writeback (V3.9.12 #78).
-    Session recap is an episodic receipt; sparks are staged candidates.
-    do_not_save entries are skipped; raw transcripts are never saved here.
-    """
-    parsed = parse_terminal_writeback(raw)
-    if not parsed.ok:
-        return {"status": "error", "errors": parsed.errors}
+def ingest_terminal_writeback(*args, **kwargs) -> dict[str, object]:
+    return portable_context.ingest_terminal_writeback(sys.modules[__name__], *args, **kwargs)
 
-    writeback = parsed.writeback
-    assert writeback is not None
-    session_raw = writeback.get("session")
-    if not isinstance(session_raw, dict):
-        return {"status": "error", "errors": ["session object missing after parse"]}
-
-    project_row = get_project_by_slug(project) if project else get_active_project()
-    if project_row is None:
-        raise ValueError(f"project not found: {project}")
-    project_id = int(project_row["id"])
-
-    session_summary = str(session_raw.get("summary") or "").strip()
-    # Treat omitted surface as chatgpt for portable Actions sessions so
-    # downstream acceptance criteria sees the same normalized value.
-    surface = str(session_raw.get("surface") or "chatgpt").strip().lower() or "chatgpt"
-    normalized_session = dict(session_raw)
-    normalized_session["surface"] = surface
-    normalized_writeback = dict(writeback)
-    normalized_writeback["session"] = normalized_session
-    session_metadata = _portable_session_receipt_metadata(normalized_writeback)
-
-    session_receipt_id = save_memory_item(
-        "summary",
-        session_summary,
-        summary=f"Portable terminal session ({surface})",
-        source=PORTABLE_TERMINAL_SOURCE,
-        project_id=project_id,
-        importance=3,
-        confidence=0.85,
-        pinned=False,
-        status="active",
-        metadata=session_metadata,
-    )
-    if session_receipt_id is None:
-        record_system_metric("ingest_error", label=PORTABLE_TERMINAL_SOURCE)
-        return {
-            "status": "error",
-            "errors": ["failed to save session receipt"],
-            "session_receipt_id": None,
-        }
-
-    spark_ids: list[int] = []
-    v4_spark_ids: list[int] = []
-    v4_spark_actions: list[str] = []
-    rejected_sparks: list[str] = []
-    sparks_raw = writeback.get("sparks") or []
-    assert isinstance(sparks_raw, list)
-
-    conn = connect_db()
-    try:
-        for spark in sparks_raw:
-            if not isinstance(spark, dict):
-                rejected_sparks.append("invalid spark object")
-                continue
-            content = str(spark.get("content") or "").strip()
-            sensitivity = str(spark.get("sensitivity") or "normal").lower()
-            is_sensitive = sensitivity in {"sensitive", "high"}
-            spark_metadata = _portable_spark_metadata(
-                spark,
-                session=normalized_session,
-                session_receipt_id=int(session_receipt_id),
-            )
-            item_id = save_memory_item(
-                "event",
-                content,
-                summary=str(spark.get("why_keep") or "").strip() or None,
-                source=PORTABLE_TERMINAL_SOURCE,
-                project_id=project_id,
-                importance=2 if is_sensitive else 3,
-                confidence=float(spark.get("confidence") or 0.5),
-                pinned=False,
-                status=PORTABLE_SPARK_STATUS,
-                metadata=spark_metadata,
-                write_action="portable.writeback.ingest",
-                conn=conn,
-            )
-            if item_id is None:
-                rejected_sparks.append(_truncate(content, 64))
-                continue
-
-            spark_ids.append(int(item_id))
-            try:
-                import portable_writeback_sparks_bridge
-
-                upsert = portable_writeback_sparks_bridge.upsert_portable_spark_to_v4(
-                    conn,
-                    spark,
-                    source_memory_item_id=int(item_id),
-                    project_id=project_id,
-                    session_receipt_id=int(session_receipt_id),
-                    session=normalized_session,
-                )
-            except ValueError as exc:
-                rejected_sparks.append(f"{_truncate(content, 48)}: {exc}")
-                continue
-
-            v4_spark_ids.append(int(upsert.spark_id))
-            v4_spark_actions.append(str(upsert.action))
-            attach_memory_item_metadata(
-                int(item_id),
-                {
-                    "v4_spark_id": int(upsert.spark_id),
-                    "v4_spark_action": str(upsert.action),
-                },
-                conn=conn,
-            )
-        conn.commit()
-    finally:
-        conn.close()
-
-    do_not_save = writeback.get("do_not_save") or []
-    skipped_do_not_save = (
-        [str(item) for item in do_not_save] if isinstance(do_not_save, list) else []
-    )
-
-    record_system_metric("ingest_ok", label=PORTABLE_TERMINAL_SOURCE)
-    return {
-        "status": "ok",
-        "session_receipt_id": int(session_receipt_id),
-        "spark_ids": spark_ids,
-        "v4_spark_ids": v4_spark_ids,
-        "v4_spark_actions": v4_spark_actions,
-        "rejected_sparks": rejected_sparks,
-        "skipped_do_not_save": skipped_do_not_save,
-        "metadata": session_metadata,
-    }
 
 
 WRITEBACK_ACCEPTANCE_CRITERIA: list[dict[str, str]] = [
@@ -6705,234 +5452,9 @@ def list_portable_writeback_sessions(
             conn.close()
 
 
-def build_portable_writeback_acceptance_report(
-    *,
-    apply: bool = False,
-    reviewer: str = "operator",
-    session_receipt_id: int | None = None,
-) -> dict[str, object]:
-    """Analyze staged portable writeback sparks; optionally promote accepted rows."""
-    conn = connect_db()
-    try:
-        sessions = list_portable_writeback_sessions(conn=conn)
-        if session_receipt_id is not None:
-            sessions = [
-                session
-                for session in sessions
-                if int(session.get("session_receipt_id") or -1) == int(session_receipt_id)
-            ]
-        accepted: list[dict[str, object]] = []
-        rejected: list[dict[str, object]] = []
-        deduped: list[dict[str, object]] = []
-        promoted_metadata: list[dict[str, object]] = []
+def build_portable_writeback_acceptance_report(*args, **kwargs) -> dict[str, object]:
+    return portable_context.build_portable_writeback_acceptance_report(sys.modules[__name__], *args, **kwargs)
 
-        for index, session in enumerate(sessions, start=1):
-            session_id = int(session["session_receipt_id"])
-            session_row = conn.execute(
-                "SELECT * FROM memory_items WHERE id = ?", (session_id,)
-            ).fetchone()
-            if session_row is None:
-                continue
-            spark_rows = _portable_session_sparks(conn, session_id)
-            is_fixture = session["classification"] == "test_fixture"
-            canonical_ids, duplicate_map = _canonical_staged_spark_ids(spark_rows)
-            session["sort_rank"] = index
-
-            for spark_row in spark_rows:
-                spark_id = int(spark_row["id"])
-                duplicate_master = next(
-                    (
-                        master_id
-                        for master_id, dup_ids in duplicate_map.items()
-                        if spark_id in dup_ids
-                    ),
-                    None,
-                )
-                if duplicate_master is not None:
-                    evaluation = {
-                        "memory_item_id": spark_id,
-                        "session_receipt_id": session_id,
-                        "content": str(spark_row["content"] or ""),
-                        "accepted": False,
-                        "rejection_reason": "duplicate_staged_row",
-                        "duplicate_of": duplicate_master,
-                        "criteria": {
-                            "dedup_canonical": False,
-                        },
-                    }
-                    deduped.append(evaluation)
-                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
-                        conn.execute(
-                            """
-                            UPDATE memory_items
-                            SET status = 'merged', merged_into_id = ?, updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (duplicate_master, _now_iso(), spark_id),
-                        )
-                        attach_memory_item_metadata(
-                            spark_id,
-                            {
-                                "review_rejected_as": "duplicate_staged_row",
-                                "merged_into_id": duplicate_master,
-                                "reviewed_at": _now_iso(),
-                                "reviewed_by": reviewer,
-                            },
-                            conn=conn,
-                        )
-                    continue
-
-                evaluation = _evaluate_portable_spark_acceptance(
-                    session_row=session_row,
-                    spark_row=spark_row,
-                    spark_rows=spark_rows,
-                    is_test_fixture=is_fixture,
-                    canonical_ids=canonical_ids,
-                    conn=conn,
-                )
-                if evaluation["accepted"]:
-                    accepted.append(evaluation)
-                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
-                        conn.execute(
-                            """
-                            UPDATE memory_items
-                            SET status = 'active', updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (_now_iso(), spark_id),
-                        )
-                        attach_memory_item_metadata(
-                            spark_id,
-                            {
-                                "candidate": False,
-                                "promoted_at": _now_iso(),
-                                "promoted_by": reviewer,
-                                "promotion_source": "portable_writeback_acceptance",
-                                "acceptance_criteria": evaluation["criteria"],
-                            },
-                            conn=conn,
-                        )
-                        vector = embed_text(str(spark_row["content"]))
-                        if vector and len(vector) == EMBED_DIM:
-                            provider = _memory_embed_provider()
-                            model_name = (
-                                "text-embedding-3-small"
-                                if provider == "openai"
-                                else EMBED_MODEL_LOCAL
-                            )
-                            index_memory_embedding(
-                                conn, spark_id, vector, model_name
-                            )
-                else:
-                    rejected.append(evaluation)
-                    if apply and str(spark_row["status"]) == PORTABLE_SPARK_STATUS:
-                        conn.execute(
-                            """
-                            UPDATE memory_items
-                            SET status = 'rejected', updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (_now_iso(), spark_id),
-                        )
-                        attach_memory_item_metadata(
-                            spark_id,
-                            {
-                                "review_rejected_as": evaluation["rejection_reason"],
-                                "reviewed_at": _now_iso(),
-                                "reviewed_by": reviewer,
-                            },
-                            conn=conn,
-                        )
-
-            if not is_fixture and apply:
-                meta = session["metadata"]
-                assert isinstance(meta, dict)
-                for field, memory_type in (
-                    ("decisions", "decision"),
-                    ("lessons", "lesson"),
-                ):
-                    values = meta.get(field) or []
-                    if not isinstance(values, list):
-                        continue
-                    for bullet in values:
-                        text = str(bullet or "").strip()
-                        if not text:
-                            continue
-                        if _find_active_memory_by_content(
-                            conn,
-                            content=text,
-                            project_id=int(session_row["project_id"])
-                            if session_row["project_id"] is not None
-                            else None,
-                        ):
-                            continue
-                        item_id = save_memory_item(
-                            memory_type,
-                            text,
-                            summary=text,
-                            source=PORTABLE_TERMINAL_SOURCE,
-                            project_id=int(session_row["project_id"])
-                            if session_row["project_id"] is not None
-                            else None,
-                            importance=4 if memory_type == "decision" else 3,
-                            confidence=0.85,
-                            pinned=False,
-                            status="active",
-                            metadata={
-                                "promoted_from": "session_metadata",
-                                "session_receipt_id": session_id,
-                                "surface": meta.get("surface"),
-                                "promoted_at": _now_iso(),
-                                "promoted_by": reviewer,
-                            },
-                            conn=conn,
-                        )
-                        if item_id is not None:
-                            promoted_metadata.append(
-                                {
-                                    "memory_item_id": int(item_id),
-                                    "session_receipt_id": session_id,
-                                    "memory_type": memory_type,
-                                    "content": text,
-                                }
-                            )
-
-        if apply:
-            conn.commit()
-
-        for entry in accepted:
-            spark_id = entry.get("memory_item_id")
-            entry["destination_memory_id"] = int(spark_id) if spark_id is not None else None
-            entry["promotion_lineage"] = {
-                "source_session_id": entry.get("session_receipt_id"),
-                "spark_id": spark_id,
-            }
-        for entry in deduped:
-            dup = entry.get("duplicate_of")
-            entry["destination_memory_id"] = int(dup) if dup is not None else None
-
-        report = {
-            "status": "ok",
-            "generated_at": _now_iso(),
-            "applied": apply,
-            "reviewer": reviewer,
-            "criteria": WRITEBACK_ACCEPTANCE_CRITERIA,
-            "sessions": sessions,
-            "accepted": accepted,
-            "rejected": rejected,
-            "deduped": deduped,
-            "promoted_session_metadata": promoted_metadata,
-            "counts": {
-                "sessions": len(sessions),
-                "accepted": len(accepted),
-                "rejected": len(rejected),
-                "deduped": len(deduped),
-                "promoted_session_metadata": len(promoted_metadata),
-            },
-        }
-        return report
-    finally:
-        conn.close()
 
 
 def auto_promote_portable_writeback_session(
@@ -6948,31 +5470,14 @@ def auto_promote_portable_writeback_session(
     )
 
 
-def write_portable_writeback_acceptance_report(
-    report: dict[str, object],
-    *,
-    path: Path | None = None,
-) -> Path:
-    target = path or WRITEBACK_ACCEPTANCE_REPORT_PATH
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    return target
+def write_portable_writeback_acceptance_report(*args, **kwargs) -> Path:
+    return portable_context.write_portable_writeback_acceptance_report(sys.modules[__name__], *args, **kwargs)
 
 
-def load_portable_writeback_acceptance_report(
-    *, path: Path | None = None
-) -> dict[str, object] | None:
-    target = path or WRITEBACK_ACCEPTANCE_REPORT_PATH
-    if not target.is_file():
-        return None
-    try:
-        parsed = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return parsed if isinstance(parsed, dict) else None
+
+def load_portable_writeback_acceptance_report(*args, **kwargs) -> dict[str, object] | None:
+    return portable_context.load_portable_writeback_acceptance_report(sys.modules[__name__], *args, **kwargs)
+
 
 
 def _agent_permissions_payload(agent: str) -> dict[str, object]:
@@ -7006,136 +5511,14 @@ def get_agent_role(agent: str) -> str:
     return roles.get(normalized, roles["chatgpt"])
 
 
-def build_agent_sync_bundle(agent: str, limit: int = 20) -> dict[str, object]:
-    """Read-only slim sync snapshot for agents communicating through Crowley (V3.9.9)."""
-    import agent_sync_envelope
-
-    normalized_agent = agent.strip().lower()
-    if normalized_agent not in {"cursor", "codex", "chatgpt"}:
-        raise ValueError(f"unsupported agent: {agent}")
-
-    sync_limit = agent_sync_envelope.normalize_agent_sync_limit(limit)
-    caps = agent_sync_envelope.section_caps(sync_limit)
-    memory_limit = caps["memories"]
-    project = get_active_project()
-    project_id = int(project["id"]) if project is not None else None
-    state = get_project_state(project_id) if project_id is not None else None
-    state_payload = _state_payload_for_api(state)
-
-    raw_events = [
-        _memory_item_api_dict(row)
-        for row in list_recent_agent_events(
-            limit=max(sync_limit, caps["events_other"]),
-            project_id=project_id,
-        )
-    ]
-    events_from_this_agent = [
-        _agent_sync_event_dict(event)
-        for event in raw_events
-        if str(event.get("source", "")).lower() == normalized_agent
-    ][: caps["events_own"]]
-    events_from_other_agents = [
-        _agent_sync_event_dict(event)
-        for event in raw_events
-        if str(event.get("source", "")).lower() != normalized_agent
-    ][: caps["events_other"]]
-
-    recent_decisions: list[dict[str, object]] = []
-    if project_id is not None:
-        recent_decisions = [
-            row_to_dict(row)
-            for row in list_decisions(project_id, limit=caps["decisions"])
-        ]
-
-    constraint_memories = _list_constraint_memories(
-        project_id, limit=caps["constraints"]
-    )
-    retrieval_context = retrieve_work_context_memories(
-        project_id,
-        normalized_agent,
-        limit=memory_limit,
-    )
-    relevant_memories = retrieval_context["memories"]
-    supporting_memories = relevant_memories
-    recommended = _state_display(state["next_action"]) if state is not None else "(unset)"
-    tickets = build_tickets_summary(
-        project_id,
-        normalized_agent,
-        open_limit=caps["tickets_open"],
-        closed_limit=caps["tickets_closed"],
-    )
-    task_frame = build_task_frame_context(
-        project_id,
-        normalized_agent,
-        sync_limit=sync_limit,
-    )
-    activity_wire = _slim_activity_wire_for_agent(
-        build_activity_wire(project_id, limit=ACTIVITY_WIRE_WORLD_CAP),
-        normalized_agent,
-        limit=caps["activity_wire"],
-    )
-
-    import agent_behavior
-
-    recent_handoffs = agent_behavior.build_auto_handoff_feed(limit=caps["handoffs"])
-
-    bundle = {
-        "agent": normalized_agent,
-        "role": get_agent_role(normalized_agent),
-        "permissions": _agent_permissions_payload(normalized_agent),
-        "boot_sequence": {
-            "required_first_tool": "agent.sync",
-            "status": "complete",
-            "message": "This bundle satisfies fresh-session boot when agent.sync is the first tool call.",
-        },
-        "pipeline": {
-            "hub": "crowley",
-            "crowley": "running local OS — memory, world model, extraction, bus, this chat",
-            "codex": "architect — plans and decides; posts to Crowley memory",
-            "cursor": "builder — ships code; posts to Crowley memory",
-            "rule": "agents do not message each other; truth flows through Crowley only",
-        },
-        "bus_health": bus_health(),
-        "project": row_to_dict(project) if project is not None else None,
-        "state": state_payload,
-        "recommended_next_action": recommended,
-        "agent_activity": _agent_activity_summary(project_id),
-        "tickets": tickets,
-        "task_frame": task_frame,
-        "activity_wire": activity_wire,
-        "recent_handoffs": recent_handoffs,
-        "recent_decisions": recent_decisions,
-        "constraint_memories": constraint_memories,
-        "events_from_this_agent": events_from_this_agent,
-        "events_from_other_agents": events_from_other_agents,
-        "relevant_memories_query": retrieval_context["query"],
-        "relevant_memories": relevant_memories,
-        "supporting_memories": supporting_memories,
-        "relevant_memories_tickets": retrieval_context["tickets"],
-        "bundle_shape": AGENT_SYNC_BUNDLE_SHAPE,
-        "sync_limit": sync_limit,
-        "bundle_caps": {
-            "sync_limit": sync_limit,
-            "recent_decisions": caps["decisions"],
-            "constraint_memories": caps["constraints"],
-            "events_from_other_agents": caps["events_other"],
-            "events_from_this_agent": caps["events_own"],
-            "supporting_memories": memory_limit,
-            "relevant_memories": memory_limit,
-            "task_frame_working_on": caps["task_frame_working"],
-            "activity_wire": caps["activity_wire"],
-            "handoffs": caps["handoffs"],
-            "tickets_open": caps["tickets_open"],
-        },
-    }
-    return bundle
+def build_agent_sync_bundle(*args, **kwargs) -> dict[str, object]:
+    return agent_sync_bundle.build_agent_sync_bundle(sys.modules[__name__], *args, **kwargs)
 
 
-def finalize_agent_sync_bundle(bundle: dict[str, object]) -> dict[str, object]:
-    """Apply ASE byte bounding to a sync bundle (#229)."""
-    import agent_sync_envelope
 
-    return agent_sync_envelope.apply_adaptive_sync_envelope(bundle)
+def finalize_agent_sync_bundle(*args, **kwargs) -> dict[str, object]:
+    return agent_sync_bundle.finalize_agent_sync_bundle(sys.modules[__name__], *args, **kwargs)
+
 
 
 INGEST_SOURCES = frozenset({"cursor", "chatgpt", "codex", "manual", "crowley"})
