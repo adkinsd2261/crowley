@@ -534,6 +534,10 @@ def api_cognitive_context(
     project: str | None = Query(None),
     depth: str | None = Query("medium"),
     debug: bool = Query(False),
+    query_mode: str | None = Query(
+        None,
+        description="Optional override: recall|decision|reflection|planning",
+    ),
 ) -> JSONResponse:
     import context_orchestration
     import system_integrity
@@ -549,6 +553,7 @@ def api_cognitive_context(
             project=project,
             depth=depth,
             debug=debug,
+            query_mode=query_mode,
         )
     except ValueError as exc:
         _record_cognitive_api_observability(

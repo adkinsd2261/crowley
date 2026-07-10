@@ -741,6 +741,7 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
     project = _optional_str(args, "project")
     depth = _optional_str(args, "depth") or "medium"
     debug = bool(args.get("debug"))
+    query_mode = _optional_str(args, "query_mode")
     try:
         return (
             context_orchestration.build_cognitive_context(
@@ -750,6 +751,7 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
                 project=project,
                 depth=depth,
                 debug=debug,
+                query_mode=query_mode,
             ),
             None,
         )
@@ -795,6 +797,11 @@ def _register_domain_read_tools() -> None:
                         "enum": ["light", "medium", "deep"],
                     },
                     "debug": {"type": "boolean"},
+                    "query_mode": {
+                        "type": "string",
+                        "enum": ["recall", "decision", "reflection", "planning"],
+                        "description": "Optional query-mode override (not explore/precise).",
+                    },
                 }
             },
             _handle_cognitive_context,

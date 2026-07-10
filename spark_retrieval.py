@@ -1,9 +1,9 @@
-"""V4 T8 — spark retrieval and canonical scoring."""
+"""V4 T8 / V4.3 T3 — spark retrieval and query-mode scoring profiles."""
 
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import spark_graph
 import spark_lifecycle
@@ -25,6 +25,85 @@ SPARK_RETRIEVE_VECTOR_CANDIDATES = 50
 SPARK_RETRIEVE_KEYWORD_CANDIDATES = 50
 SPARK_DEFAULT_LIMIT = 12
 SPARK_KEYWORD_SEMANTIC_FLOOR = 0.05
+SECONDARY_LANE_SCORE_BOOST = 1.05
+
+QUERY_MODE_PROFILES = frozenset({"recall", "decision", "reflection", "planning"})
+
+
+@dataclass(frozen=True)
+class ScoringProfile:
+    name: str
+    w_semantic: float
+    w_confidence: float
+    w_recency: float
+    w_graph: float
+    trust_active_boost: float = 1.0
+    trust_stale_boost: float = 1.0
+    spark_type_boosts: dict[str, float] = field(default_factory=dict)
+
+    def score_basis(self) -> str:
+        return (
+            f"{self.name} profile: "
+            f"{self.w_semantic:.2f} semantic + "
+            f"{self.w_confidence:.2f} confidence + "
+            f"{self.w_recency:.2f} recency + "
+            f"{self.w_graph:.2f} graph_reinforcement"
+        )
+
+
+SCORING_PROFILES: dict[str, ScoringProfile] = {
+    "recall": ScoringProfile(
+        name="recall",
+        w_semantic=W_SPARK_SEMANTIC,
+        w_confidence=W_SPARK_CONFIDENCE,
+        w_recency=W_SPARK_RECENCY,
+        w_graph=W_SPARK_GRAPH,
+    ),
+    "planning": ScoringProfile(
+        name="planning",
+        w_semantic=0.30,
+        w_confidence=0.20,
+        w_recency=0.30,
+        w_graph=0.20,
+        trust_active_boost=1.05,
+        trust_stale_boost=0.90,
+        spark_type_boosts={"decision": 1.08},
+    ),
+    "decision": ScoringProfile(
+        name="decision",
+        w_semantic=0.30,
+        w_confidence=0.30,
+        w_recency=0.20,
+        w_graph=0.20,
+        trust_active_boost=1.05,
+        trust_stale_boost=0.90,
+        spark_type_boosts={"decision": 1.08, "intent": 1.04},
+    ),
+    "reflection": ScoringProfile(
+        name="reflection",
+        w_semantic=0.25,
+        w_confidence=0.25,
+        w_recency=0.15,
+        w_graph=0.35,
+        trust_active_boost=1.05,
+        trust_stale_boost=0.90,
+        spark_type_boosts={"observation": 1.05},
+    ),
+}
+
+
+def resolve_scoring_profile(query_mode: str | None) -> ScoringProfile:
+    """Map query_mode to a profile. None/blank → recall; invalid non-empty → error."""
+    if query_mode is None:
+        return SCORING_PROFILES["recall"]
+    mode = str(query_mode).strip().lower()
+    if not mode:
+        return SCORING_PROFILES["recall"]
+    if mode not in QUERY_MODE_PROFILES:
+        raise ValueError(
+            "query_mode must be one of recall|decision|reflection|planning"
+        )
+    return SCORING_PROFILES[mode]
 
 
 @dataclass(frozen=True)
@@ -37,6 +116,7 @@ class SparkRetrievalResult:
     score: float
     score_breakdown: dict[str, float]
     sensitivity: str = "normal"
+    score_profile: str = "recall"
 
 
 def _clamp01(value: float) -> float:
@@ -240,32 +320,86 @@ def _certainty_multiplier(row: sqlite3.Row) -> float:
     return CERTAINTY_SCORE_MULTIPLIERS.get(certainty, 0.85)
 
 
+def _secondary_lane_boost(
+    row: sqlite3.Row,
+    *,
+    lanes: frozenset[str] | None,
+) -> float:
+    """Boost only for primary-admitted rows whose secondary lanes intersect filter."""
+    if not lanes:
+        return 1.0
+    secondary, errors = sparks._decode_secondary_lanes(row["secondary_lanes_json"])
+    if errors or not secondary:
+        return 1.0
+    if any(lane in lanes for lane in secondary):
+        return SECONDARY_LANE_SCORE_BOOST
+    return 1.0
+
+
+def _trust_multiplier(row: sqlite3.Row, profile: ScoringProfile) -> float:
+    trust = str(row["trust_state"] or "active")
+    if trust in {"active", "pinned"}:
+        return float(profile.trust_active_boost)
+    if trust in {"stale", "rejected", "candidate"}:
+        # candidate stays neutral; stale/rejected soft-down when profile asks
+        if trust == "candidate":
+            return 1.0
+        return float(profile.trust_stale_boost)
+    return 1.0
+
+
+def _spark_type_boost(row: sqlite3.Row, profile: ScoringProfile) -> float:
+    spark_type = str(row["spark_type"] or "").strip().lower()
+    if not spark_type:
+        return 1.0
+    return float(profile.spark_type_boosts.get(spark_type, 1.0))
+
+
 def _score_spark(
     row: sqlite3.Row,
     *,
     semantic: float,
     graph: float,
     live_confidence: float,
+    lanes: frozenset[str] | None = None,
+    profile: ScoringProfile | None = None,
 ) -> tuple[float, dict[str, float]]:
+    scoring = profile or SCORING_PROFILES["recall"]
     confidence = _clamp01(live_confidence)
     recency = _spark_recency_score(row)
     semantic_c = _clamp01(semantic)
     graph_c = _clamp01(graph)
     certainty_multiplier = _certainty_multiplier(row)
+    secondary_boost = _secondary_lane_boost(row, lanes=lanes)
+    trust_mult = _trust_multiplier(row, scoring)
+    type_mult = _spark_type_boost(row, scoring)
     breakdown = {
         "semantic": round(semantic_c, 4),
         "confidence": round(confidence, 4),
         "recency": round(recency, 4),
         "graph_reinforcement": round(graph_c, 4),
         "certainty_multiplier": round(certainty_multiplier, 4),
+        "secondary_lane_boost": round(secondary_boost, 4),
+        "w_semantic": round(scoring.w_semantic, 4),
+        "w_confidence": round(scoring.w_confidence, 4),
+        "w_recency": round(scoring.w_recency, 4),
+        "w_graph": round(scoring.w_graph, 4),
+        "trust_multiplier": round(trust_mult, 4),
+        "spark_type_boost": round(type_mult, 4),
     }
     score = (
-        W_SPARK_SEMANTIC * semantic_c
-        + W_SPARK_CONFIDENCE * confidence
-        + W_SPARK_RECENCY * recency
-        + W_SPARK_GRAPH * graph_c
+        scoring.w_semantic * semantic_c
+        + scoring.w_confidence * confidence
+        + scoring.w_recency * recency
+        + scoring.w_graph * graph_c
     )
-    return round(score * certainty_multiplier, 4), breakdown
+    return (
+        round(
+            score * certainty_multiplier * secondary_boost * trust_mult * type_mult,
+            4,
+        ),
+        breakdown,
+    )
 
 
 def _bump_spark_access(
@@ -291,9 +425,11 @@ def _rank_spark_candidates(
     graph_boosts: dict[int, float] | None = None,
     project_id: int | None,
     lanes: frozenset[str] | None,
+    profile: ScoringProfile | None = None,
 ) -> list[SparkRetrievalResult]:
     results: list[SparkRetrievalResult] = []
     graph_boosts = graph_boosts or {}
+    scoring = profile or SCORING_PROFILES["recall"]
     pattern_spark_ids = spark_lifecycle.active_pattern_spark_ids(conn)
     for spark_id in candidate_ids:
         row = _load_spark_row(conn, spark_id, project_id=project_id, lanes=lanes)
@@ -316,6 +452,8 @@ def _rank_spark_candidates(
             semantic=semantic,
             graph=graph,
             live_confidence=live_confidence,
+            lanes=lanes,
+            profile=scoring,
         )
         results.append(
             SparkRetrievalResult(
@@ -327,6 +465,7 @@ def _rank_spark_candidates(
                 score=score,
                 score_breakdown=breakdown,
                 sensitivity=str(row["sensitivity"] or "normal"),
+                score_profile=scoring.name,
             )
         )
     return sorted(results, key=lambda item: (-item.score, item.spark_id))
@@ -343,10 +482,12 @@ def retrieve_sparks(
     expand_hops: int = 0,
     expand_max_nodes: int = spark_graph.SPARK_GRAPH_MAX_NODES,
     depth: str | None = None,
+    query_mode: str | None = None,
 ) -> list[SparkRetrievalResult]:
     """Hybrid spark retrieval with canonical deterministic scoring."""
     import crowley
 
+    profile = resolve_scoring_profile(query_mode)
     owns_conn = conn is None
     db = conn or crowley.connect_db()
     try:
@@ -379,6 +520,7 @@ def retrieve_sparks(
             keyword_candidate_ids=keyword_candidate_ids,
             project_id=project_id,
             lanes=lanes,
+            profile=profile,
         )
         if expand_hops > 0 and ranked:
             seed_ids = [item.spark_id for item in ranked[: max(0, limit)]]
@@ -399,6 +541,7 @@ def retrieve_sparks(
                     graph_boosts=expansion.graph_boost,
                     project_id=project_id,
                     lanes=lanes,
+                    profile=profile,
                 )
 
         filtered = spark_security.filter_ranked_sparks(

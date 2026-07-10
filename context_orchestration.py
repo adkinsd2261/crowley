@@ -6,6 +6,7 @@ import json
 import sqlite3
 from typing import Any
 
+import cognitive_query
 import context_resolution
 import spark_graph
 import spark_retrieval
@@ -66,6 +67,7 @@ def _spark_payload(result: spark_retrieval.SparkRetrievalResult) -> dict[str, An
         "confidence": result.confidence,
         "score": result.score,
         "score_breakdown": dict(result.score_breakdown),
+        "score_profile": result.score_profile,
     }
 
 
@@ -200,10 +202,15 @@ def build_cognitive_context(
     conn: sqlite3.Connection | None = None,
     depth: str = "medium",
     debug: bool = False,
+    query_mode: str | None = None,
 ) -> dict[str, Any]:
     """Build read-only cognitive context from ranked sparks and active patterns."""
     import crowley
 
+    interpretation = cognitive_query.interpret_query(
+        str(query or ""),
+        explicit_mode=query_mode,
+    )
     resolved_depth = context_resolution.normalize_depth(depth, default="medium")
     assert resolved_depth is not None
     depth_limits = context_resolution.COGNITIVE_DEPTH_LIMITS[resolved_depth]
@@ -213,7 +220,16 @@ def build_cognitive_context(
         int(depth_limits["supporting"]),
     )
     pattern_limit = int(depth_limits["patterns"])
-    lane_filter = _normalize_lanes(lanes)
+    explicit_lanes = _normalize_lanes(lanes)
+    if explicit_lanes is not None:
+        lane_filter = explicit_lanes
+        lane_source = "explicit"
+    elif interpretation.inferred_lanes:
+        lane_filter = frozenset(interpretation.inferred_lanes)
+        lane_source = "inferred"
+    else:
+        lane_filter = None
+        lane_source = "none"
     owns_conn = conn is None
     db = conn or crowley.connect_db()
     try:
@@ -228,6 +244,7 @@ def build_cognitive_context(
             db,
             project_id=resolved_project_id,
         )
+        scoring_profile = spark_retrieval.resolve_scoring_profile(interpretation.mode)
         ranked = spark_retrieval.retrieve_sparks(
             str(query or ""),
             limit=core_limit + support_limit,
@@ -237,6 +254,7 @@ def build_cognitive_context(
             bump_access=True,
             expand_hops=spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
             depth=resolved_depth,
+            query_mode=interpretation.mode,
         )
         core = ranked[:core_limit]
         supporting = ranked[core_limit : core_limit + support_limit]
@@ -265,11 +283,16 @@ def build_cognitive_context(
             "pattern_count": len(attached_patterns),
             "expand_hops": spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
             "selection_reason": "ranked retrieval split into core and supporting sparks",
-            "score_basis": COGNITIVE_CONTEXT_SCORE_BASIS,
+            "score_basis": scoring_profile.score_basis(),
             "lineage": trace_lineage,
             "fallback_used": fallback_used,
             "active_spark_count": active_spark_count,
             "cold_start_spark_count": cold_start_spark_count,
+            "query_mode": interpretation.mode,
+            "query_mode_confidence": interpretation.confidence,
+            "query_mode_reason": interpretation.reason,
+            "lane_source": lane_source,
+            "score_profile": scoring_profile.name,
         }
         if fallback_used:
             trace["selection_reason"] = (
@@ -287,7 +310,11 @@ def build_cognitive_context(
         if memory_fallback:
             payload["memory_fallback"] = memory_fallback
         if debug:
-            payload["debug"] = {"spark_ranked_count": len(ranked)}
+            payload["debug"] = {
+                "spark_ranked_count": len(ranked),
+                "query_hints": dict(interpretation.hints),
+                "inferred_lanes": list(interpretation.inferred_lanes),
+            }
         return spark_sanitize.sanitize_cognitive_context_payload(payload)
     finally:
         if owns_conn:
