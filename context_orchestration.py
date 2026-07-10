@@ -13,8 +13,8 @@ import spark_retrieval
 import spark_sanitize
 import sparks
 
-COGNITIVE_CONTEXT_DEFAULT_LIMIT = 12
-COGNITIVE_CONTEXT_SUPPORTING_LIMIT = 20
+COGNITIVE_CONTEXT_DEFAULT_LIMIT = 8
+COGNITIVE_CONTEXT_SUPPORTING_LIMIT = 7
 COGNITIVE_CONTEXT_PATTERN_LIMIT = 5
 COGNITIVE_CONTEXT_SCORE_BASIS = (
     "0.40 semantic + 0.25 confidence + 0.15 recency + 0.20 graph_reinforcement"
@@ -26,6 +26,7 @@ def _clamp_limit(value: int, *, default: int = COGNITIVE_CONTEXT_DEFAULT_LIMIT) 
         parsed = int(value)
     except (TypeError, ValueError):
         parsed = default
+    # Keep absolute clamp at 50; depth table is the cognitive-context hard ceiling.
     return max(1, min(parsed, 50))
 
 
@@ -195,8 +196,8 @@ def build_cognitive_context(
     query: str,
     *,
     lanes: object | None = None,
-    limit: int = COGNITIVE_CONTEXT_DEFAULT_LIMIT,
-    supporting_limit: int = COGNITIVE_CONTEXT_SUPPORTING_LIMIT,
+    limit: int | None = None,
+    supporting_limit: int | None = None,
     project: str | None = None,
     project_id: int | None = None,
     conn: sqlite3.Connection | None = None,
@@ -214,11 +215,17 @@ def build_cognitive_context(
     resolved_depth = context_resolution.normalize_depth(depth, default="medium")
     assert resolved_depth is not None
     depth_limits = context_resolution.COGNITIVE_DEPTH_LIMITS[resolved_depth]
-    core_limit = min(_clamp_limit(limit), int(depth_limits["core"]))
-    support_limit = min(
-        max(0, int(supporting_limit)),
-        int(depth_limits["supporting"]),
-    )
+    if limit is None:
+        core_limit = int(depth_limits["core"])
+    else:
+        core_limit = min(_clamp_limit(limit), int(depth_limits["core"]))
+    if supporting_limit is None:
+        support_limit = int(depth_limits["supporting"])
+    else:
+        support_limit = min(
+            max(0, int(supporting_limit)),
+            int(depth_limits["supporting"]),
+        )
     pattern_limit = int(depth_limits["patterns"])
     explicit_lanes = _normalize_lanes(lanes)
     if explicit_lanes is not None:
@@ -245,9 +252,13 @@ def build_cognitive_context(
             project_id=resolved_project_id,
         )
         scoring_profile = spark_retrieval.resolve_scoring_profile(interpretation.mode)
-        ranked = spark_retrieval.retrieve_sparks(
+        total_cap = core_limit + support_limit
+        # Probe +1 for truncated_count; expand_seed_limit keeps overflow out of
+        # graph-expansion seeds (Codex #361 amendment / memory #2450).
+        probe_limit = total_cap + 1
+        ranked_raw = spark_retrieval.retrieve_sparks(
             str(query or ""),
-            limit=core_limit + support_limit,
+            limit=probe_limit,
             project_id=resolved_project_id,
             lanes=lane_filter,
             conn=db,
@@ -255,7 +266,10 @@ def build_cognitive_context(
             expand_hops=spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
             depth=resolved_depth,
             query_mode=interpretation.mode,
+            expand_seed_limit=total_cap,
         )
+        truncated_count = max(0, len(ranked_raw) - total_cap)
+        ranked = ranked_raw[:total_cap]
         core = ranked[:core_limit]
         supporting = ranked[core_limit : core_limit + support_limit]
         fallback_used = (
@@ -278,6 +292,7 @@ def build_cognitive_context(
             "depth": resolved_depth,
             "lanes_used": sorted(lane_filter) if lane_filter else [],
             "retrieved_count": len(ranked),
+            "truncated_count": truncated_count,
             "core_count": len(core),
             "supporting_count": len(supporting),
             "pattern_count": len(attached_patterns),

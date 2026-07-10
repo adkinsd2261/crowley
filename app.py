@@ -530,7 +530,12 @@ def api_cognitive_spark_seed(body: CognitiveSparkSeedRequest) -> JSONResponse:
 def api_cognitive_context(
     q: str = Query(""),
     lane: str | None = Query(None),
-    limit: int = Query(12, ge=1, le=50),
+    limit: int | None = Query(
+        None,
+        ge=1,
+        le=50,
+        description="Optional core override; omit to use depth-table default",
+    ),
     project: str | None = Query(None),
     depth: str | None = Query("medium"),
     debug: bool = Query(False),

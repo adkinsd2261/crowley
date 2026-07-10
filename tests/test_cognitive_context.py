@@ -91,12 +91,16 @@ class CognitiveContextTests(IsolatedDbTestCase):
                 kwargs["expand_hops"],
                 spark_graph.SPARK_EXPANSION_HOPS_MEDIUM,
             )
-            self.assertEqual(kwargs["limit"], 23)
+            # limit=3 → core=min(3,8)=3; supporting=min(7,7)=7; probe=11
+            self.assertEqual(kwargs["limit"], 11)
+            self.assertEqual(kwargs["expand_seed_limit"], 10)
             self.assertEqual(len(payload["core_sparks"]), 2)
             self.assertEqual(payload["supporting_sparks"], [])
             self.assertEqual(payload["confidence"], 0.85)
             self.assertEqual(payload["trace"]["core_count"], 2)
             self.assertEqual(payload["trace"]["supporting_count"], 0)
+            self.assertEqual(payload["trace"]["truncated_count"], 0)
+            self.assertEqual(payload["trace"]["retrieved_count"], 2)
         finally:
             conn.close()
 
@@ -388,6 +392,105 @@ class CognitiveContextTests(IsolatedDbTestCase):
         self.assertEqual(trace["cold_start_spark_count"], 8)
         self.assertFalse(trace["fallback_used"])
         self.assertNotIn("memory_fallback", payload)
+
+    def test_medium_default_total_cap_15(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            ranked = [
+                _retrieval_result(i, score=1.0 - (i * 0.01)) for i in range(1, 20)
+            ]
+            with mock.patch.object(
+                context_orchestration.spark_retrieval,
+                "retrieve_sparks",
+                return_value=ranked[:16],
+            ) as retrieve_mock:
+                payload = context_orchestration.build_cognitive_context(
+                    "default medium cap",
+                    conn=conn,
+                )
+            kwargs = retrieve_mock.call_args.kwargs
+            self.assertEqual(kwargs["limit"], 16)
+            self.assertEqual(kwargs["expand_seed_limit"], 15)
+            total = len(payload["core_sparks"]) + len(payload["supporting_sparks"])
+            self.assertLessEqual(total, 15)
+            self.assertEqual(len(payload["core_sparks"]), 8)
+            self.assertEqual(len(payload["supporting_sparks"]), 7)
+            self.assertEqual(payload["trace"]["retrieved_count"], 15)
+            self.assertEqual(payload["trace"]["truncated_count"], 1)
+            self.assertEqual(payload["trace"]["depth"], "medium")
+        finally:
+            conn.close()
+
+    def test_truncated_count_zero_when_under_cap(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            ranked = [_retrieval_result(i, score=0.9 - i * 0.01) for i in range(1, 6)]
+            with mock.patch.object(
+                context_orchestration.spark_retrieval,
+                "retrieve_sparks",
+                return_value=ranked,
+            ):
+                payload = context_orchestration.build_cognitive_context(
+                    "under cap",
+                    conn=conn,
+                )
+            self.assertEqual(payload["trace"]["truncated_count"], 0)
+            self.assertEqual(payload["trace"]["retrieved_count"], 5)
+        finally:
+            conn.close()
+
+    def test_deep_allows_higher_explicit(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            ranked = [
+                _retrieval_result(i, score=1.0 - (i * 0.01)) for i in range(1, 34)
+            ]
+            with mock.patch.object(
+                context_orchestration.spark_retrieval,
+                "retrieve_sparks",
+                return_value=ranked[:33],
+            ) as retrieve_mock:
+                payload = context_orchestration.build_cognitive_context(
+                    "deep mode",
+                    depth="deep",
+                    conn=conn,
+                )
+            kwargs = retrieve_mock.call_args.kwargs
+            self.assertEqual(kwargs["limit"], 33)  # 12+20+1
+            self.assertEqual(kwargs["expand_seed_limit"], 32)
+            total = len(payload["core_sparks"]) + len(payload["supporting_sparks"])
+            self.assertEqual(total, 32)
+            self.assertGreater(total, 15)
+            self.assertEqual(payload["trace"]["truncated_count"], 1)
+            self.assertEqual(payload["trace"]["depth"], "deep")
+        finally:
+            conn.close()
+
+    def test_light_core_only_within_band(self) -> None:
+        conn = crowley.connect_db()
+        try:
+            ranked = [
+                _retrieval_result(i, score=1.0 - (i * 0.01)) for i in range(1, 12)
+            ]
+            with mock.patch.object(
+                context_orchestration.spark_retrieval,
+                "retrieve_sparks",
+                return_value=ranked[:9],
+            ) as retrieve_mock:
+                payload = context_orchestration.build_cognitive_context(
+                    "light mode",
+                    depth="light",
+                    conn=conn,
+                )
+            kwargs = retrieve_mock.call_args.kwargs
+            self.assertEqual(kwargs["limit"], 9)  # 8+0+1
+            self.assertEqual(kwargs["expand_seed_limit"], 8)
+            self.assertEqual(len(payload["core_sparks"]), 8)
+            self.assertEqual(payload["supporting_sparks"], [])
+            self.assertEqual(payload["trace"]["truncated_count"], 1)
+            self.assertEqual(payload["trace"]["depth"], "light")
+        finally:
+            conn.close()
 
 
 if __name__ == "__main__":

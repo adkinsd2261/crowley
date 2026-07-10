@@ -14,8 +14,9 @@ DEPTH_LIMITS: dict[str, dict[str, int | bool]] = {
 }
 
 COGNITIVE_DEPTH_LIMITS: dict[str, dict[str, int]] = {
-    "light": {"core": 12, "supporting": 0, "patterns": 5},
-    "medium": {"core": 12, "supporting": 20, "patterns": 5},
+    # V4.3 T4 (#361): medium hard total = 15; deep higher only when explicit.
+    "light": {"core": 8, "supporting": 0, "patterns": 5},
+    "medium": {"core": 8, "supporting": 7, "patterns": 5},
     "deep": {"core": 12, "supporting": 20, "patterns": 5},
 }
 

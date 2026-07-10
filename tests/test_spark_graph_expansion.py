@@ -335,6 +335,51 @@ class SparkGraphExpansionTests(IsolatedDbTestCase):
         finally:
             conn.close()
 
+    def test_expand_seed_limit_excludes_probe_overflow_row(self) -> None:
+        """limit=cap+1 must not seed expansion from the overflow row (#361)."""
+        conn = crowley.connect_db()
+        try:
+            top = self._insert(conn, content="cap seed top", confidence=0.5)
+            mid = self._insert(conn, content="cap seed mid", confidence=0.5)
+            overflow = self._insert(conn, content="cap probe overflow", confidence=0.5)
+            noise = self._insert(conn, content="overflow linked noise", confidence=0.5)
+            self._link(conn, overflow, noise, 0.99)
+
+            semantic = {top: 0.9, mid: 0.5, overflow: 0.2}
+            empty_expansion = spark_graph.SparkExpansionResult(
+                graph_boost={},
+                hop_distance={},
+                visited_count=0,
+            )
+            with mock.patch.object(
+                spark_retrieval, "_spark_semantic_candidate_scores", return_value=semantic
+            ), mock.patch.object(
+                spark_retrieval, "_spark_keyword_candidate_scores", return_value={}
+            ), mock.patch.object(
+                spark_retrieval, "_pinned_spark_ids", return_value=set()
+            ), mock.patch.object(
+                spark_retrieval.spark_graph,
+                "expand_spark_graph",
+                return_value=empty_expansion,
+            ) as expand_mock:
+                results = spark_retrieval.retrieve_sparks(
+                    "seed probe",
+                    conn=conn,
+                    limit=3,
+                    bump_access=False,
+                    expand_hops=1,
+                    expand_seed_limit=2,
+                )
+
+            expand_mock.assert_called_once()
+            seed_ids = expand_mock.call_args.args[1]
+            self.assertEqual(seed_ids, [top, mid])
+            self.assertNotIn(overflow, seed_ids)
+            # Probe still returns the overflow row in the result slice.
+            self.assertEqual([item.spark_id for item in results], [top, mid, overflow])
+        finally:
+            conn.close()
+
     def test_retrieve_expand_hops_zero_preserves_t8_behavior(self) -> None:
         conn = crowley.connect_db()
         try:

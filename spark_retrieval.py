@@ -483,11 +483,18 @@ def retrieve_sparks(
     expand_max_nodes: int = spark_graph.SPARK_GRAPH_MAX_NODES,
     depth: str | None = None,
     query_mode: str | None = None,
+    expand_seed_limit: int | None = None,
 ) -> list[SparkRetrievalResult]:
-    """Hybrid spark retrieval with canonical deterministic scoring."""
+    """Hybrid spark retrieval with canonical deterministic scoring.
+
+    ``expand_seed_limit`` (V4.3 T4): when probing ``limit=total_cap+1`` for
+    truncation detection, pass ``expand_seed_limit=total_cap`` so the overflow
+    row is not used as a graph-expansion seed (and is not access-bumped).
+    """
     import crowley
 
     profile = resolve_scoring_profile(query_mode)
+    seed_limit = limit if expand_seed_limit is None else max(0, int(expand_seed_limit))
     owns_conn = conn is None
     db = conn or crowley.connect_db()
     try:
@@ -523,7 +530,7 @@ def retrieve_sparks(
             profile=profile,
         )
         if expand_hops > 0 and ranked:
-            seed_ids = [item.spark_id for item in ranked[: max(0, limit)]]
+            seed_ids = [item.spark_id for item in ranked[:seed_limit]]
             expansion = spark_graph.expand_spark_graph(
                 db,
                 seed_ids,
@@ -552,7 +559,9 @@ def retrieve_sparks(
         top = filtered[: max(0, limit)]
         if bump_access and top:
             now = crowley._now_iso()
-            _bump_spark_access(db, [item.spark_id for item in top], now)
+            # Probe overflow rows must not receive access bumps.
+            bump_ids = [item.spark_id for item in top[:seed_limit]]
+            _bump_spark_access(db, bump_ids, now)
             if owns_conn:
                 db.commit()
         return top

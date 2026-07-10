@@ -737,7 +737,8 @@ def _handle_cognitive_context(args: dict[str, Any]) -> tuple[dict[str, Any], int
 
     q = _optional_str(args, "q") or ""
     lane = _optional_str(args, "lane")
-    limit = min(_optional_int(args, "limit", 12), 50)
+    # Omit limit so depth table supplies core/supporting defaults (V4.3 T4).
+    limit = min(_optional_int(args, "limit", 12), 50) if "limit" in args else None
     project = _optional_str(args, "project")
     depth = _optional_str(args, "depth") or "medium"
     debug = bool(args.get("debug"))
