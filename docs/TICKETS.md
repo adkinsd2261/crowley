@@ -7,19 +7,24 @@
 
 ## Active initiative — V4.2–V4.5 Cognitive Completion (builder-owned)
 
-**Current:** V4.1 Architecture and MCP Readiness shipped (#316–#325). **V4.2 Input Intelligence locked** (#352–#357). **V4.3 Retrieval + Query locked** (#358–#362, Codex APPROVED #2465 / #2473). **Next:** V4.4 Context + Chat Wire (#363–#367) — claim one ticket at a time when directed. Preserve V4.2/V4.3 locks and full V4 acceptance matrix criteria.
+**Current:** V4.1 Architecture and MCP Readiness shipped (#316–#325). **V4.2 Input Intelligence locked** (#352–#357). **V4.3 Retrieval + Query locked** (#358–#362, Codex APPROVED #2465 / #2473). **V4.3.1 Spark Corpus Migration locked** (#468–#472). **V4.3.2 Spark Corpus Expansion + Legacy Demotion locked** (#479–#483). **Next:** V4.3.3 Legacy Memory Final Drain — clear remaining legacy memory_items from living cognitive use before V4.4. **V4.4 Context + Chat Wire (#363–#367) is minted but blocked until V4.3.3 locks.** Preserve V4.2/V4.3 locks and full V4 acceptance matrix criteria.
 
 **Plan:** Complete ChatGPT cognitive-memory spec across V4.2–V4.5 before V5 automation. **V4.6 Explore Activation** is architecture-approved and parked until #374.
 
 **Planning docs:** [V4_COGNITIVE_SPEC_GAP_ANALYSIS.md](./V4_COGNITIVE_SPEC_GAP_ANALYSIS.md) · [V4.2_SCHEMA_RFC.md](./V4.2_SCHEMA_RFC.md) · [V4_CHAT_WIRE_RFC.md](./V4_CHAT_WIRE_RFC.md) · [V4_ACCEPTANCE_TEST_MATRIX.md](./V4_ACCEPTANCE_TEST_MATRIX.md) · [V4.6_EXPLORE_ACTIVATION_RFC.md](./V4.6_EXPLORE_ACTIVATION_RFC.md)  
 **V4.2 lock:** [V4.2_INPUT_INTELLIGENCE_LOCK.md](./V4.2_INPUT_INTELLIGENCE_LOCK.md)  
 **V4.3 lock:** [V4.3_RETRIEVAL_QUERY_LOCK.md](./V4.3_RETRIEVAL_QUERY_LOCK.md)
+**V4.3.1 lock:** [V4.3.1_SPARK_CORPUS_MIGRATION_LOCK.md](./V4.3.1_SPARK_CORPUS_MIGRATION_LOCK.md)
+**V4.3.2 lock:** [V4.3.2_SPARK_CORPUS_EXPANSION_LOCK.md](./V4.3.2_SPARK_CORPUS_EXPANSION_LOCK.md)
 
 | Ladder | Tickets | Packet | Status |
 |--------|---------|--------|--------|
 | V4.2 Input Intelligence | #352–#357 | `tickets/v4.2_input_intelligence.json` | **Locked** · Codex APPROVED #419 · [V4.2_INPUT_INTELLIGENCE_LOCK.md](./V4.2_INPUT_INTELLIGENCE_LOCK.md) |
 | V4.3 Retrieval + Query | #358–#362 | `tickets/v4.3_retrieval_query.json` | **Locked** · Codex APPROVED #2465/#2473 · [V4.3_RETRIEVAL_QUERY_LOCK.md](./V4.3_RETRIEVAL_QUERY_LOCK.md) |
-| V4.4 Context + Chat Wire | #363–#367 | `tickets/v4.4_context_chat_wire.json` | **Minted** · unblocked · next ladder |
+| V4.3.1 Spark Corpus Migration | #468–#472 | `tickets/v4.3.1_spark_corpus_migration.json` | **Locked** · [V4.3.1_SPARK_CORPUS_MIGRATION_LOCK.md](./V4.3.1_SPARK_CORPUS_MIGRATION_LOCK.md) |
+| V4.3.2 Spark Corpus Expansion + Legacy Demotion | #479–#483 | `tickets/v4.3.2_spark_corpus_expansion_legacy_demotion.json` | **Locked** · [V4.3.2_SPARK_CORPUS_EXPANSION_LOCK.md](./V4.3.2_SPARK_CORPUS_EXPANSION_LOCK.md) |
+| V4.3.3 Legacy Memory Final Drain | #491–#495 | `tickets/v4.3.3_legacy_memory_final_drain.json` | **Approved packet** · work before V4.4 · clear legacy living memory |
+| V4.4 Context + Chat Wire | #363–#367 | `tickets/v4.4_context_chat_wire.json` | **Minted** · blocked on V4.3.3 lock |
 | V4.5 Truth + Security Lock | #369–#374 | `tickets/v4.5_truth_security_lock.json` | **Minted** · blocked on V4.4 lock |
 | V4.6 Explore Activation | — | `tickets/v4.6_explore_activation.json` | **Spec parked** · mint only after #374 |
 

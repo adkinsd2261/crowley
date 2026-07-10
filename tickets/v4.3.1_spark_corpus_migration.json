@@ -1,0 +1,120 @@
+{
+  "objective": "V4.3.1 Spark Corpus Migration — convert valuable active memory_items into validated V4 sparks before V4.4 chat wire, so cognitive retrieval has a real living corpus.",
+  "context": "V4.3 Retrieval + Query is locked and bounded, but the production corpus is still cold-start: roughly 2500 memory_items, 1086 active memory_items, only 3 V4 sparks, and 0 active/pinned sparks at planning time. V4.4 intends to make cognitive memory primary in chat, so the spark corpus must be seeded first. memory_items remain receipts, canon, legacy retrieval, ticket memory, and cold-start fallback; they are not deleted or bulk-archived in this packet.",
+  "decisions": [
+    "Cursor implements all V4.3.1 tickets before V4.4 #363 is claimed.",
+    "Migrate value, not rows: do not bulk-convert all memory_items.",
+    "Every migrated spark preserves source_memory_item_id and migration lineage.",
+    "All generated sparks pass sparks.validate_spark and use sparks.upsert_spark_with_dedup.",
+    "Default apply path inserts candidates; only canon/pinned/approved decisions may be promoted active by deterministic policy.",
+    "Dry-run reports are required before any apply mode.",
+    "memory_items remain intact as receipts and fallback; no deletion, no table removal, no legacy retrieval removal.",
+    "No crowley.py rewrite and no CROWLEY_VERSION bump."
+  ],
+  "non_goals": [
+    "Spark Map Dashboard UI",
+    "V4.4 build_prompt/chat wire",
+    "Truth arbitration or contradiction resolution",
+    "Encryption or sensitivity redesign",
+    "Deleting, archiving, or bulk-mutating memory_items",
+    "Bulk dumping 2500 memory_items into sparks",
+    "Changing V4.3 query/scoring/lane/cap contracts",
+    "Changing retrieve_memories API behavior"
+  ],
+  "risks": [
+    "Low-signal handoff receipts become noisy sparks",
+    "Duplicate canon summaries produce repeated active sparks",
+    "Incorrect lane inference contaminates retrieval",
+    "Over-promotion makes uncertain memories authoritative",
+    "Large apply batch is hard to audit or roll back",
+    "Migration scripts accidentally mutate production during QA"
+  ],
+  "qa_expectations": "Per ticket: focused unit tests for inventory, candidate selection, extraction dry-run, dedup/idempotency, apply batch, lineage, and cognitive context smoke. Full unittest discovery at T5. Any production apply must be small, explicit, and auditable.",
+  "next_action": "Mint and run this packet before V4.4 #363. Cursor claims T1 first. Do not claim V4.4 until V4.3.1 T5 is approved.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-10",
+    "note": "Spark corpus migration is required before V4.4 chat wire because V4.3 retrieval is built but the active spark corpus is empty."
+  },
+  "tickets": [
+    {
+      "title": "V4.3.1 T1: spark corpus inventory and migration policy",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add read-only inventory and policy docs for memory_items → sparks migration. Implement scripts/memory_corpus_inventory.py that reports counts by memory_type/status/source/importance, active memory_items without spark lineage, pinned/canon/high-importance candidates, existing sparks by trust_state/lane, and cold-start retrieval status. Add docs/V4.3.1_SPARK_CORPUS_MIGRATION_PLAN.md documenting selection rules, trust policy, safety guardrails, and apply gates. Files: scripts/memory_corpus_inventory.py, docs/V4.3.1_SPARK_CORPUS_MIGRATION_PLAN.md, tests/test_memory_corpus_inventory.py. Depends on V4.3 lock.",
+      "acceptance": [
+        "Inventory runs read-only and never writes to memory_items or sparks",
+        "Report includes total/active memory_items, sparks_total, active/pinned sparks, and active memory_items without source spark lineage",
+        "Report breaks down memory_items by memory_type, status, source, importance, pinned",
+        "Plan doc defines migrate/include/exclude rules and explicitly says memory_items remain receipts/fallback",
+        "Plan doc blocks bulk dumping and requires small explicit apply batches",
+        "Tests prove inventory is read-only and schema tolerant"
+      ]
+    },
+    {
+      "title": "V4.3.1 T2: deterministic candidate selector and dry-run review report",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add scripts/select_memory_spark_candidates.py or equivalent module that selects valuable active memory_items for migration without extracting yet. Prioritize pinned canon summaries, decisions, constraints, lessons, preferences, and high-importance project updates; exclude merged/rejected/staged rows, obvious handoff receipts, QA-only noise, duplicate summaries, side-quest quarantine notes, and rows already represented by sparks.source_memory_item_id. Emit a dry-run JSON/markdown review report with candidate ids, reason, proposed trust tier, and skip reasons. Files: scripts/select_memory_spark_candidates.py, docs/artifacts/ generated only when run, tests/test_memory_spark_candidate_selection.py. Depends on T1.",
+      "acceptance": [
+        "Selector is dry-run/read-only by default",
+        "Already-linked memory_items are excluded",
+        "Merged/rejected/staged rows are excluded",
+        "Pinned canon and durable decisions rank first",
+        "Handoff receipt noise and side-quest recovery chatter are skipped unless explicitly high-signal",
+        "Report includes include_reason and skip_reason counts",
+        "Tests cover include/exclude rules with fixture memory_items"
+      ]
+    },
+    {
+      "title": "V4.3.1 T3: memory item to spark extraction dry-run",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add scripts/extract_memory_items_to_sparks.py in dry-run mode only. For selected candidates, generate one or more compact validated spark payloads using deterministic mapping for short/canon/decision rows and spark_extraction.extract_sparks_from_text for longer content when allowed. Every proposed spark must pass sparks.validate_spark and include proposed lane, spark_type, certainty, confidence, sensitivity, source_memory_item_id, and lineage_json with migration batch id. No database writes in T3. Files: scripts/extract_memory_items_to_sparks.py, tests/test_memory_to_spark_extraction.py. Depends on T2.",
+      "acceptance": [
+        "Dry-run creates no sparks and does not mutate memory_items",
+        "Each proposed spark is atomic and <= 300 chars",
+        "Each proposed spark passes sparks.validate_spark",
+        "Each proposed spark includes source_memory_item_id and migration lineage",
+        "Canon/approved decisions produce confirmed decision/fact sparks when deterministic",
+        "Ambiguous long rows stay candidate/proposed with lower confidence or are skipped",
+        "Invalid/prompt-injection/secret content is rejected or redacted by existing validation",
+        "Tests cover deterministic short-row mapping and long-row dry-run behavior"
+      ]
+    },
+    {
+      "title": "V4.3.1 T4: small apply batch with idempotent dedup and trust policy",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Extend the extraction script with explicit apply mode for small batches only. Apply must require --apply plus --limit and should default to candidate trust_state. Use sparks.upsert_spark_with_dedup and preserve source_memory_item_id/lineage_json. Promote only deterministic canon/pinned/approved decision sparks according to documented policy; otherwise leave candidate. Produce an apply report with inserted/linked/merged/promoted/skipped counts. Files: scripts/extract_memory_items_to_sparks.py, spark_lifecycle.py only if needed, tests/test_memory_to_spark_apply.py. Depends on T3.",
+      "acceptance": [
+        "Apply mode refuses to run without explicit --apply and a bounded --limit",
+        "Apply mode is idempotent on repeated runs for same memory_items",
+        "All inserted sparks preserve source_memory_item_id",
+        "Dedup path links/merges duplicates instead of inserting copies",
+        "Default trust_state is candidate",
+        "Only documented canon/pinned/approved decision policy can promote active",
+        "Apply report includes inserted, linked, merged, promoted, rejected, skipped",
+        "Tests prove no bulk apply and no memory_items deletion/archive"
+      ]
+    },
+    {
+      "title": "V4.3.1 T5: corpus migration lock and cognitive context smoke",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.3.1_SPARK_CORPUS_MIGRATION_LOCK.md recording inventory baseline, candidate policy, dry-run/apply evidence, exact commands, and active spark coverage after the initial small batch. Add smoke tests proving build_cognitive_context can return migrated sparks for core Crowley queries without relying only on memory_items fallback when enough active/pinned sparks exist. Update docs/TICKETS.md to mark V4.3.1 locked and V4.4 unblocked. Run focused suites and full unittest discovery. Depends on T1–T4.",
+      "acceptance": [
+        "Lock doc records before/after counts for memory_items and sparks",
+        "Lock doc links dry-run and apply reports",
+        "At least core canon/current-project memory is represented as active or pinned sparks, or the lock explicitly records why promotion was held",
+        "Cognitive context smoke returns migrated sparks with source_memory_item_id lineage",
+        "Cold-start fallback remains available and unchanged",
+        "V4.3 retrieval acceptance tests still pass",
+        "Actions/crowley_tools registry contract tests still pass",
+        "Full unittest discovery passes",
+        "docs/TICKETS.md shows V4.3.1 locked and V4.4 next"
+      ]
+    }
+  ]
+}

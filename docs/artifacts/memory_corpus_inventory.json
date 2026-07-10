@@ -1,0 +1,192 @@
+{
+  "generated_at": "2026-07-10T04:23:30.121912+00:00",
+  "db_path": "/Users/mixstation/crowley/crowley.db",
+  "read_only": true,
+  "tables": {
+    "memories": 64,
+    "memory_items": 2532,
+    "sparks": 210,
+    "spark_links": 9,
+    "patterns": 0
+  },
+  "memory_items_total": 2532,
+  "memory_items_active": 1011,
+  "sparks_total": 210,
+  "sparks_active": 6,
+  "sparks_pinned": 0,
+  "active_memory_items_without_spark_lineage": 809,
+  "high_value_candidates_without_spark": 560,
+  "memory_items_by_type": [
+    {
+      "memory_type": "event",
+      "n": 1457
+    },
+    {
+      "memory_type": "project_update",
+      "n": 408
+    },
+    {
+      "memory_type": "constraint",
+      "n": 253
+    },
+    {
+      "memory_type": "decision",
+      "n": 222
+    },
+    {
+      "memory_type": "summary",
+      "n": 134
+    },
+    {
+      "memory_type": "lesson",
+      "n": 55
+    },
+    {
+      "memory_type": "bug",
+      "n": 1
+    },
+    {
+      "memory_type": "preference",
+      "n": 1
+    },
+    {
+      "memory_type": "qa_result",
+      "n": 1
+    }
+  ],
+  "memory_items_by_status": [
+    {
+      "status": "merged",
+      "n": 1335
+    },
+    {
+      "status": "active",
+      "n": 1011
+    },
+    {
+      "status": "archived",
+      "n": 104
+    },
+    {
+      "status": "staged",
+      "n": 63
+    },
+    {
+      "status": "rejected",
+      "n": 18
+    },
+    {
+      "status": "stale",
+      "n": 1
+    }
+  ],
+  "memory_items_by_source": [
+    {
+      "source": "portable_terminal",
+      "n": 1263
+    },
+    {
+      "source": "cursor",
+      "n": 441
+    },
+    {
+      "source": "codex",
+      "n": 314
+    },
+    {
+      "source": "extract_guard",
+      "n": 238
+    },
+    {
+      "source": "implicit",
+      "n": 170
+    },
+    {
+      "source": "session_summary",
+      "n": 63
+    },
+    {
+      "source": "chatgpt",
+      "n": 26
+    },
+    {
+      "source": "crowley",
+      "n": 11
+    },
+    {
+      "source": "manual",
+      "n": 6
+    }
+  ],
+  "memory_items_by_importance": [
+    {
+      "importance": 5,
+      "n": 12
+    },
+    {
+      "importance": 4,
+      "n": 618
+    },
+    {
+      "importance": 3,
+      "n": 1076
+    },
+    {
+      "importance": 2,
+      "n": 658
+    },
+    {
+      "importance": 1,
+      "n": 168
+    }
+  ],
+  "memory_items_by_pinned": [
+    {
+      "pinned": 1,
+      "n": 15
+    },
+    {
+      "pinned": 0,
+      "n": 2517
+    }
+  ],
+  "sparks_by_trust_state": [
+    {
+      "trust_state": "candidate",
+      "n": 204
+    },
+    {
+      "trust_state": "active",
+      "n": 6
+    }
+  ],
+  "sparks_by_lane": [
+    {
+      "lane": "work",
+      "n": 204
+    },
+    {
+      "lane": "operating_style",
+      "n": 3
+    },
+    {
+      "lane": "health",
+      "n": 3
+    }
+  ],
+  "cold_start_retrieval": false,
+  "policy": {
+    "living_store": "sparks",
+    "receipts_fallback": "memory_items",
+    "no_bulk_dump": true,
+    "no_memory_items_delete": true,
+    "migrate_types": [
+      "constraint",
+      "decision",
+      "lesson",
+      "preference",
+      "project_update",
+      "summary"
+    ]
+  }
+}

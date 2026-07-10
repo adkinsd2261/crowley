@@ -1,0 +1,1716 @@
+{
+  "generated_at": "2026-07-10T04:19:32.174406+00:00",
+  "dry_run": true,
+  "migration_batch_id": "dryrun-219a7bfeab25",
+  "candidate_count": 50,
+  "proposed_spark_count": 49,
+  "skipped": 0,
+  "rejected": 1,
+  "items": [
+    {
+      "memory_item_id": 7,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Crowley V3.6 Phase 3 dual-writes memories into memory_items QA",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #7.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.92,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 7,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 7,
+            "source_memory_item_id": 7,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_A+pinned+decision+importance_5",
+      "proposed_trust": "active"
+    },
+    {
+      "memory_item_id": 6,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "User prefers local-first SQLite over ChromaDB",
+            "lane": "operating_style",
+            "why_keep": "Migrated from active preference memory_item #6.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.92,
+            "sensitivity": "normal",
+            "spark_type": "intent",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 6,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 6,
+            "source_memory_item_id": 6,
+            "source_memory_type": "preference",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_A+pinned+preference+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 263,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Canon: Project QA canon explanation probe docs/WHERE_WE_ARE.md",
+            "lane": "work",
+            "why_keep": "Migrated from active summary memory_item #263.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "observation",
+            "certainty": "tentative",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 263,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 263,
+            "source_memory_item_id": 263,
+            "source_memory_type": "summary",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_A+pinned+summary",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2392,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "inferred_lanes must remain a hint only in #358; do not apply lane filters until #359.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2392.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2392,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2392,
+            "source_memory_item_id": 2392,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2391,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Do not add a generic mode= API parameter in T1. If an explicit override is implemented, name it query_mode= to avoid collision with future mode=precise|explore activation semantics and existing mode/depth concepts.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2391.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2391,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2391,
+            "source_memory_item_id": 2391,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2390,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T1 must be rules-only. Do not add optional model tie-break hooks beyond a no-op placeholder; no OpenAI/Ollama/Anthropic calls from cognitive_query in T1.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2390.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2390,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2390,
+            "source_memory_item_id": 2390,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2382,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.3 #358+ may proceed next; preserve V4.2 lock and do not weaken V4 acceptance matrix criteria in later doc locks.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2382.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2382,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2382,
+            "source_memory_item_id": 2382,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2365,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "crowley.py remains V4.1 facade/version 4.1.0; no monolith regression observed.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2365.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2365,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2365,
+            "source_memory_item_id": 2365,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2364,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T5 guardrails satisfied: CROWLEY_TEST_MODE fixture path preserved, 1-retry-then-discard preserved, cache stores only successful canonical batches including empty-array success, and failures do not poison cache.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2364.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2364,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2364,
+            "source_memory_item_id": 2364,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2363,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Approve Cursor implementation for #356.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2363.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2363,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2363,
+            "source_memory_item_id": 2363,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2354,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Canonicalization must be applied only after validation/defaulting and before cache store/return, including empty-array success and test fixture success.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2354.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2354,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2354,
+            "source_memory_item_id": 2354,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2353,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Keep crowley.py change to the narrow _call_openai temperature passthrough only; no facade expansion or monolith regression.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2353.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2353,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2353,
+            "source_memory_item_id": 2353,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2352,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Keep durable SQLite extraction cache out of initial T5 unless explicitly re-approved; ship in-memory process cache only for this ticket.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2352.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2352,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2352,
+            "source_memory_item_id": 2352,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2348,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "None; short planning update only.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2348.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2348,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2348,
+            "source_memory_item_id": 2348,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2345,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.6 Explore Activation: mint only after #374; ephemeral clusters only (no Concept table); precise default parallel explore; wire cognitive/spark path not legacy /api/retrieve; extractive themes; lane-homogeneous + sensitivity-max security.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2345.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2345,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2345,
+            "source_memory_item_id": 2345,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2343,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "No new product decisions recorded.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2343.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2343,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2343,
+            "source_memory_item_id": 2343,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2338,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T4 promotion policy guardrails are acceptable: auto promotion requires normal sensitivity, candidate state, confirmed certainty, and confidence gate; manual promotion remains constrained to explicit seed/acceptance paths with security va...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2338.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2338,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2338,
+            "source_memory_item_id": 2338,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2337,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Previous blocker #2324 is resolved: facade/version tests now pass and crowley.py is not the old monolith.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2337.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2337,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2337,
+            "source_memory_item_id": 2337,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2336,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Approved Cursor's #355 fix.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2336.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2336,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2336,
+            "source_memory_item_id": 2336,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2323,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Denied pending fix: #355 cannot be approved while V4.1 facade extraction/version lock is broken. Do not treat version/facade failures as pre-existing; HEAD:crowley.py is V4.1 facade-compatible and current worktree changes caused the mism...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2323.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2323,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2323,
+            "source_memory_item_id": 2323,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2301,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Ship parser before ingest (#78).",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2301.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.85,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2301,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2301,
+            "source_memory_item_id": 2301,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2273,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Approved T3 plan v2: one temporary/noise section must not discard useful chunks from the same receipt; short-input T1 behavior remains unchanged.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2273.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2273,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2273,
+            "source_memory_item_id": 2273,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2268,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Plan changes required: T3 must chunk mixed useful input before applying temporary/noise decisions per chunk. One temporary/noise section must not discard useful chunks from the same receipt.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2268.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2268,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2268,
+            "source_memory_item_id": 2268,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2264,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Approved: schema-first spark extensions plus rules-first cognitive intent gate meet #353 and #352 acceptance, including no active sparks and no normal retrieval result for ignore/temporary intents.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2264.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2264,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2264,
+            "source_memory_item_id": 2264,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2235,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Denied pending fix: V4.2 T1 acceptance requires temporary creates no active spark and no normal retrieval result. Current code only sets metadata non_retrieval=true while memory_retrieval still returns active memory_items.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2235.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2235,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2235,
+            "source_memory_item_id": 2235,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2200,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Conditional approval: use deterministic rules-first cognitive_intent.py, skip extraction for ignore/temporary, preserve T18-T20 gates, and sequence T2 before persistence-aware T1 wiring.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2200.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2200,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2200,
+            "source_memory_item_id": 2200,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2190,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Security pre-check delegates to sparks._spark_content_security_errors without bypassing T20.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2190.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2190,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2190,
+            "source_memory_item_id": 2190,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2189,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "temporary intent retains audit receipt only; no sparks and no normal retrieval.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2189.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2189,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2189,
+            "source_memory_item_id": 2189,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2188,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Low-confidence ambiguous input defaults to store with tentative receipt hint, never silent ignore.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2188.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2188,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2188,
+            "source_memory_item_id": 2188,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2187,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.2 T1 uses deterministic rule stack only \u2014 no LLM intent classifier in first slice.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2187.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2187,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2187,
+            "source_memory_item_id": 2187,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2180,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Planning docs locked under docs/V4_*; implementation stays ticket-scoped per ladder.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2180.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2180,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2180,
+            "source_memory_item_id": 2180,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2175,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "None; short builder update only.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2175.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2175,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2175,
+            "source_memory_item_id": 2175,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2172,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.1 (#316\u2013#325) reconciled and release-locked on main.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2172.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2172,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2172,
+            "source_memory_item_id": 2172,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2149,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "python crowley.py now registers the running __main__ module as crowley before domain imports, fixing script-entry circular imports while preserving normal import behavior.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2149.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2149,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2149,
+            "source_memory_item_id": 2149,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2148,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Conversation constants and ChatTurnResult remain in crowley.py for import compatibility; behavior moved behind runtime-bound facade wrappers.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2148.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2148,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2148,
+            "source_memory_item_id": 2148,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2143,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Portable writeback module wrappers support both runtime-bound facade calls and internal module calls, preventing recursion while preserving local function composition.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2143.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2143,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2143,
+            "source_memory_item_id": 2143,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2142,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "crowley.py remains the public facade for world/sync/portable call sites; moved modules bind to the Crowley runtime and refresh runtime dependencies per call so mocks and live state keep working.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2142.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2142,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2142,
+            "source_memory_item_id": 2142,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2114,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T6 uses runtime-injection modules to avoid circular imports while making the new modules own implementation. Retrieval ordering, score breakdowns, inclusion reasons, ticket boosts, and memory item API shapes are preserved by existing tests.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2114.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2114,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2114,
+            "source_memory_item_id": 2114,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2110,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Core runtime moved without changing DB schema, public APIs, Actions dispatch, CLI behavior, or model routing semantics. Facade wrappers intentionally preserve crowley._has_openai_key, _call_openai, _iter_ollama_tokens, and related monkey...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2110.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2110,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2110,
+            "source_memory_item_id": 2110,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2106,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "MCP metadata remains internal-only. docs/V4.1_MCP_TOOL_MAPPING.md records mcp_safe, mcp_conditional, actions_only, local_only, and blocked tools. No MCP server or public route changes shipped.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2106.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2106,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2106,
+            "source_memory_item_id": 2106,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2102,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T3 keeps Actions behavior unchanged: MCP metadata lives in the new contract but is not exposed through /api/actions/catalog yet. Conservative classifications: normal reads MCP-safe, writes conditional, agent sync Actions-only, inspect/Gi...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2102.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2102,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2102,
+            "source_memory_item_id": 2102,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2098,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.1 security remains local-first: full internal API trusted-local only, public exposure only /api/actions/* with CROWLEY_ACTION_KEY, no OAuth/accounts/local auth requirement/field encryption in this ticket.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2098.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2098,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2098,
+            "source_memory_item_id": 2098,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2094,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.1 extractions must preserve import crowley compatibility and stop if a move forces API shape changes, schema changes, or unexpected Actions catalog drift.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2094.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2094,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2094,
+            "source_memory_item_id": 2094,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2090,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "V4.1 starts from clean baseline commit 16813d3; architecture work must preserve APIs, CLI, sync payloads, Actions tools, and DB schema.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2090.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2090,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2090,
+            "source_memory_item_id": 2090,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2057,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "Scope stayed clean: no spark_sanitize/output sanitization changes, no retrieval/scoring changes, no API rate-limit/Pydantic work, no observability/version/schema changes, and no sensitivity gate changes.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2057.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2057,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2057,
+            "source_memory_item_id": 2057,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2056,
+      "status": "rejected",
+      "reason": "validation_failed",
+      "proposals": [],
+      "errors": [
+        "content contains prompt wrapper token"
+      ],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2055,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T20 final behavior accepted: validate_spark applies content-only write-time rejects for instruction markers, prompt wrapper blobs, sk-/Bearer secrets, MEMORY_DATA delimiter smuggling, and spark-shaped JSON/code-fence structures while all...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2055.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2055,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2055,
+            "source_memory_item_id": 2055,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2052,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "T20 implementation scope is otherwise correct: validate_spark content-only write-time security gates, no spark_sanitize/retrieval/API-limit/observability/version scope drift, and existing callers inherit through validate_spark.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2052.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2052,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2052,
+            "source_memory_item_id": 2052,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2048,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "If making content checks additive, use independent checks deliberately and keep error text deterministic enough for tests. Existing structural validation behavior and normalized accepted spark payload shape should not change.",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2048.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2048,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2048,
+            "source_memory_item_id": 2048,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    },
+    {
+      "memory_item_id": 2047,
+      "status": "proposed",
+      "reason": "deterministic_short",
+      "proposals": [
+        {
+          "spark": {
+            "content": "False-positive guardrail: normal content must still pass when it merely discusses JSON, schemas, Authorization headers, or code fences in prose. Reject structural blobs/wrappers and actual secret/token patterns, not ordinary technical vo...",
+            "lane": "work",
+            "why_keep": "Migrated from active decision memory_item #2047.",
+            "worth_reason": "Valuable keeper selected for V4.3.1 spark corpus seeding.",
+            "confidence": 0.9,
+            "sensitivity": "normal",
+            "spark_type": "decision",
+            "certainty": "confirmed",
+            "secondary_lanes_json": "[]",
+            "exposure_class": "public"
+          },
+          "source_memory_item_id": 2047,
+          "lineage_json": {
+            "migration": "v4.3.1_spark_corpus",
+            "migration_batch_id": "dryrun-219a7bfeab25",
+            "memory_item_id": 2047,
+            "source_memory_item_id": 2047,
+            "source_memory_type": "decision",
+            "path": "deterministic_short"
+          },
+          "path": "deterministic_short"
+        }
+      ],
+      "errors": [],
+      "include_reason": "tier_B+decision+importance_4",
+      "proposed_trust": "candidate"
+    }
+  ],
+  "selection_summary": {
+    "include_reason_counts": {
+      "tier_A+pinned+decision+importance_5": 1,
+      "tier_A+pinned+preference+importance_4": 1,
+      "tier_A+pinned+summary": 1,
+      "tier_B+constraint": 26,
+      "tier_B+decision+importance_4": 171,
+      "tier_B+lesson": 7,
+      "tier_B+summary": 3
+    },
+    "skip_reason_counts": {
+      "already_linked": 27,
+      "duplicate_summary": 176,
+      "handoff_receipt": 495,
+      "qa_noise": 2,
+      "sidequest_noise": 2,
+      "status_archived": 4,
+      "status_merged": 1335,
+      "status_rejected": 16,
+      "status_staged": 63,
+      "status_stale": 1,
+      "ticket_chatter": 35,
+      "tier_C_filtered": 10,
+      "tier_d_excluded": 22,
+      "too_short": 12,
+      "type_excluded": 111
+    }
+  }
+}

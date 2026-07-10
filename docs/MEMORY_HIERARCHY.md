@@ -115,3 +115,5 @@ V4 adds a parallel stack **on top of** `memory_items` — it does not replace th
 **Authority:** For version and ship status, filesystem docs still win. V4 cognitive tables provide structured recall and context, not canon.
 
 **Legacy note:** CLI trim sparks still use `memories` / implicit spark path. V4 `sparks` table is the new cognitive unit.
+
+**V4.3.2 spark-first (corpus expansion):** After migration + promotion review, `sparks` are the living cognitive log. `memory_items` remain receipts/audit; rows may be marked `archived`/`stale` (never deleted) when represented by sparks or classified as Tier D noise. Cold-start `memory_items` fallback in `build_cognitive_context` remains available but is **exceptional** once active/pinned spark coverage exists — see [V4.3.2_SPARK_CORPUS_EXPANSION_PLAN.md](./V4.3.2_SPARK_CORPUS_EXPANSION_PLAN.md). `retrieve_memories` API is unchanged.

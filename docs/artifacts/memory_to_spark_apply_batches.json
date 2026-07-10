@@ -1,0 +1,1358 @@
+{
+  "generated_at": "2026-07-10T04:20:40.759229+00:00",
+  "dry_run": false,
+  "gate": "dry_run_artifact_ok:memory_to_spark_dryrun.json",
+  "batch_id_prefix": "v432-exp",
+  "max_batches": 4,
+  "batches_run": 4,
+  "limit_per_batch": 50,
+  "tiers": [
+    "A",
+    "B"
+  ],
+  "before": {
+    "sparks_total": 27,
+    "sparks_active": 2,
+    "sparks_pinned": 0,
+    "sparks_with_lineage": 27,
+    "memory_items_total": 2521,
+    "memory_items_active": 1100
+  },
+  "after": {
+    "sparks_total": 210,
+    "sparks_active": 2,
+    "sparks_pinned": 0,
+    "sparks_with_lineage": 210,
+    "memory_items_total": 2521,
+    "memory_items_active": 1100
+  },
+  "totals": {
+    "inserted": 175,
+    "linked": 8,
+    "merged": 7,
+    "promoted": 0,
+    "rejected": 10,
+    "skipped": 390
+  },
+  "batches": [
+    {
+      "generated_at": "2026-07-10T04:19:48.795152+00:00",
+      "dry_run": false,
+      "migration_batch_id": "v432-exp-b1",
+      "limit": 50,
+      "candidate_count": 210,
+      "tiers": [
+        "A",
+        "B"
+      ],
+      "inserted": 47,
+      "linked": 1,
+      "merged": 1,
+      "promoted": 0,
+      "rejected": 1,
+      "skipped": 27,
+      "details": [
+        {
+          "action": "skipped_already_linked_batch",
+          "count": 27
+        },
+        {
+          "memory_item_id": 7,
+          "spark_id": 4,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 6,
+          "spark_id": 28,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 263,
+          "spark_id": 29,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2392,
+          "spark_id": 30,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2391,
+          "spark_id": 31,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2390,
+          "spark_id": 32,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2382,
+          "spark_id": 33,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2365,
+          "spark_id": 34,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2364,
+          "spark_id": 35,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2363,
+          "spark_id": 36,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2354,
+          "spark_id": 37,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2353,
+          "spark_id": 38,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2352,
+          "spark_id": 39,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2348,
+          "spark_id": 40,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2345,
+          "spark_id": 41,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2343,
+          "spark_id": 42,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2338,
+          "spark_id": 43,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2337,
+          "spark_id": 44,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2336,
+          "spark_id": 45,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2323,
+          "spark_id": 46,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2301,
+          "spark_id": 47,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2273,
+          "spark_id": 48,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2268,
+          "spark_id": 49,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2264,
+          "spark_id": 50,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2235,
+          "spark_id": 51,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2200,
+          "spark_id": 52,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2190,
+          "spark_id": 53,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2189,
+          "spark_id": 54,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2188,
+          "spark_id": 55,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2187,
+          "spark_id": 56,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2180,
+          "spark_id": 57,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2175,
+          "spark_id": 58,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2172,
+          "spark_id": 59,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2149,
+          "spark_id": 60,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2148,
+          "spark_id": 61,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2143,
+          "spark_id": 62,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2142,
+          "spark_id": 63,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2114,
+          "spark_id": 64,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2110,
+          "spark_id": 65,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2106,
+          "spark_id": 66,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2102,
+          "spark_id": 67,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2098,
+          "spark_id": 68,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2094,
+          "spark_id": 69,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2090,
+          "spark_id": 70,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2057,
+          "spark_id": 71,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2056,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 2055,
+          "spark_id": 72,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2052,
+          "spark_id": 73,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2048,
+          "spark_id": 74,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2047,
+          "spark_id": 75,
+          "action": "inserted",
+          "trust_state": "candidate"
+        }
+      ],
+      "memory_items_mutated": false
+    },
+    {
+      "generated_at": "2026-07-10T04:20:05.809863+00:00",
+      "dry_run": false,
+      "migration_batch_id": "v432-exp-b2",
+      "limit": 50,
+      "candidate_count": 165,
+      "tiers": [
+        "A",
+        "B"
+      ],
+      "inserted": 43,
+      "linked": 3,
+      "merged": 1,
+      "promoted": 0,
+      "rejected": 3,
+      "skipped": 75,
+      "details": [
+        {
+          "action": "skipped_already_linked_batch",
+          "count": 75
+        },
+        {
+          "memory_item_id": 7,
+          "spark_id": 4,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2056,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 2046,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing"
+          ]
+        },
+        {
+          "memory_item_id": 2045,
+          "spark_id": 76,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2044,
+          "spark_id": 77,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2041,
+          "spark_id": 78,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2040,
+          "spark_id": 79,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2039,
+          "spark_id": 80,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2038,
+          "spark_id": 81,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2037,
+          "spark_id": 82,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2036,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing; content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 2035,
+          "spark_id": 83,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2034,
+          "spark_id": 84,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2033,
+          "spark_id": 85,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2030,
+          "spark_id": 86,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2029,
+          "spark_id": 87,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2025,
+          "spark_id": 88,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2021,
+          "spark_id": 89,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2020,
+          "spark_id": 90,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2019,
+          "spark_id": 91,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2018,
+          "spark_id": 92,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2017,
+          "spark_id": 93,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2014,
+          "spark_id": 94,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2013,
+          "spark_id": 95,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2012,
+          "spark_id": 96,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2011,
+          "spark_id": 97,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2010,
+          "spark_id": 98,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2009,
+          "spark_id": 99,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2008,
+          "spark_id": 100,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2007,
+          "spark_id": 101,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2004,
+          "spark_id": 102,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2000,
+          "spark_id": 103,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1999,
+          "spark_id": 104,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1998,
+          "spark_id": 105,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1997,
+          "spark_id": 106,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1996,
+          "spark_id": 107,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1992,
+          "spark_id": 108,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1991,
+          "spark_id": 109,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1990,
+          "spark_id": 110,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1989,
+          "spark_id": 111,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1988,
+          "spark_id": 112,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1987,
+          "spark_id": 113,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1982,
+          "spark_id": 114,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1981,
+          "spark_id": 115,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1978,
+          "spark_id": 116,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1977,
+          "spark_id": 117,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1973,
+          "spark_id": 118,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1972,
+          "spark_id": 119,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1971,
+          "spark_id": 120,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1970,
+          "spark_id": 121,
+          "action": "inserted",
+          "trust_state": "candidate"
+        }
+      ],
+      "memory_items_mutated": false
+    },
+    {
+      "generated_at": "2026-07-10T04:20:22.866050+00:00",
+      "dry_run": false,
+      "migration_batch_id": "v432-exp-b3",
+      "limit": 50,
+      "candidate_count": 119,
+      "tiers": [
+        "A",
+        "B"
+      ],
+      "inserted": 43,
+      "linked": 3,
+      "merged": 1,
+      "promoted": 0,
+      "rejected": 3,
+      "skipped": 121,
+      "details": [
+        {
+          "action": "skipped_already_linked_batch",
+          "count": 121
+        },
+        {
+          "memory_item_id": 7,
+          "spark_id": 4,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2056,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 2046,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing"
+          ]
+        },
+        {
+          "memory_item_id": 2036,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing; content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 1969,
+          "spark_id": 122,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1965,
+          "spark_id": 123,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1964,
+          "spark_id": 124,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1963,
+          "spark_id": 125,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1962,
+          "spark_id": 126,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1961,
+          "spark_id": 127,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1960,
+          "spark_id": 128,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1955,
+          "spark_id": 129,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1954,
+          "spark_id": 130,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1953,
+          "spark_id": 131,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1949,
+          "spark_id": 132,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1948,
+          "spark_id": 133,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1945,
+          "spark_id": 134,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1944,
+          "spark_id": 135,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1943,
+          "spark_id": 136,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1942,
+          "spark_id": 137,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1941,
+          "spark_id": 138,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1940,
+          "spark_id": 139,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1935,
+          "spark_id": 140,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1934,
+          "spark_id": 141,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1933,
+          "spark_id": 142,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1932,
+          "spark_id": 143,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1931,
+          "spark_id": 144,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1930,
+          "spark_id": 145,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1927,
+          "spark_id": 146,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1924,
+          "spark_id": 147,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1921,
+          "spark_id": 148,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1920,
+          "spark_id": 149,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1915,
+          "spark_id": 150,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1914,
+          "spark_id": 151,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1909,
+          "spark_id": 152,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1908,
+          "spark_id": 153,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1907,
+          "spark_id": 154,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1906,
+          "spark_id": 155,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1903,
+          "spark_id": 156,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1901,
+          "spark_id": 157,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1900,
+          "spark_id": 158,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1896,
+          "spark_id": 159,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1895,
+          "spark_id": 160,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1890,
+          "spark_id": 161,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1889,
+          "spark_id": 162,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1888,
+          "spark_id": 163,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1887,
+          "spark_id": 164,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1882,
+          "spark_id": 165,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1881,
+          "spark_id": 166,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1880,
+          "spark_id": 167,
+          "action": "inserted",
+          "trust_state": "candidate"
+        }
+      ],
+      "memory_items_mutated": false
+    },
+    {
+      "generated_at": "2026-07-10T04:20:40.757556+00:00",
+      "dry_run": false,
+      "migration_batch_id": "v432-exp-b4",
+      "limit": 50,
+      "candidate_count": 73,
+      "tiers": [
+        "A",
+        "B"
+      ],
+      "inserted": 42,
+      "linked": 1,
+      "merged": 4,
+      "promoted": 0,
+      "rejected": 3,
+      "skipped": 167,
+      "details": [
+        {
+          "action": "skipped_already_linked_batch",
+          "count": 167
+        },
+        {
+          "memory_item_id": 7,
+          "spark_id": 4,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2056,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 2046,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing"
+          ]
+        },
+        {
+          "memory_item_id": 2036,
+          "action": "rejected",
+          "reason": "validation_failed",
+          "errors": [
+            "content looks like instruction phrasing; content contains prompt wrapper token"
+          ]
+        },
+        {
+          "memory_item_id": 1879,
+          "spark_id": 168,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1809,
+          "spark_id": 169,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1454,
+          "spark_id": 170,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1453,
+          "spark_id": 171,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 891,
+          "spark_id": 172,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 890,
+          "spark_id": 173,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 889,
+          "spark_id": 174,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 885,
+          "spark_id": 175,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 884,
+          "spark_id": 176,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 883,
+          "spark_id": 177,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 882,
+          "spark_id": 178,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 807,
+          "spark_id": 179,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 806,
+          "spark_id": 180,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 775,
+          "spark_id": 181,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 654,
+          "spark_id": 182,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 614,
+          "spark_id": 183,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 508,
+          "spark_id": 184,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 504,
+          "spark_id": 185,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 499,
+          "spark_id": 186,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 495,
+          "spark_id": 187,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 491,
+          "spark_id": 188,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 488,
+          "spark_id": 189,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 485,
+          "spark_id": 190,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 480,
+          "spark_id": 191,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 475,
+          "spark_id": 192,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 470,
+          "spark_id": 193,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 466,
+          "spark_id": 194,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 457,
+          "spark_id": 195,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 454,
+          "spark_id": 196,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 442,
+          "spark_id": 197,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 438,
+          "spark_id": 198,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 425,
+          "spark_id": 199,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 419,
+          "spark_id": 200,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2511,
+          "spark_id": 201,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2495,
+          "spark_id": 202,
+          "action": "linked",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 2153,
+          "spark_id": 201,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1877,
+          "spark_id": 203,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1876,
+          "spark_id": 204,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1859,
+          "spark_id": 205,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1858,
+          "spark_id": 206,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1857,
+          "spark_id": 207,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1803,
+          "spark_id": 202,
+          "action": "merged",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1450,
+          "spark_id": 208,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1449,
+          "spark_id": 209,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1448,
+          "spark_id": 210,
+          "action": "inserted",
+          "trust_state": "candidate"
+        },
+        {
+          "memory_item_id": 1245,
+          "spark_id": 202,
+          "action": "merged",
+          "trust_state": "candidate"
+        }
+      ],
+      "memory_items_mutated": false
+    }
+  ],
+  "memory_items_mutated": false,
+  "memory_items_archived": false,
+  "memory_items_deleted": false
+}

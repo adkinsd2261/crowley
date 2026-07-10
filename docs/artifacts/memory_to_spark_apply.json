@@ -1,0 +1,172 @@
+{
+  "generated_at": "2026-07-10T03:50:32.856989+00:00",
+  "dry_run": false,
+  "migration_batch_id": "v431-initial-25",
+  "limit": 25,
+  "candidate_count": 363,
+  "inserted": 23,
+  "linked": 1,
+  "merged": 1,
+  "promoted": 2,
+  "rejected": 0,
+  "skipped": 3,
+  "details": [
+    {
+      "action": "skipped_already_linked_batch",
+      "count": 3
+    },
+    {
+      "memory_item_id": 10,
+      "spark_id": 4,
+      "action": "inserted",
+      "trust_state": "active",
+      "promoted": true
+    },
+    {
+      "memory_item_id": 2,
+      "spark_id": 5,
+      "action": "inserted",
+      "trust_state": "active",
+      "promoted": true
+    },
+    {
+      "memory_item_id": 2502,
+      "spark_id": 6,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2499,
+      "spark_id": 7,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2471,
+      "spark_id": 8,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2463,
+      "spark_id": 9,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2457,
+      "spark_id": 10,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2453,
+      "spark_id": 11,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2448,
+      "spark_id": 12,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2441,
+      "spark_id": 13,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2434,
+      "spark_id": 14,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2433,
+      "spark_id": 15,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2432,
+      "spark_id": 16,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2431,
+      "spark_id": 17,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2430,
+      "spark_id": 18,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2425,
+      "spark_id": 19,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2424,
+      "spark_id": 20,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2416,
+      "spark_id": 21,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2415,
+      "spark_id": 22,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2414,
+      "spark_id": 23,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2413,
+      "spark_id": 24,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2412,
+      "spark_id": 25,
+      "action": "linked",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2407,
+      "spark_id": 26,
+      "action": "inserted",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2406,
+      "spark_id": 20,
+      "action": "merged",
+      "trust_state": "candidate"
+    },
+    {
+      "memory_item_id": 2393,
+      "spark_id": 27,
+      "action": "inserted",
+      "trust_state": "candidate"
+    }
+  ],
+  "memory_items_mutated": false
+}

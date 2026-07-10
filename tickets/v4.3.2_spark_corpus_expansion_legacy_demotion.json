@@ -1,0 +1,117 @@
+{
+  "objective": "V4.3.2 Spark Corpus Expansion + Legacy Demotion — aggressively grow the V4 spark corpus and make sparks the primary cognitive log, while preserving memory_items only as receipts/audit until safe archival completes.",
+  "context": "V4.3.1 proved the migration path and seeded the first batch: sparks grew from 3 to 27, with 2 active and 25 candidate, while memory_items stayed intact. The user goal is one living memory log: sparks. Before V4.4 chat wire, Crowley needs much broader spark coverage, a reviewed promotion policy, and a path to demote/archive migrated or low-value memory_items from cognitive use without deleting audit history.",
+  "decisions": [
+    "Cursor implements all V4.3.2 tickets before V4.4 #363 is claimed.",
+    "Sparks are the living cognitive log; memory_items are receipts/audit/fallback only.",
+    "Expansion may run larger than V4.3.1 but remains batch-based, dry-run-first, and capped.",
+    "No DELETE of memory_items in V4.3.2; archive/stale only after lineage or explicit noise classification.",
+    "Every migrated spark must preserve source_memory_item_id and migration lineage.",
+    "Promotion to active/pinned requires deterministic policy or review report; broad auto-promotion is not allowed.",
+    "Legacy fallback remains available until lock tests prove common Crowley queries resolve from sparks.",
+    "No crowley.py rewrite and no CROWLEY_VERSION bump."
+  ],
+  "non_goals": [
+    "Spark Map Dashboard UI",
+    "V4.4 build_prompt/chat wire",
+    "Truth arbitration or contradiction resolution",
+    "Field encryption",
+    "Deleting memory_items",
+    "Removing memory_items table",
+    "Removing retrieve_memories API",
+    "Changing V4.3 query/scoring/lane/cap contracts",
+    "Bulk dumping all memory_items as active sparks"
+  ],
+  "risks": [
+    "Aggressive migration turns ticket chatter into cognitive noise",
+    "Legacy archive hides useful receipts before spark coverage is real",
+    "Promotion mistakes make stale decisions authoritative",
+    "Batch apply creates duplicate or overlong sparks",
+    "Common Crowley queries still fall back to memory_items after migration",
+    "Archive tooling mutates rows without a reversible report"
+  ],
+  "qa_expectations": "Per ticket: focused migration tests, archive/demotion safety tests, cognitive context smoke, V4.3 retrieval acceptance, Actions registry contracts. Full unittest discovery at T5. Production apply/archive operations must be report-backed and bounded.",
+  "next_action": "Mint and run V4.3.2 before V4.4 #363. Cursor claims T1 first. Do not start dashboard or V4.4 chat wire until V4.3.2 T5 is approved.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-10",
+    "note": "User wants sparks to become the single living memory log; V4.3.2 expands coverage and demotes legacy safely before V4.4."
+  },
+  "tickets": [
+    {
+      "title": "V4.3.2 T1: corpus coverage targets and aggressive candidate tiers",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Extend the V4.3.1 inventory/selector with explicit coverage targets and tiered candidate classes for aggressive migration. Define Tier A canon/pinned/current-state, Tier B durable decisions/constraints/preferences/lessons, Tier C high-signal project updates, and Tier D receipts/noise excluded from sparks. Produce a coverage report showing active/pinned spark coverage by memory_type, lane, source, and current active_memory_items_without_spark_lineage. Files: memory_spark_migration.py, scripts/select_memory_spark_candidates.py, docs/V4.3.2_SPARK_CORPUS_EXPANSION_PLAN.md, tests/test_spark_corpus_coverage.py. Depends on V4.3.1 lock.",
+      "acceptance": [
+        "Coverage report includes targets for active/pinned sparks and total migrated lineage",
+        "Candidate tiers are explicit and deterministic",
+        "Tier A/B rank before ticket approval chatter",
+        "Receipts, QA noise, and side-quest recovery chatter remain excluded unless manually whitelisted",
+        "Report identifies how many rows remain in each tier",
+        "Tests cover tier ordering and exclusion rules"
+      ]
+    },
+    {
+      "title": "V4.3.2 T2: reviewed multi-batch spark expansion",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Run and harden repeated bounded migration batches from the existing extraction path. Add support for --tier, --max-batches, and a required dry-run artifact before apply. Apply may process larger total volume than V4.3.1, but each batch remains capped (default max 50) and idempotent. Generate per-batch and cumulative reports with inserted/linked/merged/rejected/skipped counts. Files: memory_spark_migration.py, scripts/extract_memory_items_to_sparks.py, docs/artifacts reports, tests/test_spark_corpus_batch_expansion.py. Depends on T1.",
+      "acceptance": [
+        "Apply refuses to run without a recent dry-run artifact or explicit review flag",
+        "Each batch has a bounded limit and unique batch id",
+        "Repeated runs are idempotent and skip already-linked rows",
+        "Cumulative report records before/after spark and memory_items counts",
+        "All inserted sparks preserve source_memory_item_id and lineage",
+        "No memory_items are archived/deleted in T2",
+        "Tests cover multi-batch idempotency and cap enforcement"
+      ]
+    },
+    {
+      "title": "V4.3.2 T3: promotion review for active/pinned spark coverage",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add a promotion review tool that evaluates candidate migration sparks for active/pinned promotion without broad auto-promotion. Promote only confirmed canon/current-state/durable decisions/constraints/preferences with sufficient confidence and clean validation. Produce review and apply reports. Files: memory_spark_migration.py or new scripts/review_migrated_sparks.py, spark_lifecycle.py only if needed, tests/test_spark_corpus_promotion_review.py. Depends on T2.",
+      "acceptance": [
+        "Promotion review dry-run lists candidates, reasons, and holds",
+        "Promotion apply requires explicit --apply and bounded --limit",
+        "Only deterministic policy can promote active/pinned",
+        "Ticket approval/denial chatter remains candidate unless manually whitelisted",
+        "Promoted sparks keep source_memory_item_id and lineage",
+        "Tests cover promote, hold, and no broad auto-promotion"
+      ]
+    },
+    {
+      "title": "V4.3.2 T4: legacy memory_items demotion and archive safeguards",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add dry-run and apply tooling to demote legacy memory_items out of cognitive use after spark coverage exists. Do not delete rows. Archive/stale only rows with spark lineage or deterministic low-value/noise classification, preserving ticket-linked and pinned/canon receipts unless explicitly represented by active/pinned sparks. Update retrieval/cold-start docs only; do not remove retrieve_memories API. Files: scripts/archive_migrated_memory_items.py or memory_spark_migration.py, tests/test_legacy_memory_demotion.py. Depends on T3.",
+      "acceptance": [
+        "Archive/demotion dry-run is required before apply",
+        "No memory_items are deleted",
+        "Pinned/canon/ticket-linked receipts are protected unless represented by active/pinned sparks",
+        "Rows with spark lineage may be marked archived/stale only with report evidence",
+        "Low-value receipts/noise classification is deterministic and auditable",
+        "Apply report lists every changed memory_item id and reason",
+        "Tests prove protected rows are not archived prematurely"
+      ]
+    },
+    {
+      "title": "V4.3.2 T5: spark-first lock and legacy fallback threshold",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.3.2_SPARK_CORPUS_EXPANSION_LOCK.md recording before/after coverage, migration batches, promotion review, demotion/archive evidence, and remaining legacy fallback scope. Add cognitive context smoke tests for common Crowley queries proving sparks are primary and fallback is exceptional. Update docs/TICKETS.md to mark V4.3.2 locked and V4.4 unblocked. Run focused suites and full unittest discovery. Depends on T1–T4.",
+      "acceptance": [
+        "Lock doc records spark coverage before/after by trust_state/lane/source_memory_item_id",
+        "Lock doc records memory_items active/archive/stale counts before/after",
+        "Common Crowley queries return active/pinned sparks without relying on memory_items fallback when coverage exists",
+        "Legacy fallback remains available but is documented as exceptional",
+        "V4.3 retrieval acceptance tests still pass",
+        "Actions/crowley_tools registry contract tests still pass",
+        "Full unittest discovery passes",
+        "docs/TICKETS.md shows V4.3.2 locked and V4.4 next"
+      ]
+    }
+  ]
+}

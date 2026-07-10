@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-07-10T04:23:29.864659+00:00",
+  "read_only": true,
+  "targets": {
+    "active_or_pinned_sparks_min": 50,
+    "total_sparks_with_lineage_min": 200,
+    "active_memory_items_without_lineage_max": 400,
+    "tier_a_migrated_min": 20,
+    "tier_b_migrated_min": 80
+  },
+  "progress": {
+    "active_or_pinned_sparks": 6,
+    "total_sparks_with_lineage": 210,
+    "active_memory_items_without_lineage": 809,
+    "tier_remaining": {
+      "A": 1,
+      "B": 31,
+      "C": 10,
+      "D": 2118
+    },
+    "tier_counts_scanned": {
+      "A": 5,
+      "B": 399,
+      "C": 10,
+      "D": 2118
+    }
+  },
+  "gaps": {
+    "active_or_pinned_sparks": 44,
+    "total_sparks_with_lineage": 0,
+    "active_memory_items_without_lineage_over": 409
+  },
+  "sparks_total": 210,
+  "sparks_active": 6,
+  "sparks_pinned": 0,
+  "sparks_by_trust_state": [
+    {
+      "trust_state": "candidate",
+      "n": 204
+    },
+    {
+      "trust_state": "active",
+      "n": 6
+    }
+  ],
+  "sparks_by_lane": [
+    {
+      "lane": "work",
+      "n": 204
+    },
+    {
+      "lane": "operating_style",
+      "n": 3
+    },
+    {
+      "lane": "health",
+      "n": 3
+    }
+  ],
+  "migrated_by_memory_type": [
+    {
+      "memory_type": "decision",
+      "n": 195
+    },
+    {
+      "memory_type": "constraint",
+      "n": 10
+    },
+    {
+      "memory_type": "event",
+      "n": 2
+    },
+    {
+      "memory_type": "lesson",
+      "n": 1
+    },
+    {
+      "memory_type": "preference",
+      "n": 1
+    },
+    {
+      "memory_type": "summary",
+      "n": 1
+    }
+  ],
+  "migrated_by_source": [
+    {
+      "source": "codex",
+      "n": 128
+    },
+    {
+      "source": "cursor",
+      "n": 62
+    },
+    {
+      "source": "chatgpt",
+      "n": 8
+    },
+    {
+      "source": "portable_terminal",
+      "n": 5
+    },
+    {
+      "source": "manual",
+      "n": 4
+    },
+    {
+      "source": "extract_guard",
+      "n": 2
+    },
+    {
+      "source": "crowley",
+      "n": 1
+    }
+  ],
+  "memory_items_active": 1011,
+  "active_memory_items_without_spark_lineage": 809,
+  "candidate_include_count": 42,
+  "candidate_skip_reason_counts": {
+    "already_linked": 210,
+    "duplicate_summary": 176,
+    "handoff_receipt": 423,
+    "qa_noise": 2,
+    "sidequest_noise": 1,
+    "status_archived": 98,
+    "status_merged": 1335,
+    "status_rejected": 16,
+    "status_staged": 63,
+    "status_stale": 1,
+    "ticket_chatter": 22,
+    "tier_d_excluded": 22,
+    "too_short": 11,
+    "type_excluded": 110
+  },
+  "tier_remaining": {
+    "A": 1,
+    "B": 31,
+    "C": 10,
+    "D": 2118
+  },
+  "cold_start_retrieval": false
+}

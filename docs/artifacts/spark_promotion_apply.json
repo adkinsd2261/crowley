@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-07-10T04:21:56.123048+00:00",
+  "dry_run": false,
+  "limit": 20,
+  "before": {
+    "sparks_total": 210,
+    "sparks_active": 2,
+    "sparks_pinned": 0,
+    "sparks_with_lineage": 210,
+    "memory_items_total": 2525,
+    "memory_items_active": 1104
+  },
+  "after": {
+    "sparks_total": 210,
+    "sparks_active": 6,
+    "sparks_pinned": 0,
+    "sparks_with_lineage": 210,
+    "memory_items_total": 2525,
+    "memory_items_active": 1104
+  },
+  "promoted": 4,
+  "pinned": 0,
+  "held": 0,
+  "details": [
+    {
+      "spark_id": 28,
+      "action": "active",
+      "reason": "tier_A_active",
+      "source_memory_item_id": 6,
+      "source_preserved": true,
+      "lineage_preserved": true
+    },
+    {
+      "spark_id": 47,
+      "action": "active",
+      "reason": "tier_B_active",
+      "source_memory_item_id": 2301,
+      "source_preserved": true,
+      "lineage_preserved": true
+    },
+    {
+      "spark_id": 179,
+      "action": "active",
+      "reason": "tier_B_active",
+      "source_memory_item_id": 807,
+      "source_preserved": true,
+      "lineage_preserved": true
+    },
+    {
+      "spark_id": 180,
+      "action": "active",
+      "reason": "tier_B_active",
+      "source_memory_item_id": 806,
+      "source_preserved": true,
+      "lineage_preserved": true
+    }
+  ],
+  "review_summary": {
+    "promote_count": 4,
+    "hold_count": 204,
+    "reason_counts": {
+      "agent_decision_hold": 148,
+      "not_confirmed": 3,
+      "policy_no_match": 10,
+      "sensitive": 1,
+      "sidequest_noise": 1,
+      "ticket_chatter": 41,
+      "tier_A_active": 1,
+      "tier_B_active": 3
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "objective": "V4.3.3 Legacy Memory Final Drain - finish converting valuable memory_items into sparks, demote safe legacy rows, and define the protected receipt policy needed for sparks to be the only living cognitive log.",
+  "context": "V4.3.2 locked spark-first corpus expansion with 211 lineage sparks, 6 active sparks, and no memory_items deletion. Current live state before this packet: 2547 total memory_items; 1014 active; 104 archived; 1 stale; 1335 merged; 75 staged; 18 rejected. Coverage report shows 812 active memory_items without spark lineage, 42 remaining valuable migration candidates (Tier A 1, Tier B 31, Tier C 10), and 351 rows currently safe to demote by existing rules (167 archive as Tier D noise, 184 stale because they already have candidate spark lineage). 499 active rows are protected, mostly ticket-linked handoff receipts and pinned/canon rows, and need explicit policy before they can leave living memory.",
+  "decisions": [
+    "Cursor implements all V4.3.3 tickets before V4.4 #363 is claimed.",
+    "Goal is one living cognitive log: sparks. memory_items remain audit/canon/receipts only.",
+    "No DELETE of memory_items and no removal of the memory_items table.",
+    "Migrate the remaining Tier A/B/C candidates before broader demotion.",
+    "Promotion remains review-gated; ticket chatter and approval receipts must not become active memory.",
+    "Demotion applies only after dry-run evidence and bounded apply limits.",
+    "Ticket-linked handoff receipts require a specific closed-ticket/archive policy before bulk demotion.",
+    "Preserve auditability through linked tickets, lock docs, source_memory_item_id, lineage_json, and generated artifacts.",
+    "Do not change V4.3 retrieval scoring/lane/cap contracts, Actions registry contracts, or CROWLEY_VERSION."
+  ],
+  "non_goals": [
+    "Spark Map Dashboard UI",
+    "V4.4 build_prompt/chat wire",
+    "Truth arbitration or contradiction resolution",
+    "Field encryption",
+    "Deleting memory_items",
+    "Removing memory_items table",
+    "Removing retrieve_memories API",
+    "Bulk promoting all candidate sparks",
+    "Bulk archiving pinned/canon rows",
+    "Hiding audit trail for ticket-linked handoffs"
+  ],
+  "risks": [
+    "Protected ticket-linked receipts continue to dominate active legacy counts",
+    "Over-aggressive cleanup archives useful current-state facts",
+    "Migration of final candidates duplicates existing candidate sparks",
+    "Promotion of old ticket chatter pollutes active memory",
+    "Archive policy removes operator-visible evidence needed for handoff review",
+    "Legacy fallback still appears in chat/API after final drain"
+  ],
+  "qa_expectations": "Each ticket must ship focused tests for its policy, bounded dry-run/apply artifacts, and DB count evidence. T5 must run V4.3.3 focused tests, V4.3 retrieval acceptance, Actions registry/tool contracts, py_compile for touched scripts, git diff --check, and full unittest discovery.",
+  "next_action": "Run V4.3.3 before V4.4 #363. Cursor claims T1 first and proceeds sequentially. Do not start Spark Map UI or V4.4 chat wire until V4.3.3 T5 is approved.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-10",
+    "note": "User wants memory_items cleared from living memory and sparks to become the single cognitive log before continuing the V4.4 chat wire."
+  },
+  "tickets": [
+    {
+      "title": "V4.3.3 T1: final valuable candidate migration",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Migrate the remaining valuable active memory_items into sparks using the V4.3.2 tier policy. Target the current remaining Tier A/B/C set: Tier A 1, Tier B 31, Tier C 10. Run dry-run first, then bounded apply batches. Preserve source_memory_item_id and lineage_json for every migrated spark. Files: memory_spark_migration.py, scripts/select_memory_spark_candidates.py, scripts/extract_memory_items_to_sparks.py, docs/artifacts, tests/test_legacy_final_candidate_migration.py. Depends on V4.3.2 lock.",
+      "acceptance": [
+        "Dry-run artifact reports the remaining Tier A/B/C candidates before apply",
+        "Apply is bounded and refuses to run without dry-run evidence or explicit review flag",
+        "All inserted/linked/merged sparks preserve source_memory_item_id and lineage_json",
+        "Repeated apply is idempotent and does not duplicate migrated rows",
+        "Ticket approval chatter remains excluded or candidate-only",
+        "Coverage report after apply shows zero or explicitly justified remaining Tier A/B/C candidates",
+        "Tests cover final candidate migration and idempotency"
+      ]
+    },
+    {
+      "title": "V4.3.3 T2: durable spark promotion pass",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Run a stricter promotion review over migrated candidate sparks to move durable current-state facts, preferences, constraints, and decisions into active/pinned memory. Target progress toward at least 50 active/pinned sparks only when quality allows; do not force the target with ticket chatter. Produce review and apply artifacts with promote/hold reasons. Files: memory_spark_migration.py, scripts/review_migrated_sparks.py, docs/artifacts, tests/test_legacy_final_promotion_review.py. Depends on T1.",
+      "acceptance": [
+        "Promotion review lists every promoted and held spark with deterministic reason",
+        "Apply requires explicit --apply and bounded --limit",
+        "Ticket approval/denial chatter, handoff receipts, QA noise, and side-quest chatter remain candidate or held",
+        "Promoted sparks retain source_memory_item_id and lineage_json",
+        "Pinned promotion is limited to canon/pinned/current-state rows",
+        "Report records active/pinned count before and after",
+        "Tests cover promote, hold, and no forced promotion to meet numeric targets"
+      ]
+    },
+    {
+      "title": "V4.3.3 T3: safe legacy demotion batch",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Apply the currently safe demotion set from the V4.3.2 archive policy: archive deterministic Tier D noise and mark candidate-lineage rows stale, without touching protected ticket-linked or pinned/canon rows. Current dry-run estimates: 167 archive, 184 stale, 499 protected, 164 skipped/no rule. Keep apply bounded and report every changed id. Files: memory_spark_migration.py, scripts/archive_migrated_memory_items.py, docs/artifacts, tests/test_legacy_final_demotion_batch.py. Depends on T2.",
+      "acceptance": [
+        "Dry-run artifact records archive/stale/protect/skip counts before apply",
+        "Apply requires explicit --apply and bounded --limit",
+        "No memory_items are deleted",
+        "Pinned/canon/ticket-linked rows remain protected in T3",
+        "Every changed memory_item id, old status, new status, and reason is recorded",
+        "Post-apply active memory_items count drops by the applied archive/stale total",
+        "Tests prove protected rows are not demoted by the safe batch"
+      ]
+    },
+    {
+      "title": "V4.3.3 T4: protected ticket receipt archive policy",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Define and implement a policy for ticket-linked handoff/project_update receipts so they are no longer living cognitive memory while preserving audit. Closed-ticket receipts may be archived only when their linked ticket is done/cancelled and the useful state is represented by a lock doc, active/pinned spark, or ticket event lineage. Pinned/canon remains protected. Produce a dry-run first, then a bounded apply only if the policy is deterministic. Files: memory_spark_migration.py, scripts/archive_migrated_memory_items.py or new scripts/archive_ticket_receipts.py, docs/MEMORY_HIERARCHY.md, tests/test_ticket_receipt_archive_policy.py. Depends on T3.",
+      "acceptance": [
+        "Policy distinguishes audit receipts from living cognitive memory",
+        "Closed-ticket linked receipts can be archived only with ticket status evidence and summary/lineage evidence",
+        "Open/in_progress ticket-linked receipts remain protected",
+        "Pinned/canon rows remain protected",
+        "Dry-run reports eligible, protected, and blocked receipt counts",
+        "Apply is bounded and records every changed id and linked ticket id",
+        "No memory_items are deleted",
+        "Tests cover closed-ticket archive, open-ticket protection, and pinned/canon protection"
+      ]
+    },
+    {
+      "title": "V4.3.3 T5: final drain lock and V4.4 unblock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Add docs/V4.3.3_LEGACY_MEMORY_FINAL_DRAIN_LOCK.md recording before/after counts, migration, promotion, demotion, protected receipt policy, remaining active memory_items by reason, and the final spark-first operating model. Update docs/TICKETS.md so V4.3.3 is locked and V4.4 #363 is next. Add final smoke tests proving common context queries use sparks and legacy fallback is exceptional. Depends on T1-T4.",
+      "acceptance": [
+        "Lock doc records before/after sparks by trust_state and memory_items by status",
+        "Lock doc records remaining active memory_items by reason: canon, open ticket receipt, protected audit, or no rule",
+        "docs/MEMORY_HIERARCHY.md documents memory_items as audit/canon/receipts rather than living cognitive log",
+        "Common Crowley context queries resolve through sparks without memory_items fallback when coverage exists",
+        "V4.3 retrieval acceptance tests still pass",
+        "Actions/crowley_tools registry contract tests still pass",
+        "Full unittest discovery passes",
+        "docs/TICKETS.md shows V4.3.3 locked and V4.4 next"
+      ]
+    }
+  ]
+}
