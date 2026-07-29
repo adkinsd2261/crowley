@@ -23,6 +23,7 @@ Crowley is a **unified context hub** for multi-agent AI workflows. Instead of re
 - **Memory quality (V3.9.19)** — Ingest dedup, retrieval strength, lifecycle cleanup, observability-backed validation
 - **Agent retrieval enforcement (V3.9.18)** — Gateway gating, domain triggers, handoff→ticket bridge, proactive chaining
 - **Context packets** — Export portable bundles for external agents or human review
+- **Encrypted disaster recovery** — Consistent SQLite snapshots, client-side encrypted off-device history, scheduled checks, and isolated restore drills
 - **Zero context window math** — Memory layer handles retrieval; agents get what they need
 
 Think of it as a **local-first memory server** that lets you coordinate multiple AI systems without rebuilding context or losing institutional knowledge on model swaps.
@@ -211,6 +212,8 @@ Created by Codex, claimed by Cursor, visible on the dashboard.
 - **ChatGPT (Custom Actions)** — External integration via hybrid `/api/actions/*` gateway.
 
 Setup: [CODEX.md](./CODEX.md) · [CURSOR.md](./CURSOR.md)
+
+Disaster recovery: [docs/DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md)
 
 ---
 

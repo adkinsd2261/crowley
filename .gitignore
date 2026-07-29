@@ -1,5 +1,6 @@
 .env
 venv/
+venv.broken-*/
 __pycache__/
 *.pyc
 .DS_Store
@@ -16,5 +17,6 @@ crowley.db-shm
 .crowley/brain.json
 .crowley/chatgpt_bridge/
 .crowley/cloudflared/
+.crowley/backup/
 cloudflared/config.yml
 openapi-chatgpt.deployed.json

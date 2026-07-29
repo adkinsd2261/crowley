@@ -1,0 +1,153 @@
+{
+  "objective": "Make Crowley's current and future durable state safely evolvable, inspectable, backed up, and recoverable before adding sessions, Spaces, personal operations, Forge runs, or connectors.",
+  "context": "Approved plan: docs/V4.3.3R_RECOVERY_FOUNDATION_PLAN.md. North star: docs/V5_LIFE_READY_COGNITIVE_OS_PLAN.md. Baseline main commit ab04924189cde80cb80b341fcbf3256b236497c3 locks V4.3.1-V4.3.2. A current crowley.db exists but its provenance and historical lock-document counts are not assumed. The Windows bridge, encrypted backup work, and repaired Python 3.12 environment are checkpointed inputs that must be reviewed rather than treated as recovery-lock proof. Historical V4.3.3 tickets #491-#495 are absent from the current reset database; their do-not-claim/superseded status must be preserved in repository documentation and a current Crowley receipt without fabricating ticket events.",
+  "decisions": [
+    "Adopt and preserve compatible existing databases; do not presume a clean reset.",
+    "Use an ordered migration ledger with explicit empty-database and audited legacy-adoption paths.",
+    "Treat migration, core compatibility schema, memory compatibility, write audit, observability, and Sparks as required startup subsystems; optional embeddings and external providers may degrade visibly.",
+    "Enable foreign-key enforcement on every application connection after orphan preflight; add constraints progressively instead of rebuilding every legacy table in this release.",
+    "Retain the compatibility Crowley project and defer canonical Space creation until the project-versus-Space decision.",
+    "Keep memory_items as mixed compatibility state for now; new cognitive behavior remains Spark-first and V4.4 owns final chat fallback tiering.",
+    "A backup is verified only after isolated restore, integrity checks, migrations, required startup health, and bounded application smoke.",
+    "Preserve crowley.py as an import-compatible facade and keep new migration/recovery logic in focused modules."
+  ],
+  "non_goals": [
+    "Deleting, draining, bulk-archiving, or reconstructing current database rows",
+    "Replaying historical artifacts as fabricated live events",
+    "Creating Spaces, conversation sessions, personal operations, agent runs, durable jobs, MCP, connectors, or voice",
+    "Rebuilding every legacy table solely to add foreign keys",
+    "Removing existing public APIs, Actions shapes, or crowley.py compatibility",
+    "Automatically replacing the live database during restore",
+    "Storing the only backup recovery key with the database, repository, or encrypted backup"
+  ],
+  "risks": [
+    "The current database may contain an unknown or incompatible schema and must be preserved before adoption.",
+    "Enabling foreign keys may expose existing orphaned references or tests that relied on unenforced relationships.",
+    "Python environment repair and external restic/R2 configuration are operational dependencies, not proof of repository correctness.",
+    "SQLite migration transaction behavior and concurrent startup require explicit failure and locking tests.",
+    "The checkpointed recovery implementation overlaps this ladder and must not be overwritten or treated as recovery-lock proof.",
+    "Backup success can create false confidence unless application-aware restore verification is mandatory."
+  ],
+  "qa_expectations": "Each slice runs its focused tests. Schema-changing slices test empty, compatible existing, incompatible, repeated, interrupted, and concurrent behavior. Recovery slices test tamper, missing-key, isolated restore, and live-state preservation. The final lock requires full unittest discovery, preflight, clean-bootstrap acceptance, existing-database adoption, and bounded restored-copy API/cognitive smoke. Verification must use isolated databases and never mutate the live crowley.db.",
+  "next_action": "Post the approved do-not-claim notice for historical V4.3.3 tickets #491-#495, preserve that the rows are absent from the current reset database, then mint this seven-ticket ladder and activate only R1.",
+  "approval": {
+    "status": "approved",
+    "approved_by": "mr_go",
+    "approved_at": "2026-07-28",
+    "note": "The V5 and V4.3.3R plans and this concrete seven-ticket packet were approved by Mr. Go on 2026-07-28. The Python runtime was repaired and verified. Before minting, preserve a do-not-claim notice for historical V4.3.3 tickets #491-#495; because those rows are absent from the current reset database, do not fabricate cancellation events."
+  },
+  "tickets": [
+    {
+      "title": "V4.3.3R R1: runtime preflight and current-state preservation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Establish an executable, reproducible Crowley environment and preserve current durable state before schema work. Convert the verified local Python 3.12 repair into repository-supported setup and preflight without embedding machine-specific paths. Perform metadata-only database inspection (file identity, integrity, schema fingerprint, migration/user version, table names/counts; no row-content export), create and verify a pre-change online snapshot, and write a provenance status artifact. Review the checkpointed Windows bridge/backup implementation without overwriting it or treating it as recovery-lock proof. Likely surfaces: requirements files, setup/operator docs, a focused preflight or schema-inspection script, existing scripts/crowley_backup.py, and isolated tests. Depends on the approved V4.3.3R plan.",
+      "non_goals": "Schema mutation; database reset; corpus drain; installing or configuring external R2 credentials as test truth; committing secrets.",
+      "qa_expectation": "Focused environment/preflight and snapshot tests; metadata inspection against an isolated fixture and the current DB in read-only mode; prove no live rows change.",
+      "acceptance": [
+        "Repository instructions produce a working Python environment without relying on the removed Python311 path",
+        "Current crowley.db is inspected read-only and receives a provenance status without exporting row contents",
+        "A consistent pre-change snapshot is created and passes checksum plus SQLite integrity verification",
+        "Checkpointed recovery and Windows bridge work is preserved and explicitly inventoried",
+        "No schema or live database row is changed by R1",
+        "Focused tests and exact verification commands are recorded in the handoff"
+      ]
+    },
+    {
+      "title": "V4.3.3R R2: schema inventory and migration contract lock",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Produce the reviewed schema inventory and implementation contract before migration code. Inventory every table, index, trigger, declared foreign key, runtime ALTER/column check, direct sqlite3 opener, setup owner, and required/optional subsystem across crowley.py and focused modules. Lock migration ledger fields, checksum semantics, empty-database creation, existing-database baseline adoption, transaction/locking rules, schema fingerprinting, incompatibility behavior, and compatibility implications for APIs, tools, tests, scripts, and backup. Add docs/V4.3.3R_MIGRATION_CONTRACT.md plus deterministic inventory tooling/artifact if useful. Depends on R1.",
+      "non_goals": "Implementing the migration runner; modifying schema; rebuilding legacy tables; changing APIs.",
+      "qa_expectation": "Inventory test or deterministic comparison proves all committed schema creators and runtime column additions are represented; Codex architecture review before R3.",
+      "acceptance": [
+        "Inventory covers every committed CREATE TABLE, index, trigger, ALTER/add-column path, and direct database connection",
+        "Required and optional startup subsystems are explicitly classified",
+        "Migration identity, checksum, transaction, locking, adoption, and failure contracts are unambiguous",
+        "Compatibility effects on setup_db, tests, APIs, Actions, scripts, backup, and Spark foreign keys are recorded",
+        "No migration implementation or database mutation lands in R2",
+        "Codex approves the migration contract before R3 may begin"
+      ]
+    },
+    {
+      "title": "V4.3.3R R3: ordered migration runner and baseline adoption",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Implement a focused migration module and schema_migrations ledger from the approved R2 contract. Support ordered empty-database creation and audited adoption of compatible existing databases without claiming historical migrations ran. Integrate through a thin crowley.setup_db compatibility wrapper and the shared test DB helper. Enforce migration IDs/checksums, repeat-safe behavior, bounded migration locking, incompatible-schema rejection, and truthful failure reporting. Preserve all existing public behavior and rows unless the approved baseline migration explicitly requires otherwise. Depends on R2 Codex approval.",
+      "non_goals": "Strict startup subsystem registry (R4); foreign-key rollout (R4); domain schema for sessions/Spaces/operations; legacy row deletion.",
+      "qa_expectation": "Focused migration tests cover empty, compatible legacy, incompatible, repeat, checksum mismatch, interruption, and concurrent startup fixtures; existing isolated DB tests remain compatible.",
+      "acceptance": [
+        "Empty and adopted-compatible database fixtures reach the same required schema fingerprint",
+        "Existing-database adoption is recorded explicitly and does not fabricate historical migration execution",
+        "Repeated migration is a no-op and an applied checksum mismatch fails loudly",
+        "Incompatible or unknown schema blocks healthy startup without overwriting the database",
+        "Interrupted and concurrent migration tests produce one truthful migration owner and recoverable committed state",
+        "crowley.setup_db remains an import-compatible wrapper and focused migration tests pass"
+      ]
+    },
+    {
+      "title": "V4.3.3R R4: strict startup and SQLite integrity enforcement",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Replace broad required-initialization exception suppression with an explicit required/optional subsystem registry. Require migration/core schema, memory compatibility, write audit, observability, and Sparks; expose optional embedding/model/tunnel degradation separately. Enable PRAGMA foreign_keys=ON on every shared application connection after adoption orphan preflight. Add foreign_key_check/orphan reporting, schema/startup health fields, and focused failure injection. Keep business logic out of app.py and new feature logic out of crowley.py. Depends on R3.",
+      "non_goals": "Rebuilding every legacy table; making external providers required; changing domain APIs beyond approved additive health fields.",
+      "qa_expectation": "Connection pragma, required failure, optional degradation, orphan preflight, health redaction, and existing Spark foreign-key behavior tests.",
+      "acceptance": [
+        "Every normal application connection has foreign_keys enabled and retains WAL/busy-timeout behavior",
+        "Required subsystem failure prevents healthy startup and identifies the failing subsystem",
+        "Optional provider or embedding failure reports degraded status without hiding the reason",
+        "Existing orphaned references block adoption or produce an explicit repair requirement and are never silently deleted",
+        "Health output exposes migration/schema and subsystem status without secrets",
+        "Focused startup/integrity tests and relevant existing database tests pass"
+      ]
+    },
+    {
+      "title": "V4.3.3R R5: versioned recovery bundle and key contract",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Review and integrate the checkpointed encrypted recovery implementation under a stable, versioned bundle contract. Expand the manifest to classify all durable artifacts and excluded configuration, include migration version/schema fingerprint/tool format/rebuild metadata, checksum included artifacts, preserve online SQLite snapshot consistency, and keep recovery keys outside ordinary backup contents. Support isolated local restic integration tests plus the documented encrypted off-device operator path. Surface backup freshness and last verification without claiming upload equals recovery. Likely surfaces: scripts/crowley_backup.py, tests/test_crowley_backup.py, docs/DISASTER_RECOVERY.md, health/preflight adapters. Depends on R3 and coordinates with R4 health.",
+      "non_goals": "Uploading test data to a real cloud account; committing credentials; automatic live restore; field-level Spark encryption; connector framework.",
+      "qa_expectation": "Snapshot consistency, complete manifest classification, checksum/tamper, DPAPI where available, local restic integration, secret redaction, and live-path isolation tests.",
+      "acceptance": [
+        "Recovery manifest is versioned and records migration version, schema fingerprint, repository state, artifact checksums, exclusions, and rebuild metadata",
+        "Bundle scope explicitly classifies database, processed/inbox state, brain configuration, managed artifacts, connector/schedule configuration, and secrets",
+        "The only recovery key is never stored in Git, the database, the encrypted repository, ordinary logs, manifests, or handoffs",
+        "Backup status distinguishes snapshot/upload success from verified restore",
+        "Local isolated integration tests do not require real R2 credentials and external operator steps remain documented",
+        "Existing user recovery work is preserved, reviewed, and covered by focused tests"
+      ]
+    },
+    {
+      "title": "V4.3.3R R6: application-aware restore and recovery failure injection",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Extend restore verification beyond hashes and SQLite integrity. Restore into an isolated path, verify manifest/artifact checksums, run migrations against the restored copy, initialize required subsystems, and execute bounded health, ticket, Spark, and cognitive-context smoke without touching live state. Add clean-machine-equivalent acceptance tooling and failure injection for corrupt backup, missing key, interrupted migration, partial required initialization, concurrent startup, and stale recovery locks. Record drill reports suitable for health/operations. Depends on R4 and R5.",
+      "non_goals": "Automated promotion of restored data to live; destructive restore; full production connector recovery; user-facing recovery UI.",
+      "qa_expectation": "Isolated restore integration suite plus failure matrix; verify the live database path and checksum remain unchanged throughout drills.",
+      "acceptance": [
+        "A restored copy passes manifest hashes, SQLite integrity, ordered migrations, and required subsystem startup",
+        "Bounded restored-copy health, ticket, Spark, and cognitive-context smoke passes without using live state",
+        "Corrupt backup, missing key, interrupted migration, partial initialization, concurrent startup, and stale-lock fixtures fail truthfully",
+        "Restore drill records a durable report with snapshot identity and verification results",
+        "Automated restore never replaces or mutates live crowley.db",
+        "Clean-machine-equivalent acceptance commands are documented and reproducible"
+      ]
+    },
+    {
+      "title": "V4.3.3R R7: recovery lock and V4 ladder reconciliation",
+      "assignee": "cursor",
+      "priority": 1,
+      "description": "Produce docs/V4.3.3R_RECOVERY_FOUNDATION_LOCK.md containing only verified migration, startup, foreign-key, backup, restore, and failure-injection evidence. Record the historical database-loss incident and authoritative seed manifest without fabricating live events. Confirm the repository notice and current Crowley receipt preserving the supersession of old V4.3.3 #491-#495, whose rows are absent from the reset database. Reconcile docs/ROADMAP.md, docs/TICKETS.md, docs/PROJECT_STATE.md, docs/WHERE_WE_ARE.md, docs/ARCHITECTURE.md, docs/DECISION_LOG.md, and the V4.4 plan so persistent sessions/cognitive chat are next only after recovery acceptance. Run full verification. Depends on R1-R6.",
+      "non_goals": "Implementing V4.4; altering historical lock evidence; version bump unless separately approved; minting later V5 packets.",
+      "qa_expectation": "Full unittest discovery, preflight, empty bootstrap, existing-database adoption, isolated restore drill, required health, foreign-key check, and bounded API/cognitive smoke with exact results in the lock.",
+      "acceptance": [
+        "Recovery lock records exact verified commands, results, migration IDs, snapshot/drill identities, and known limitations",
+        "Database-loss incident and seed manifest distinguish known facts, unknowns, Git evidence, and live database state",
+        "Historical #491-#495 supersession remains visible through repository documentation and a current receipt without fabricated ticket events or corpus counts",
+        "Roadmap, ticket ledger, project state, onboarding, architecture, and decision documents agree on the recovery lock and next release",
+        "V4.4 is unblocked only after all recovery acceptance scenarios pass",
+        "Full unittest discovery, preflight, clean bootstrap, adoption, restore, and bounded runtime smoke pass or the lock remains blocked"
+      ]
+    }
+  ]
+}

@@ -186,14 +186,14 @@ def verify_local(*, action_key: str, port: int = 8765) -> int:
     auth = {"Authorization": f"Bearer {action_key}"}
     code = request_code(f"{base}/api/actions/health", headers=auth, timeout=5.0)
     if code != 200:
-        print(f"FAIL local /api/actions/health → HTTP {code}", file=sys.stderr)
+        print(f"FAIL local /api/actions/health -> HTTP {code}", file=sys.stderr)
         return 1
-    print("OK   local /api/actions/health → HTTP 200")
+    print("OK   local /api/actions/health -> HTTP 200")
     code = request_code(f"{base}/api/actions/catalog", headers=auth, timeout=5.0)
     if code != 200:
-        print(f"FAIL local /api/actions/catalog → HTTP {code}", file=sys.stderr)
+        print(f"FAIL local /api/actions/catalog -> HTTP {code}", file=sys.stderr)
         return 1
-    print("OK   local /api/actions/catalog → HTTP 200")
+    print("OK   local /api/actions/catalog -> HTTP 200")
     return 0
 
 
@@ -216,13 +216,13 @@ def verify(*, base_url: str, action_key: str, wait_seconds: int = 90) -> int:
     while time.monotonic() < deadline:
         code = request_with_fallback(health_url, headers=auth)
         if code == 200:
-            print(f"OK   /api/actions/health → HTTP {code}")
+            print(f"OK   /api/actions/health -> HTTP {code}")
             health_ok = True
             break
         time.sleep(2)
 
     if not health_ok:
-        print("FAIL /api/actions/health → tunnel not ready in time", file=sys.stderr)
+        print("FAIL /api/actions/health -> tunnel not ready in time", file=sys.stderr)
         return 1
 
     for method, url, body in checks[1:]:
@@ -231,11 +231,11 @@ def verify(*, base_url: str, action_key: str, wait_seconds: int = 90) -> int:
         for _ in range(3):
             code = request_with_fallback(url, method=method, headers=auth, body=body)
             if code == 200:
-                print(f"OK   {path} → HTTP {code}")
+                print(f"OK   {path} -> HTTP {code}")
                 break
             time.sleep(2)
         else:
-            print(f"FAIL {path} → HTTP {code}", file=sys.stderr)
+            print(f"FAIL {path} -> HTTP {code}", file=sys.stderr)
             return 1
 
     print("All Actions checks passed.")

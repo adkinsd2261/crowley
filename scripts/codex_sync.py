@@ -17,7 +17,11 @@ if str(_SCRIPTS) not in sys.path:
 import agent_sync_lib as asl  # noqa: E402
 
 ROOT = asl.ROOT
-PYTHON = ROOT / "venv" / "bin" / "python3"
+PYTHON = (
+    ROOT / "venv" / "Scripts" / "python.exe"
+    if sys.platform == "win32"
+    else ROOT / "venv" / "bin" / "python3"
+)
 CODEX_MD = ROOT / "CODEX.md"
 INBOX = ROOT / ".crowley" / "inbox"
 HEALTH_URL = asl.url("/api/bus/health")
@@ -115,6 +119,12 @@ def _git(args: list[str]) -> str:
     return result.stdout.strip()
 
 
+def _ensure_bus() -> None:
+    script = ROOT / "scripts" / "ensure_crowley_bus.py"
+    if script.is_file():
+        _run([_python_cmd(), str(script)], timeout=75)
+
+
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
@@ -194,11 +204,10 @@ def _print_agent_sync(sync: dict[str, Any]) -> None:
 
 
 def before() -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     sync, error = asl.fetch_json(
-        asl.url("/api/agent/sync", {"agent": AGENT, "limit": 20})
+        asl.url("/api/agent/sync", {"agent": AGENT, "limit": 20}),
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
     )
     if error:
         print(f"WARNING: Crowley agent sync unavailable: {error}")
@@ -382,7 +391,10 @@ def _ingest_and_verify() -> bool:
         print("No files were ingested.")
         return False
 
-    health, health_error = asl.fetch_json(HEALTH_URL)
+    health, health_error = asl.fetch_json(
+        HEALTH_URL,
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
+    )
     if health_error:
         print(f"WARNING: Crowley unavailable at {HEALTH_URL}: {health_error}")
         print("Handoff left in .crowley/inbox for later ingest.")
@@ -411,9 +423,7 @@ def _ingest_and_verify() -> bool:
 
 
 def after(args: argparse.Namespace) -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     INBOX.mkdir(parents=True, exist_ok=True)
     before_files = {
         path
@@ -471,9 +481,7 @@ def after(args: argparse.Namespace) -> int:
 
 
 def note(text: str) -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     INBOX.mkdir(parents=True, exist_ok=True)
     before_files = {
         path
@@ -522,9 +530,7 @@ def note(text: str) -> int:
 
 
 def create_ticket_cli(args: argparse.Namespace) -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     description = args.description or ""
     if args.acceptance:
         description = (description + "\n\nAcceptance:\n" + "\n".join(f"- {a}" for a in args.acceptance)).strip()
@@ -545,9 +551,7 @@ def create_ticket_cli(args: argparse.Namespace) -> int:
 
 
 def cancel_ticket_cli(args: argparse.Namespace) -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     if not args.comment or not args.comment.strip():
         print("Ticket cancel failed: --comment is required with --cancel-ticket")
         return 1
@@ -564,9 +568,7 @@ def cancel_ticket_cli(args: argparse.Namespace) -> int:
 
 
 def create_tickets_file(path: str) -> int:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
-    if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+    _ensure_bus()
     file_path = Path(path)
     if not file_path.is_file():
         print(f"Ticket file not found: {file_path}")
@@ -627,7 +629,10 @@ def create_tickets_file(path: str) -> int:
 
 
 def status() -> int:
-    health, error = asl.fetch_json(HEALTH_URL)
+    health, error = asl.fetch_json(
+        HEALTH_URL,
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
+    )
     print("Codex hardwiring status")
     print("=======================")
     if error:

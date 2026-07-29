@@ -18,7 +18,11 @@ import agent_sync_lib as asl  # noqa: E402
 ROOT = asl.ROOT
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-PYTHON = ROOT / "venv" / "bin" / "python3"
+PYTHON = (
+    ROOT / "venv" / "Scripts" / "python.exe"
+    if sys.platform == "win32"
+    else ROOT / "venv" / "bin" / "python3"
+)
 INBOX = ROOT / ".crowley" / "inbox"
 HEALTH_URL = asl.url("/api/bus/health")
 AGENT = "cursor"
@@ -53,9 +57,9 @@ def _git(args: list[str]) -> str:
 
 
 def _ensure_bus() -> None:
-    script = ROOT / "scripts" / "ensure_crowley_bus.sh"
+    script = ROOT / "scripts" / "ensure_crowley_bus.py"
     if script.is_file():
-        _run(["bash", str(script)], timeout=30)
+        _run([_python_cmd(), str(script)], timeout=75)
 
 
 def _print_agent_sync(sync: dict[str, Any]) -> None:
@@ -85,7 +89,10 @@ def session_end() -> int:
 
 def before() -> int:
     _ensure_bus()
-    sync, error = asl.fetch_json(asl.url("/api/agent/sync", {"agent": AGENT, "limit": 20}))
+    sync, error = asl.fetch_json(
+        asl.url("/api/agent/sync", {"agent": AGENT, "limit": 20}),
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
+    )
     if error:
         print(f"WARNING: Crowley agent sync unavailable: {error}", file=sys.stderr)
         return 0
@@ -319,7 +326,10 @@ def _ingest_and_verify() -> bool:
         print("No files were ingested.")
         return False
 
-    health, health_error = asl.fetch_json(HEALTH_URL)
+    health, health_error = asl.fetch_json(
+        HEALTH_URL,
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
+    )
     if health_error:
         print(f"WARNING: Crowley unavailable at {HEALTH_URL}: {health_error}")
         print("Handoff left in .crowley/inbox for later ingest.")
@@ -524,7 +534,10 @@ def note(text: str) -> int:
 
 
 def status() -> int:
-    health, error = asl.fetch_json(HEALTH_URL)
+    health, error = asl.fetch_json(
+        HEALTH_URL,
+        timeout=asl.DIAGNOSTIC_READ_TIMEOUT,
+    )
     print("Cursor hardwiring status")
     print("========================")
     if error:

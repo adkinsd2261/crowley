@@ -38,7 +38,7 @@ def patch_openapi(*, base_url: str, template: Path, output: Path) -> dict[str, o
         raise ValueError("servers[0] must be an object")
     first["url"] = base_url
     first["description"] = (
-        "Crowley ChatGPT Actions bridge (Cloudflare Tunnel or ngrok → 127.0.0.1:8765)"
+        "Crowley ChatGPT Actions bridge (Cloudflare Tunnel or ngrok -> 127.0.0.1:8765)"
     )
     output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return payload
@@ -75,7 +75,7 @@ def main() -> int:
         print(exc, file=sys.stderr)
         return 1
 
-    print(f"Patched OpenAPI server URL → {base_url}")
+    print(f"Patched OpenAPI server URL -> {base_url}")
     print(f"Wrote {args.output.relative_to(ROOT)}")
     return 0
 

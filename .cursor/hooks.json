@@ -4,13 +4,13 @@
     "sessionStart": [
       {
         "command": ".cursor/hooks/session-start.sh",
-        "timeout": 30
+        "timeout": 120
       }
     ],
     "beforeSubmitPrompt": [
       {
         "command": ".cursor/hooks/prompt-submit.sh",
-        "timeout": 20
+        "timeout": 90
       }
     ],
     "stop": [

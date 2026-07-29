@@ -27,6 +27,10 @@ class SlimAgentSyncBundleTests(IsolatedDbTestCase):
         self.project_id = crowley._active_project_id(self.conn)
         assert self.project_id is not None
 
+    def tearDown(self) -> None:
+        self.conn.close()
+        super().tearDown()
+
     def _insert_constraint(self, content: str) -> int:
         now = crowley._now_iso()
         cur = self.conn.execute(

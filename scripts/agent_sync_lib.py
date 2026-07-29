@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SESSION_MARKER = ROOT / ".crowley" / ".cursor-session-pending-handoff"
 BUS_URL = "http://127.0.0.1:8765"
 DEFAULT_TIMEOUT = 8
+DIAGNOSTIC_READ_TIMEOUT = 30
 
 
 def url(path: str, params: dict[str, object] | None = None) -> str:
@@ -206,7 +207,10 @@ def cancel_ticket_api(
 
 
 def last_handoff_memory_id(agent: str) -> int | None:
-    sync, _ = fetch_json(url("/api/agent/sync", {"agent": agent, "limit": 5}))
+    sync, _ = fetch_json(
+        url("/api/agent/sync", {"agent": agent, "limit": 5}),
+        timeout=DIAGNOSTIC_READ_TIMEOUT,
+    )
     if not sync:
         return None
     activity = sync.get("agent_activity")
@@ -601,7 +605,10 @@ def print_agent_sync_bundle(sync: dict[str, Any], *, agent: str) -> None:
 
 def verify_agent_handoff(agent: str) -> tuple[bool, str]:
     """Confirm latest handoff via agent_activity (not fuzzy retrieve)."""
-    sync, error = fetch_json(url("/api/agent/sync", {"agent": agent, "limit": 5}))
+    sync, error = fetch_json(
+        url("/api/agent/sync", {"agent": agent, "limit": 5}),
+        timeout=DIAGNOSTIC_READ_TIMEOUT,
+    )
     if error or sync is None:
         return False, error or "agent sync unavailable"
 
@@ -654,7 +661,10 @@ def handoff_since_session(agent: str) -> bool:
     """True if agent posted after session marker was set."""
     if not SESSION_MARKER.is_file():
         return True
-    sync, _ = fetch_json(url("/api/agent/sync", {"agent": agent, "limit": 5}))
+    sync, _ = fetch_json(
+        url("/api/agent/sync", {"agent": agent, "limit": 5}),
+        timeout=DIAGNOSTIC_READ_TIMEOUT,
+    )
     if not sync:
         return False
     activity = sync.get("agent_activity")
