@@ -113,9 +113,11 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 
 ## Quick Start
 
+Supported baseline: **Python 3.12.x** (same as CI). Full install notes, Windows `py -3.12` / venv rules, and pre-change DB preservation: [docs/SETUP.md](./docs/SETUP.md). Do not wire Crowley to a removed machine-specific `Python311` path — use a project-local `venv`.
+
 ### Requirements
 
-- Python 3.10+
+- Python 3.12.x (recommended; CI reference)
 - OpenAI API key (or Ollama for local models)
 - Git
 
@@ -126,12 +128,12 @@ Roadmap: [docs/WHERE_WE_ARE.md](./docs/WHERE_WE_ARE.md)
 git clone https://github.com/adkinsd2261/crowley.git
 cd crowley
 
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment (Windows: py -3.12 -m venv venv)
+python3.12 -m venv venv
 source venv/bin/activate  # on Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Core deps (CI / recovery work). Optional ML: requirements-ml.txt or requirements.txt
+pip install -r requirements-core.txt
 
 # Copy and configure env
 cp .env.example .env
@@ -141,12 +143,12 @@ cp .env.example .env
 ### Run
 
 ```bash
-# Start the web server
-python app.py
+# Prefer the venv interpreter explicitly
+./venv/bin/python app.py          # Windows: .\venv\Scripts\python.exe app.py
 # → opens at http://127.0.0.1:8765
 
 # Or use the terminal REPL
-python crowley.py
+./venv/bin/python crowley.py
 ```
 
 ### First Steps

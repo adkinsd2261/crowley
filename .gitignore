@@ -18,5 +18,6 @@ crowley.db-shm
 .crowley/chatgpt_bridge/
 .crowley/cloudflared/
 .crowley/backup/
+.crowley/artifacts/
 cloudflared/config.yml
 openapi-chatgpt.deployed.json

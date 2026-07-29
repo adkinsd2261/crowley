@@ -28,6 +28,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNTIME_DIR = ROOT / ".crowley" / "backup"
+ARTIFACTS_DIR = ROOT / ".crowley" / "artifacts"
 CONFIG_PATH = RUNTIME_DIR / "config.json"
 SECRETS_PATH = RUNTIME_DIR / "secrets.dpapi"
 STAGING_DIR = RUNTIME_DIR / "staging" / "current"
@@ -91,6 +92,125 @@ def database_path(explicit: str | None = None) -> Path:
     return Path(configured).expanduser().resolve() if configured else ROOT / "crowley.db"
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _is_strict_descendant(path: Path, parent: Path) -> bool:
+    resolved = path.resolve()
+    parent_resolved = parent.resolve()
+    return _is_relative_to(resolved, parent_resolved) and resolved != parent_resolved
+
+
+def managed_bundle_roots() -> tuple[Path, ...]:
+    """Roots whose strict descendants may receive snapshot bundles / replace."""
+    return (
+        ARTIFACTS_DIR.resolve(),
+        (RUNTIME_DIR / "staging").resolve(),
+    )
+
+
+def unique_bundle_dir(prefix: str = "snapshot") -> Path:
+    """Allocate a new non-existing strict descendant under .crowley/artifacts."""
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in prefix)
+    candidate = (ARTIFACTS_DIR / f"{safe}_{stamp}").resolve()
+    if candidate.exists():
+        raise BackupError(f"unique bundle path unexpectedly exists: {candidate}")
+    return candidate
+
+
+def is_crowley_bundle(path: Path) -> bool:
+    """True when path looks like a verified Crowley snapshot bundle."""
+    bundle = path.expanduser().resolve()
+    manifest_path = bundle / "manifest.json"
+    snapshot_db = bundle / "state" / "crowley.db"
+    if not manifest_path.is_file() or not snapshot_db.is_file():
+        return False
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        return False
+    database = data.get("database")
+    if not isinstance(data.get("schema_version"), int):
+        return False
+    if not isinstance(database, dict):
+        return False
+    if not isinstance(database.get("sha256"), str) or not database.get("sha256"):
+        return False
+    if str(database.get("quick_check", "")).lower() != "ok":
+        return False
+    return True
+
+
+def assert_safe_snapshot_output(
+    output_dir: Path,
+    *,
+    source_db: Path,
+    replace: bool = False,
+) -> Path:
+    """Fail closed before any recursive clear of a snapshot destination."""
+    target = output_dir.expanduser().resolve()
+    source = source_db.expanduser().resolve()
+    root = ROOT.resolve()
+    managed = managed_bundle_roots()
+
+    if target == root:
+        raise BackupError("--output/--snapshot-dir cannot be the repository root")
+    if _is_relative_to(root, target) and target != root:
+        raise BackupError("snapshot output cannot be an ancestor of the repository")
+    if target == source:
+        raise BackupError("snapshot output collides with the live database path")
+    if target == source.parent or _is_relative_to(source, target):
+        raise BackupError(
+            "snapshot output would destroy the live database "
+            "(refusing recursive clear of the database parent/tree)"
+        )
+    for name in (".git", ".env", "venv"):
+        critical = (root / name).resolve()
+        if target == critical or _is_relative_to(critical, target):
+            raise BackupError(f"snapshot output must not contain {name}")
+
+    for managed_root in managed:
+        if target == managed_root:
+            raise BackupError(
+                "snapshot output cannot be a managed bundle root "
+                f"({managed_root}); use a strict descendant bundle directory"
+            )
+
+    under_managed = any(_is_strict_descendant(target, mr) for mr in managed)
+    if _is_relative_to(target, root):
+        if not under_managed:
+            raise BackupError(
+                "snapshot output inside the repository must be a strict "
+                "descendant of .crowley/artifacts or .crowley/backup/staging"
+            )
+
+    if target.exists():
+        if not replace:
+            raise BackupError(
+                "snapshot output already exists; refusing recursive delete. "
+                "Use a unique bundle path. Private rotation requires replace=True "
+                "and a verified Crowley bundle under a managed root."
+            )
+        if not under_managed:
+            raise BackupError(
+                "replace is only allowed for strict descendants of managed "
+                "bundle roots (.crowley/artifacts or .crowley/backup/staging)"
+            )
+        if not is_crowley_bundle(target):
+            raise BackupError(
+                "replace requires an existing verified Crowley snapshot bundle "
+                "(manifest.json + state/crowley.db with valid checksum fields)"
+            )
+    return target
+
+
 def _table_counts(connection: sqlite3.Connection) -> dict[str, int]:
     available = {
         str(row[0])
@@ -107,53 +227,31 @@ def _table_counts(connection: sqlite3.Connection) -> dict[str, int]:
     return counts
 
 
-def create_snapshot(
+def _write_final_manifest(
     *,
+    bundle_dir: Path,
     source_db: Path,
-    output_dir: Path | None = None,
+    final_dir: Path,
+    replace: bool,
+    quick_check: str,
+    integrity_check: str,
+    counts: dict[str, int],
+    db_sha: str,
+    snapshot_db: Path,
 ) -> dict[str, Any]:
-    if not source_db.is_file():
-        raise BackupError(f"Crowley database not found: {source_db}")
-
-    if output_dir is None:
-        output_dir = STAGING_DIR
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    state_dir = output_dir / "state"
-    state_dir.mkdir(parents=True, exist_ok=True)
-    snapshot_db = state_dir / "crowley.db"
-
-    source = sqlite3.connect(f"file:{source_db}?mode=ro", uri=True, timeout=30)
-    destination = sqlite3.connect(snapshot_db)
-    try:
-        source.backup(destination)
-        destination.commit()
-        integrity = str(destination.execute("PRAGMA quick_check").fetchone()[0])
-        counts = _table_counts(destination)
-    finally:
-        destination.close()
-        source.close()
-
-    if integrity.lower() != "ok":
-        raise BackupError(f"SQLite snapshot quick_check failed: {integrity}")
-
-    processed = ROOT / ".crowley" / "processed"
-    if processed.is_dir():
-        shutil.copytree(processed, state_dir / "processed", dirs_exist_ok=True)
-    for name in ("brain.json", "writeback_acceptance_report.json"):
-        source_file = ROOT / ".crowley" / name
-        if source_file.is_file():
-            shutil.copy2(source_file, state_dir / name)
-
-    manifest = {
+    """Write the complete final manifest and return it with checksums (no rewrite later)."""
+    manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "created_at": utc_now(),
         "source_db": str(source_db),
+        "bundle_dir": str(final_dir),
+        "replace": bool(replace),
         "database": {
             "relative_path": "state/crowley.db",
             "size_bytes": snapshot_db.stat().st_size,
-            "sha256": sha256_file(snapshot_db),
-            "quick_check": integrity,
+            "sha256": db_sha,
+            "quick_check": quick_check,
+            "integrity_check": integrity_check,
             "table_counts": counts,
         },
         "repository": {
@@ -172,10 +270,154 @@ def create_snapshot(
             ".crowley/backup/secrets.dpapi",
         ],
     }
-    (output_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    manifest_path = bundle_dir / "manifest.json"
+    payload = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    payload_bytes = payload.encode("utf-8")
+    # write_bytes avoids Windows newline translation changing the checksum
+    manifest_path.write_bytes(payload_bytes)
+    if sha256_file(snapshot_db) != db_sha:
+        raise BackupError("snapshot database checksum changed after manifest write")
+    manifest_sha = hashlib.sha256(payload_bytes).hexdigest()
+    # Separate sidecar keeps manifest.json bytes stable for verification.
+    (bundle_dir / "manifest.sha256").write_bytes((manifest_sha + "\n").encode("utf-8"))
+    manifest["manifest_sha256"] = manifest_sha
+    return manifest
+
+
+def _build_snapshot_tree(
+    *,
+    source_db: Path,
+    bundle_dir: Path,
+    final_dir: Path,
+    replace: bool,
+) -> dict[str, Any]:
+    """Build a complete verified bundle tree into an empty stage directory."""
+    state_dir = bundle_dir / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_db = state_dir / "crowley.db"
+
+    source = sqlite3.connect(f"file:{source_db}?mode=ro", uri=True, timeout=30)
+    destination = sqlite3.connect(snapshot_db)
+    try:
+        source.backup(destination)
+        destination.commit()
+        quick_check = str(destination.execute("PRAGMA quick_check").fetchone()[0])
+        integrity_check = str(
+            destination.execute("PRAGMA integrity_check").fetchone()[0]
+        )
+        counts = _table_counts(destination)
+    finally:
+        destination.close()
+        source.close()
+
+    if quick_check.lower() != "ok":
+        raise BackupError(f"SQLite snapshot quick_check failed: {quick_check}")
+    if integrity_check.lower() != "ok":
+        raise BackupError(f"SQLite snapshot integrity_check failed: {integrity_check}")
+
+    processed = ROOT / ".crowley" / "processed"
+    if processed.is_dir():
+        shutil.copytree(processed, state_dir / "processed", dirs_exist_ok=True)
+    for name in ("brain.json", "writeback_acceptance_report.json"):
+        source_file = ROOT / ".crowley" / name
+        if source_file.is_file():
+            shutil.copy2(source_file, state_dir / name)
+
+    db_sha = sha256_file(snapshot_db)
+    return _write_final_manifest(
+        bundle_dir=bundle_dir,
+        source_db=source_db,
+        final_dir=final_dir,
+        replace=replace,
+        quick_check=quick_check,
+        integrity_check=integrity_check,
+        counts=counts,
+        db_sha=db_sha,
+        snapshot_db=snapshot_db,
     )
+
+
+def _promote_bundle(*, stage_dir: Path, final_dir: Path) -> None:
+    """Promote a fully verified stage dir onto final_dir without rewriting contents."""
+    token = secrets_module.token_hex(8)
+    replaced: Path | None = None
+    try:
+        if final_dir.exists():
+            replaced = final_dir.parent / f".replacing-{final_dir.name}-{token}"
+            if replaced.exists():
+                raise BackupError(
+                    f"rotation path unexpectedly exists; refusing delete: {replaced}"
+                )
+            final_dir.rename(replaced)
+        stage_dir.rename(final_dir)
+    except OSError:
+        if replaced is not None and not final_dir.exists() and replaced.exists():
+            replaced.rename(final_dir)
+        raise
+    if replaced is not None and replaced.exists():
+        shutil.rmtree(replaced)
+
+
+def create_snapshot(
+    *,
+    source_db: Path,
+    output_dir: Path | None = None,
+    replace: bool = False,
+) -> dict[str, Any]:
+    """Create a consistent snapshot bundle via stage → verify → promote.
+
+    Public/default path never replaces an existing destination. When ``output_dir``
+    is omitted, allocates a unique bundle under ``.crowley/artifacts``. Private
+    rotation (``replace=True``) is limited to a verified Crowley bundle that is a
+    strict descendant of a managed root. Staging uses a collision-safe unique path
+    and never deletes a pre-existing partial directory. The final manifest is
+    completed and hashed before promotion and is not rewritten afterward.
+    """
+    source = source_db.expanduser().resolve()
+    if not source.is_file():
+        raise BackupError(f"Crowley database not found: {source}")
+
+    if output_dir is None:
+        final_dir = unique_bundle_dir("snapshot")
+        replace = False
+    else:
+        final_dir = assert_safe_snapshot_output(
+            output_dir, source_db=source, replace=replace
+        )
+
+    token = secrets_module.token_hex(16)
+    stage_dir = final_dir.parent / f".partial-{final_dir.name}-{token}"
+    if stage_dir.exists():
+        raise BackupError(
+            f"staging path unexpectedly exists; refusing to delete: {stage_dir}"
+        )
+    stage_dir.mkdir(parents=True, exist_ok=False)
+
+    try:
+        manifest = _build_snapshot_tree(
+            source_db=source,
+            bundle_dir=stage_dir,
+            final_dir=final_dir,
+            replace=replace,
+        )
+        # Manifest checksum must match bytes on disk before promotion.
+        staged_manifest = stage_dir / "manifest.json"
+        staged_sha_file = stage_dir / "manifest.sha256"
+        disk_sha = sha256_file(staged_manifest)
+        sidecar = staged_sha_file.read_text(encoding="utf-8").strip()
+        if disk_sha != sidecar or disk_sha != manifest["manifest_sha256"]:
+            raise BackupError("manifest checksum mismatch before promotion")
+        _promote_bundle(stage_dir=stage_dir, final_dir=final_dir)
+    except Exception:
+        if stage_dir.exists():
+            shutil.rmtree(stage_dir, ignore_errors=True)
+        raise
+
+    # Do not rewrite manifest after promotion; verify stable checksum only.
+    final_manifest = final_dir / "manifest.json"
+    final_sha = sha256_file(final_manifest)
+    if final_sha != manifest["manifest_sha256"]:
+        raise BackupError("manifest checksum changed during promotion")
     return manifest
 
 
@@ -453,7 +695,13 @@ def init_repository() -> int:
 
 def backup(tag: str) -> int:
     config = load_config()
-    manifest = create_snapshot(source_db=database_path())
+    # Private rotation of staging/current only when it is already a Crowley bundle.
+    replace = STAGING_DIR.exists()
+    manifest = create_snapshot(
+        source_db=database_path(),
+        output_dir=STAGING_DIR,
+        replace=replace,
+    )
     result = run_restic(
         [
             "backup",
@@ -732,7 +980,21 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("init", help="Initialize the configured restic repository.")
     snapshot = sub.add_parser("snapshot", help="Create a consistent local recovery bundle.")
     snapshot.add_argument("--db")
-    snapshot.add_argument("--output")
+    snapshot.add_argument(
+        "--output",
+        help=(
+            "Bundle directory. Default: unique dir under .crowley/artifacts. "
+            "Existing paths require --replace and must be a strict managed descendant."
+        ),
+    )
+    snapshot.add_argument(
+        "--replace",
+        action="store_true",
+        help=(
+            "Private rotation only: replace one existing verified Crowley bundle "
+            "under artifacts or backup/staging (never managed roots)."
+        ),
+    )
     backup_parser = sub.add_parser("backup", help="Snapshot and upload Crowley state.")
     backup_parser.add_argument("--tag", default="manual")
     check = sub.add_parser("check", help="Check repository integrity.")
@@ -763,7 +1025,8 @@ def main() -> int:
         if args.command == "snapshot":
             manifest = create_snapshot(
                 source_db=database_path(args.db),
-                output_dir=Path(args.output).resolve() if args.output else STAGING_DIR,
+                output_dir=Path(args.output).resolve() if args.output else None,
+                replace=bool(args.replace),
             )
             print(json.dumps(manifest, indent=2, sort_keys=True))
             return 0
