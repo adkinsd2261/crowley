@@ -265,6 +265,81 @@ class SnapshotSafetySystemTests(unittest.TestCase):
                 self.assertNotEqual(first["manifest_sha256"], second["manifest_sha256"])
                 self.assertTrue((real / "manifest.sha256").is_file())
 
+    def test_forged_bundle_is_rejected_for_replace(self):
+        """Codex forged-bundle probe: fake claims must not pass is_crowley_bundle."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            artifacts = repo / ".crowley" / "artifacts"
+            artifacts.mkdir(parents=True)
+            live = self._live_db(repo)
+            forged = artifacts / "forged"
+            (forged / "state").mkdir(parents=True)
+
+            # Shape-only forgery: claimed ok fields, corrupt DB bytes, no/bad sidecar
+            fake_manifest = {
+                "schema_version": 1,
+                "database": {
+                    "sha256": "0" * 64,
+                    "quick_check": "ok",
+                    "integrity_check": "ok",
+                },
+            }
+            payload = (
+                json.dumps(fake_manifest, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            (forged / "manifest.json").write_bytes(payload)
+            (forged / "state" / "crowley.db").write_bytes(b"not-a-sqlite-database")
+
+            with mock.patch.multiple(
+                backup,
+                ROOT=repo.resolve(),
+                ARTIFACTS_DIR=artifacts.resolve(),
+                RUNTIME_DIR=(repo / ".crowley" / "backup").resolve(),
+            ):
+                self.assertFalse(backup.is_crowley_bundle(forged))  # missing sidecar
+
+                (forged / "manifest.sha256").write_bytes(b"deadbeef\n")
+                self.assertFalse(backup.is_crowley_bundle(forged))  # bad sidecar
+
+                good_sidecar = backup.sha256_file(forged / "manifest.json")
+                (forged / "manifest.sha256").write_bytes(
+                    (good_sidecar + "\n").encode("utf-8")
+                )
+                # Sidecar matches, but DB hash / contents do not
+                self.assertFalse(backup.is_crowley_bundle(forged))
+
+                # Mismatched claimed DB hash with real SQLite still fails if hash wrong
+                real = artifacts / "honest"
+                backup.create_snapshot(source_db=live, output_dir=real)
+                tampered = artifacts / "tampered_hash"
+                import shutil
+
+                shutil.copytree(real, tampered)
+                data = json.loads((tampered / "manifest.json").read_bytes())
+                data["database"]["sha256"] = "1" * 64
+                new_payload = (
+                    json.dumps(data, indent=2, sort_keys=True) + "\n"
+                ).encode("utf-8")
+                (tampered / "manifest.json").write_bytes(new_payload)
+                (tampered / "manifest.sha256").write_bytes(
+                    (backup.sha256_file(tampered / "manifest.json") + "\n").encode(
+                        "utf-8"
+                    )
+                )
+                self.assertFalse(backup.is_crowley_bundle(tampered))
+
+                marker = forged / "FORGED_SENTINEL.txt"
+                marker.write_text("keep-forged", encoding="utf-8")
+                with self.assertRaisesRegex(backup.BackupError, "verified Crowley"):
+                    backup.create_snapshot(
+                        source_db=live, output_dir=forged, replace=True
+                    )
+                self.assertEqual(marker.read_text(encoding="utf-8"), "keep-forged")
+                with self.assertRaisesRegex(backup.BackupError, "verified Crowley"):
+                    backup.create_snapshot(
+                        source_db=live, output_dir=tampered, replace=True
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()

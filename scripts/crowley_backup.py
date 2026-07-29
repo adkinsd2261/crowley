@@ -126,14 +126,24 @@ def unique_bundle_dir(prefix: str = "snapshot") -> Path:
 
 
 def is_crowley_bundle(path: Path) -> bool:
-    """True when path looks like a verified Crowley snapshot bundle."""
+    """True when path is a cryptographically checked Crowley snapshot bundle.
+
+    Requires manifest.sha256 to match the actual manifest.json bytes, the on-disk
+    state/crowley.db SHA-256 to match database.sha256, and quick/integrity fields
+    to be ok. Shape-only or forged claim fields are rejected.
+    """
     bundle = path.expanduser().resolve()
     manifest_path = bundle / "manifest.json"
+    sidecar_path = bundle / "manifest.sha256"
     snapshot_db = bundle / "state" / "crowley.db"
-    if not manifest_path.is_file() or not snapshot_db.is_file():
+    if not manifest_path.is_file() or not snapshot_db.is_file() or not sidecar_path.is_file():
         return False
     try:
-        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        claimed_manifest_sha = sidecar_path.read_bytes().decode("utf-8").strip()
+        actual_manifest_sha = sha256_file(manifest_path)
+        if not claimed_manifest_sha or claimed_manifest_sha != actual_manifest_sha:
+            return False
+        data = json.loads(manifest_path.read_bytes().decode("utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeError):
         return False
     database = data.get("database")
@@ -141,9 +151,14 @@ def is_crowley_bundle(path: Path) -> bool:
         return False
     if not isinstance(database, dict):
         return False
-    if not isinstance(database.get("sha256"), str) or not database.get("sha256"):
+    claimed_db_sha = database.get("sha256")
+    if not isinstance(claimed_db_sha, str) or not claimed_db_sha:
+        return False
+    if sha256_file(snapshot_db) != claimed_db_sha:
         return False
     if str(database.get("quick_check", "")).lower() != "ok":
+        return False
+    if str(database.get("integrity_check", "")).lower() != "ok":
         return False
     return True
 
